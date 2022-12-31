@@ -1,0 +1,16 @@
+
+
+/etc/resolv.conf              # List DNS servers for internet domain name resolution.
+/etc/hosts	              # Lists hosts to be resolved locally (not by DNS).
+/etc/nsswitch.conf            # List order of host name search. Typically look at local files, then NIS server, then DNS server.
+
+Red Hat/Fedora/CentOS:
+/etc/sysconfig/network        # Specify network configuration. eg. Static IP, DHCP, NIS, etc.
+/etc/sysconfig/network-scripts/ifcfg-device # Specify TCP network information.
+
+Ubuntu/Debian: 
+/etc/network/interfaces       # Specify network configuration and devices. eg. Static IP and info, DHCP, etc.
+
+/etc/sysconfig/network        # network configuration file. It allows us to define whether we want networking (NETWORKING=yes|no), what the hostname should be (HOSTNAME=) and which gateway to use (GATEWAY=).
+/etc/hosts                    # The main purpose of /etc/hosts configuration file is to resolve hostnames that cannot be resolved any other way. It can also be used to resolve hostnames on small networks with no DNS server.
+/etc/resolv.conf              # It is used for configuring the DNS resolver library. This configuration file contains information parameters used by the DNS resolver. The DNS resolver allows for the operating system to translate domain names into IP addresses.

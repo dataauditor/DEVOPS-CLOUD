@@ -1,0 +1,60 @@
+1.Baglanma:
+> + 
+  > name: deneme 
+  > Host Name: endpoint (RDS'in) 
+  > Username: RDS'e tanimli (admin veya root olabilir. RDS'ten bakilabilir.)
+  > Keychain/Vault: password (RDS'e tanimlidir).
+  > Ok
+
+
+2.Manipulating RDS Instance: 
+- Iki turlu tablo olusturulur. Hem schema'dan hem de SQL kodlariyla:
+> Schema > New database: clarusway (RDS olusurken olustu)
+  > RC > Table > Create table > Table name: Personal_Info
+    > First Row: Type `ID_number` into the first line. 
+      - ID number is an integer, so the system automatically assign Integer value to the Datatype column.
+      - Explain the Primary Key, choose the ID_number as a Primary Key, and check the PK box.
+    > Second Row: type Name into the second row.VARCHAR(45)
+    > Third Row: type Surname into the third row.VARCHAR(45)
+    > Fourth Row: type Gender into the fourth row.VARCHAR(45)
+    > Fifth Row : type Salary into the fifth row.VARCHAR(45) 
+  > Apply
+
+
+3.Add another table via SQL command:
+```sql
+CREATE TABLE `clarusway`.`Personal_Info_2` (
+  `ID_number` INT NOT NULL,
+  `Name` VARCHAR(45) NULL,
+  `Surname` VARCHAR(45) NULL,
+  `Gender` VARCHAR(45) NULL,
+  `Age` INT NULL,
+  `Department` VARCHAR(45) NULL,
+  PRIMARY KEY (`ID_number`));
+```
+Refresh
+
+4.Add data to the "Personal_Info" table as shown below:
+```sql
+INSERT INTO clarusway.Personal_Info
+(ID_number, Name, Surname, Gender, Salary)
+VALUES
+('1234','Osvaldo','Clarusway','Male','40000'), 
+('56789','Guile','Clarusway','Male','50000'), 
+('007','Charlie','Clarusway','Male','45000'), 
+('432','Marcus','Clarusway','Male','50000'), 
+('324','Vincenzo','Clarusway','Male','60000'), 
+('43546','Serdar','Clarusway','Male','65000');
+```
+
+5.Sorgulama:
+SELECT * FROM clarusway.Personal_Info;
+SELECT Gender, Salary FROM clarusway.Personal_Info;
+SELECT Name, Surname FROM clarusway.Personal_Info WHERE salary > 40000;
+
+
+
+
+
+
+

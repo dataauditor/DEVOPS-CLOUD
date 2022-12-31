@@ -1,0 +1,307 @@
+1.Virtual Private Cloud:
+- VPC: On premise'de ne varsa  devices such as switches, routers, repeaters, firewalls, load balancers connected by network cables sanal olarak saglandigi alan.
+- Logically isolated area of cloud.
+- Auto scaling, rds, ec2, elb, ebs ... vb VPC icinde kurulur.
+- VPC, region bazinda olusur. instance olusturunca region bazinda default bir VPC otomatik olarak aws tanimlar.
+- VPC, AZ'leri kapsar.
+- Ayni regionda en fazla default + 5 VPC olusturulabilir. fazlasi talep edilebilir.
+- Subnetler departmant/proje bazinda olusturulur.
+- Subnetler AZ icinde olusturulur.
+- Bir AZ'de bircok Subnet olusturulabilir.
+- Normalde 2 tane IP numarasi broadcast vb sebeplerle kullanilamazken aws'de her subnette 5 IP adresi kisitlanir ve host'a tahsis edilemez.
+- Subnetlere IP'ler, Cidr vererek olustururuz. Her AZ'de istenilen kadar Subnet kurulabilir. Privat ve Public olarak. 
+- AZ'lerde yedek Crdir araligi birakilabilir muhtemel yeni Subnet acilmasina karsi.
+- Internet Gateway: NAT ozelligi sayesinde AWS PUBLIC IP POOL'dan public IP alir. private-public ip degisimini saglar. Daha sonra VPC'ye attach edilir.
+- VPC CIDR IP POOL: private IP'leri tahsis eder.
+- Tek instance'a 5 tane sg baglanabilir.
+- her instance'in private IP'si olup istedigimize public IP verebiliriz. Bunlar da public Subnetlerdir.
+- Subnetlere internet gateway veya VPN gateway ile ulasilabilir. 
+- Her regionun default bir AZ'si bulunur.
+- Herbir VPC'ye bir internet gateway attach edilmeli. Internet gateway olmadan VPC uzerinden internete cikilamaz.
+- Root table: Subnetlere sec grouplar belirlenir. Security Groups'da ise instancelara rulelar belirliyorduk.
+  - target : aradaki gateway veya local icin 
+    - 
+  - destination : hedef
+    -
+
+
+VPC olusturma:
+> Your VPCs > create VPC > IPv4 tanimlanir > Tenancy: default (sizin cihazlarin konumlanmasi virtual olarak. dedicated olsa ilgili rack vb size tahsisli olup ucrete tabidir.) > create VPC
+
+- DNS Hostnames: 
+  - instancelere public IP'lerin atamasini yapar. 
+  > Your VPCs > ilgili VPC > Actions > DNS hostname > enable > save
+
+Internet Gateway Olusturma/Attach/Routes'e baglama:
+- Root table'lara atanarak VPC'nin internet cikisini saglar. 
+- NAT gorevi ustlenir.
+- Herbir igv yalniz bir VPC'ye baglanir. 
+- Privat subnetlerin olusturdugu gruba atanmaz.
+> Internet Gateways > Create Internet gateway > isim gir > create
+> Internet Gateways > Ilgili Internet gateway > action > attach > ilgili VPC > save
+> Root tables > Ilgili VPC > Routes (target: local) dahili gorusme > Edit routes > Add routes > Destination: 0.0.0.0/0 > Target: Internet gateway yazilir ve olusturdugumuz gateway secilir. > save
+
+Subnet olusturma:
+- IPv4 CIDR blocklari VPC'ye tahsisli private IP'ler Subnet'lere paylastirilir. (10.7.1.0/24 - 10.7.2.0/24 - 10.7.4.0/24 ... vb)
+- Subnet uzerinden isimleri ile privat-public yazsak da root table uzerinden asil ayrim saglanir.
+> Subnets > create subnet > isim/VPC sec/AZ sec/IPv4 CIDR block  (ornek: 10.7.4.0/24) > create subnet
+- mxtoolbox.com 
+- Subnetleri Root Table'lara tanimlama: 
+  - Her VPC olustugunda public route table'i da olusur. Private subnetler icin 2. bir route table gerekir VPC bazinda. 
+  > Root tables > create root table (private subnetler icin 2. privat-rt olusturulur) > name/vpc sec > create 
+  > Root tables > privat-rt > subnet associations > Edit subnet assosiations > privat subnetleri sec > save
+  > Root table > public-rt > subnet associations > Edit subnet associations > public subnetleri sec > save
+
+- Modify auto assign IP settings:
+  - Otomatik olarak public IP alinmasini saglar. Public subnetlere yapilir.
+  > Subnet > ilgili subnet > Actions > Modify autoassign IP > Public IP'ler tahsis edilir. 
+
+Elastic IPs:
+- Static IP alinir. 
+- Kullanmayan her saat basina ucretlendirilir. ilk saat ucretsizdir.
+- Root53 ile alinan URL adresinize elastic ip alinarak adresiniz static olur.
+
+
+
+2.Private Subnete Public Subnet Uzerinden Baglanti Kurma:
+
+Bastion Host/Jump Box:
+- Amaci Public Subnetteki bilgisayara pem key'imizi kodla cekerek, ayni kodla kurdugumuz privat subnetteki insyance'e privat ip uzerinden ulasmaktir.
+- Private Subnete giris yapilir. Cikis degil.
+- Public Subnete kurulur ve bunun uzerinden private subnete secur olarak ulasilir.
+- Public ve Private ec2lara ayni key degerleri verilmeli.
+- Internet gateway > Public Subnet > Bastion host > private subnet (Ayni AZ icinde olacak sekilde diger AZ'lerden baglantilar sg'lerle kisitlanmali)
+> EC2:
+  > Private Subnete instance kur (22, All ICMP IPv4 port) > pem dosyasi sec
+  > Public Subnete instance kur (22, All ICMP IPv4 port) > pem dosyasini privattaki instance ile ayni sec. Bu Bastion Host olur.
+!!!
+> VSC:
+  >eval "$(ssh-agent)"      : ssh-agenti calistirir, keyi depolar.
+  >ssh-add ./ugur.pem       : ssh keyimizi ssh-agenta ekler.
+  >ssh -A ec2-user@[Your public EC2 public IP]   : Public instance baglanir. `-A` option `enables forwarding of the authentication agent connection`. It means that, it forwards your SSH auth schema to the remote host. So you can use SSH over there as if you were on your local machine.
+  >ssh ec2-user@[Your private EC2 private IP]    : Private instance'a baglanilir.
+> Subnets:
+  > Private Subnet > Routes > Edit > Bastion Hostu ekle > save
+
+NAT Gateway:
+- Private Subnetten internete cikis yapar.
+- NAT instance ile ayni islemi yapar.
+- AWS managed.
+- Elastic IP kullanmak zorunludur.
+- Ucretlendirme servisedir.
+> NAT Gateway:
+  > VPC > NAT Gateway > Public Subnet sec >  Allocate Elastic IP (Static IP al) > create
+> Route Tables:
+  > Private Subneti sec > Routes > Edit > Add Route > NAT gateway sec > save
+
+NAT Instance:
+- Private Subnetten internete cikis yapar. (Giris ozelligi de var.)
+- Managed by you.
+- Availibility ve bandwith daha kisitli.
+- Sadece 22 portunun acik olmasi 
+- Elastic IP zorunlu degildir.
+- Hem NAT instance hem de Bastion Host olarak kullanilabilir.
+- Ucretlendirme NAT instance olarak yuklediginiz ec2 icindir.
+- Tek NAT instance hata durumunda internet baglantisi kopacagi icin en az 2 tane kurulmasi oneriliyor.
+> EC2:
+  > ami-00a36856283d67c39 ami numarali veya bir NAT instance kur > (22, All ICMP IPv4 port) public subnette olmali.
+  > Instance > Actions > Networking > Change source/destination check > stop (baska bilgisayarlar icin gelen verilere olan engeli durdurduk)
+> Route Table:
+  > Private Subneti sec > Routes > Edit > Add Route > NAT Instance sec > save
+
+
+
+3.VPC'ler Arasi Guvenli Baglanti Kurma:
+
+Peering:
+- Farkli/ayni regiondaki ve farkli/ayni userlarin VPC'leri arasinda privat IP ile baglanti kurulmasi.  
+- Peering connection birinin public digerinin privatinda kurulur. ikisi de birbirinin route table'ina eklenir.
+- Baskasinin hesabina yapilirsa requestin kabul edilmesi gerekir.
+> EC2:
+  > VPC1'de Public Subnette ucretsiz Windows instance kur > Sec Grup (RDP: 3389) > create
+> NAT Gateway:
+  > Create NAT gateway > VPC2 de Public Subnet secilir > Elastic IP alinir > create
+> Route Tables:
+  > Private Subneti sec (VPC2 deki) > Routes > Edit > Add Route > NAT gateway sec > save
+> EC2:
+  > VPC2'de Private Subnette instance kur. > SG: 22-80 portlarini ac > User data: > launch (NAT gateway baglantisindan once kurmamalisin yoksa user datayi cekemez.)
+#!/bin/bash
+yum update -y
+amazon-linux-extras install nginx1.12
+yum install -y wget
+chkconfig nginx on
+cd /usr/share/nginx/html
+chmod o+w /usr/share/nginx/html
+rm index.html
+wget https://raw.githubusercontent.com/awsdevopsteam/route-53/master/index.html
+wget https://raw.githubusercontent.com/awsdevopsteam/route-53/master/ken.jpg
+service nginx start
+
+> VPC:
+  > Peering Connections > create peering connection > VPC(Requester): VPC1, VPC(Accepter): VPC2 > create peering connection
+  > Peering Connections > Action > Accept request > accept
+  > Route Tables > VPC2 Private Subnet > Routes > edit > Add route > destination: VPC1's CIDR blok, target: peering connection > save
+  > Route Tables > VPC1 Public Subnet > Routes > edit > Add route > destination: VPC2's CIDR blok, target: peering connection > save
+> Route Tables:
+  > Subnet sec > Routes > Edit > Add Route > Destination: CIDR of other VPC > Target: Peering Connection > Save
+> EC2:
+  > VPC1'deki Windows Instance sec > Connect > RDP client > Download 
+  > VPC1'deki Windows Instance sec > Connect > RDP client > Download remote desktop file > Get Password (pem keyini decrypt eder) > Choose file (pem key secilir) > Decrypt Password > copy password > Yuklenen Windowd rdp'nin sifresi olarak yapistir. > ok > Private subnetteki bilgisayardasin.
+  > privat subnetteki instance'in privat IP'si ile windows ekrandan giris yap.
+
+
+Endpoint:
+- VPC'den internete cikmadan role vasitasiyla endpointten AWS'nin S3 gibi public servislerine veya baska VPC'deki instancelere giris saglamaktir.  
+- Endpointler 2'ye ayrilir. Interface Endpoint ve Gateway Endpoint.
+- Interface Endpoint: Security Groupslarla calisir ve cogu yerde kullanilir. private IP ile calisir.
+- Gatawey Endpoint: S3 ve DynamoDB'ye hizmet verir. Route table'lara tanimlanir.
+- Baska hesaplarin s3 gibi servislerine de baglanilabilir ve find service by name ile bulunur.
+> S3:
+  > create bucket > hersey kapali > create > iki dosya ekle.
+> EC2:
+  > VPC2'da Public Subnette instance kur (22, All ICMP IPv4, HTTP heryere) isim: Bastion Host
+  > VPC2'de Private Subnette instance kur. (22, All ICMP IPv4, HTTP heryere) : (Peering'te privat subnetteki instance icin olan user data'yi yukle)
+> IAM:
+  > roles > create role > use case: EC2 > next > policy > "AmazonS3FullAccess" sec > isim > create
+> EC2:
+  > Private Subnetteki Instance > Action > Security > Modify IAM Role >  ilgili rol > save
+> VSC:
+  > Terminal > home > .ssh konumuna gelinir.
+  >eval "$(ssh-agent)"
+  >ssh-add ./ugur.pem
+  >ssh -A ec2-user@ec2-34-235-123-32.compute-1.amazonaws.com      : Bastion Host'a baglandik pem kaydederek.
+  >ssh ec2-user@[privat instance'in IP]                            : privat instance'a baglanilir.
+> VPC:
+  > Endpoints > create endpoint > AWS sercices > com.amazonaws.us-east-1.s3 > VPC sec > Private subnet sec > create
+> VSC:
+  >aws s3 ls    : bucketlari listeler. local baglanti ile ulastik.
+  >aws s3 cp s3://clarusway-vpc-endpoint/Guile.png .   : ilgili dosyayi privattaki mevcut konumuma kopyalar.
+
+
+
+4.Privattaki Database'e Public'teki Instance'tan VSC ile Baglanma: 
+
+!!!
+LAMP Stack (Linux Apache MySQL PHP):
+- Private Subnetteki db (MariaSQL) yuklu istance'in sg'sine Public'teki instance'in sg'si custom'dan secilerek yalniz bu instance ile irtibati saglanir. 
+- MySQL yerine baska database de kullanilabilir.
+- PHP, programlama dili ama phyton vb de kullanilabilir.
+- Linux yerine Windows vb de kullanilabilir. (WAMP, MAMP)
+> EC2:
+  > Instance kur (VPC2-Public Subnet, "nat" ile ami numarasindan kur)
+> Route Tables:
+  > Routes > VPC2-Privat Subnet'e NAT'i tanimla > save.
+> EC2:
+  > Instance kur (VPC2-Public Subnet, 22 ve 80 acik). Bastion Host/Wordpress olacak.
+  > Instance kur (VPC2-Private Subnet, 22 ve 80 acik custom'dan Wordpress yuklu instance'a tanimlanan sg secilir IP yazmak yerine.)  Db olacak.
+> Wordpress User data:
+#!/bin/bash
+yum update -y
+amazon-linux-extras install -y lamp-mariadb10.2-php7.2 php7.2
+yum install -y httpd
+systemctl start httpd
+systemctl enable httpd
+wget https://wordpress.org/latest.tar.gz
+tar -xzf latest.tar.gz
+sudo cp -r wordpress/* /var/www/html/
+cd /var/www/html/
+cp wp-config-sample.php wp-config.php
+chown -R apache /var/www
+chgrp -R apache /var/www
+chmod 775 /var/www
+find /var/www -type d -exec sudo chmod 2775 {} \;
+find /var/www -type f -exec sudo chmod 0664 {} \;
+systemctl restart httpd
+
+> Mariadb User data:
+#!/bin/bash
+yum update -y
+yum install -y mariadb-server
+systemctl start mariadb
+systemctl enable mariadb
+
+!!!
+> VSC:
+  >scp -i ugur.pem /c/Users/home/.ssh/ugur.pem ec2-user@3.232.129.39:/home/ec2-user/     : Pem dosyasini Publicteki instance'a secure kopyaladik. ilki keyimizin localdeki adresi ikincisi Wordpress instance'da gonderilecek adres.
+  >ssh -i "ugur.pem" ec2-user@3.232.129.39                                               : Instance'a baglandik.
+  >chmod 400 ugur.pem                           					 : izinleri verdik.
+  >ssh -i "ugur.pem" ec2-user@10.7.5.217     						 : Privat subnetteki db instance'a baglandik. Public'ten buraya giris yaptigimiz instance'da .pem dosyasi var.
+
+!!!
+> Alternatif giris (Public instance'dan privat instance'a):
+  >eval "$(ssh-agent)"
+  >ssh-add ugur.pem
+  >ssh -A ec2-user@3.232.129.39                                                          : public instance'a pem dosyasi hafizada olacak sekilde girdik.
+  >ssh ec2-user@10.7.5.217                                                               : privat instance'a girdik.
+
+> VSC:
+  >sudo mysql_secure_installation               : setup secure installation of MariaDB. Kendi hesabinin kurulumudur. (hepsine yes)
+  >mysql -u root -p                             : Connect mysql terminal without password anymore
+  >SHOW databases;
+  >USE mysql;                                   : mysql db'sine girdik
+  >CREATE DATABASE clarusway;                   : database olusturduk.
+  >CREATE USER ugur IDENTIFIED BY '123456789';  : ikincisi sifre
+  >GRANT ALL ON clarusway.* TO umit IDENTIFIED BY '123456789' WITH GRANT OPTION;  
+  >FLUSH PRIVILEGES;
+  >EXIT
+
+> VSC:
+  >cd /var/www/html/
+  >sudo vi wp-config.php
+-----------------------------------------------------
+     #define( 'DB_NAME', 'clarusway' );
+
+     #define( 'DB_USER', 'admin' );
+
+     #define( 'DB_PASSWORD', '123456789' );
+
+     # local ("Private DNS")
+-----------------------------------------------------
+  >sudo systemctl restart httpd
+
+> Browser:
+- Ilgili programa ulasilir.
+
+
+5.NACL ():
+- Firewall of subnets. Bir veya birkac subnete attach edilebilir.
+- SG'ler instance tabanli iken NACL'lar subnet-VPC tabanlidir.
+- Sg'lerden farkli olarak stateless'dir. Subnetlere giriste hem innbound hem de outbound kurallari tanimlanir. Hem allow hem de deny yapilabilir. 
+- Kendisine baglanan Subnetlerin tum trafigini etkiler. 
+- SG gibi extra bir guvenlik hizmeti. Daha cok malicious attacklere karsi bir IP veya araligini kisitlar.
+- VPC olusturulunca otomatik olarak Nacl'lar (allow all in and allow all out olarak) kurulur.
+- Subnet oncesinde kurulur. VPC'ye uygulanir.
+- SG'de sadece izin verilirken, Nacl'da hem izin hem de kisitlama uygulanabilir.
+- SG'larda outbound otomatik all iken yeni Nacl'larda otomatik olarak hersey kisitli gelir, siz acarsiniz.
+- Rule'lar sira numarasina gore (100-200-300 vb) kucuk olan onceliklidir. 
+- Ucretsizdir.
+> Network ACLs:
+  > Create network ACL > VPC2 > create
+  > Innbound > Edit > Add rule > rule: 100 / Type: 22 Destination: 0.0.0.0/0 (belirli bir IP araligi belki sg olabilir) 
+  > Outbound > Edit > Add rule > rule: 100 / Type: 22 Destination: 0.0.0.0/0 (belirli bir IP araligi belki sg olabilir) 
+
+> Route table'a ilistiriliyor mu kontrol et.
+
+6.VPN: 
+- AWS Site-to-site VPN ve AWS Client VPN olarak 2 cesittir.
+  - AWS Site-to-site VPN: 
+    - On-premise ile VPC arasinda secure baglanti kurar.
+    - AWS tarafinda bulunan virtual edge'e Virtual Private Gateway, on-premises tarafindakine Customer Gateway denir.
+    - IPSec (internet protocol security) kullanilir encrypted tunnel olusturmak icin.
+    - Her baglanti icin iki tunnel kurulur. 
+  - AWS Client VPN: 
+    - Remote user ile AWS veya on-premises arasinda secure baglanti saglar. AWS servislerine remote userlarin ulasmasini saglayan bir application'dur.
+    - Heryerden AWS servislerine veya on-premise baglanmaya imkan verir.
+AWS Client VPN Kurulum:
+> VPN client application > Client VPN endpoint olustur > route table'a client VPN endpoint'i tanimla > Client VPN endpoint'i VPC-Subnetler ile (associate) iliskilendir > Client VPN endpoint configuration file'ini AWS consoldan al. > VPN'e baglan.
+
+7.Direct Connect:
+- internet yerine aws ile anlasmali servis saglayicilar vasitasiyla dogrudan ve hizli baglanti kurulmasidir.
+- 3 ana bilesenden olusur: AWS region, Direct connect (DX) location and Customer on-premises data center.
+- DX icinde iki cage bulunur: AWS cage ve Customer/partner cage.
+- AWS cage'de direct connect routers ve customer/partner cage'de customer/partner routers bulunur.
+- Virtual interface olusturmaliyiz public servislere ulasim icin.
+  - public virtual interface: s3 gibi public servislere ulasim saglar.
+  - private virtual interface: VPC'a giris saglar.
+
+

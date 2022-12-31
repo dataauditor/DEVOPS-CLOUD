@@ -1,0 +1,81 @@
+1.Yeni volume ekleme:
+
+  Volumes > Create Volumes > Availibility zone: root volumela ayni AZ secilir., Key: name volume1 > create
+  Volumes > ilgili available volume secilir > actions > attach > root instance secilir > attach
+
+  >lsblk: mountpoint yapilmamis.
+  >sudo file -s /dev/xvdf: file systemini sorgular. data cikar yani formatsiz.
+  >df -h: gostermiyor cunki formatsiz.
+  >sudo mkfs -t ext4 /dev/xvdf: ext4 formati atar.
+  >sudo file -s /dev/xvdf: kontrol ettik.
+  >sudo mkdir /mnt/mp1: linux root drive'a mounting point (bir kapi) actik. 
+  >sudo mount /dev/xvdf /mnt/mp1: harddiski mounting pointe tasidik.
+  >lsblk: ilgili harddiskin geldigi goruluyor.
+
+2.Dosya ekleme:
+  >cd /mnt/mp1
+  >sudo touch hello.txt
+
+3.Volume'u artirma:
+  Volumes > Volume1 > Actions > Modify Volume > size: 6 > 
+
+  >sudo resize2fs /dev/xvdf: ilave harddisk kapasitesine ayni format eklenir ve onceki icerik korunur.
+
+  >sudo reboot now: reboot yapilir.
+
+  Instance'a yeniden baglanilir.
+
+  >lsblk: mount kopmus ama duruyor.
+  >sudo file -s /dev/xvdf: 
+  >sudo mount /dev/xvdf /mnt/mp1
+  >df -h
+  >lsblk
+
+4.Partitionlu (1'den fazla) Volume Artirma:Volumes > Create Volume > size, AZ: ayni secilir, tag > Create 
+
+  Baglama: mount ise once onmount yapilir. (daha once kullanimda olanlar icin)
+  volumes > Volume secilir > Action > 
+  >lsblk
+  >df -h
+  Partition yapma:
+    >sudo fdisk /dev/xvdg 
+      n : add a new partition
+      p > enter > enter > enter > bitis sektoru:" +2G" > ikinci part: n > enter > enter > enter > enter: geri kalan 3GB otomatik uygular > w : olustur.
+
+  >lsblk
+  >df -h
+  >sudo mkfs -t ext4 /dev/xvdg1
+  >sudo mkfs -t ext4 /dev/xvdg2
+  >sudo mkdir /mnt/mp2
+  >sudo mkdir /mnt/mp3
+  >sudo mount /dev/xvdg1 /mnt/mp2/
+  >sudo mount /dev/xvdg2 /mnt/mp3/
+  >df -h
+
+5.Kapasite artirma:
+  Volumes > Volue > Action > 6GB yukselttik > 
+  son hd'ye eklenebilir.
+
+  >sudo growpart /dev/xvdg 2: son partitiona yeni kapasite eklenir.
+  >df -h
+  >sudo resize2fs /dev/xvdg2: file sistemini de degistirdik ilave volume'un.
+  >sudo reboot now: mounting pointler kopar.
+
+  instance'a baglanilir.
+
+6.Mount point baglantisini otomatiklestirme:
+  >sudo cp /etc/fstab /etc/fstab.bak      : herhangi bir hata yapma durumuna karsi yedek alinir.
+  sudo vim /etc/fstab
+   /dev/xvdf       mnt/mp1   ext4  defaults,nofail        0       0
+   /dev/xvdg1      mnt/mp2   ext4  defaults,nofail        0       0
+   /dev/xvdg2      mnt/mp3   ext4  defaults,nofail        0       0
+ 
+   seklinde kaydedilir.
+
+  >sudo reboot now
+
+  tekrar baglanilir.
+
+7.Volumu kapatmak icin once instance kapatilir. instance kapatmadan action Volumes > Volue sec > Action > Force to Detach
+
+

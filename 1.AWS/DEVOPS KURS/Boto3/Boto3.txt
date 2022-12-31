@@ -1,0 +1,40 @@
+1.Boto3:
+- AWS SDK (Software Development Kit) Phyton'dur.
+- Enables to create, update, nad delete AWS resources with Python script. Python library'dir.
+- AWS'de dokumantasyonu var. Oradan ogrenebilirsin.
+
+Ilk Kurulum:
+>pip install boto3        : (pip3 install boto3 for Python3)
+>sudo apt install awscli  : cli yuklenir.
+-----------------
+CLI'i yuklemezsek, kullanicilar/umit/.aws seklinde olusturarak da kullanabiliriz.
+>sudo mkdir .aws
+>cd .aws && sudo touch config && sudo touch credentials
+>vim config
+...
+>vim credentials
+...
+------------------
+>aws configure            : hesabimiz konfigure edilmeli
+>aws --version            : yuklu degil ama boto3 kullanabiliriz kandirarak ya da yukleriz.
+>pip3 list                : yuklu programlari gosterir.
+>pip3 freeze              : yuklu programlari gosterir. 
+
+S3:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

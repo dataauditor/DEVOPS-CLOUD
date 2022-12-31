@@ -1,0 +1,94 @@
+1.Serverless:
+- FaaS: Function as a Service'e serverless denir. 
+- Serverin oldugu kismin bizi ilgilendirmemesi. Servisi saglayan providerin bunlari saglamasidir.
+- Aurora Serverless, Lambda, Dynamodb'de biz instance ile ugrasmiyoruz.
+- Applicationlari server olmadan, altyapi ile ilgilenmedigimiz kullanmak icin kullanilir. Kontainerlarda server gerekir, serverless'da serverlarda bizim ilgilenmemize gerek olmayan yapidir.
+- Eliminate infrastructure management.
+- Cost effective.
+
+
+2.Lambda:
+- Lambda (FaaS-Function as a Service): kodu calistiran bir servis.
+- Bizim adimiza farkli dillerde python vb bize bircok islemi bizim adimiza yapacak biz sadece kodu gireriz.
+- S3'teki fotolari kucultmek icin surekli olarak instance kaldirmak yerine (kimin ne zaman foto cekecegi de belli degil) Lambda'ya image resizing kodunu yukleriz ve lambda function'un sadece calisma suresi uzerinden ucretlendiriliriz.
+- Ruby, Phyton, C++, Java, Node.js, PowerShell, Go ... vb dilleri destekliyor.
+- Request adedi ve fonksiyon basina ne kadar sureyle calistigi uzerinden ucretlendirilir.
+- Minimum 128MB - 10240MB arasi memory kapasitelidir. + 1MB seklinde kapasite artirilabilir.
+- Minimum 1ms'den ucretlendirir. Kisa sureli kullanilabilir. Maksimum 15dk calisir.
+- API Gateway, SQS, EC2, DynamoDB, S3, ELB, RDS, CloudFormation, ...... ile calisir.
+- Lambde fonksiyonundan elde edilen verilerin sonuclari ile hem foto resize ederken hem de dynamodb'ye metadatasi yazdirilabilir. Ayni anda bircok servisle calisabilir.
+- Use a blueprint: samlari gosterir. hazir kodlar.
+- Triggersiz ve rolsuz olarak da lambda kullanilabilir.
+- Lambda function AWS'de Caclenir. Bu yuzden ilk kullanimdan sonraki latencyler cok azdir.
+
+Hands on 1:
+- Source bucketa dosya eklenince lambda fonksiyonu tetiklenir ve dosyayi alip fonksiyon icra edip destination bucketa kopyalar.
+- Role olusturulur. Lambda'ya s3'e girme yetkisi verilir.
+> Bucket:
+  > create bucket (permissionlar kapali) > source_bucket > create
+  > create bucket > destination_bucket (permissionlar kapali) > create
+> IAM Role:
+  > roles > create role > lambda > Amazons3fullaccess sec > isim gir > create role
+> Lambda:
+  > functions > create function > Author from scratch (kendiniz yapiyorsunuz) > Runtime: Phyton 3.8 > Use an existing role: hazirladigimiz rol secilir. > create function
+  > Kodu yazariz. > destination bucket'in ismi yazilir. > deploy (changes deployed yesil olmali) > + Add trigger > s3 > source_bucket ismi (eventin olusacagi unsur) > all objects create events (baskaca bir event de secilebilir.) (prefix-Suffix secilebilir; format, tag vb bazinda islem de yaptirilabilir) > Recursive (tikla) > add
+  > Source bucketa dosyalar eklenerek destination bucket'a gonderilip gonderilmedigi denenir.
+
+
+3.API Gateway:
+- kendi localinizde gerceklesir.
+- Farkli dillerde yazilan servisler API vasitasiyla konusabiliyorlar.
+- https://openexchangerates.org/    : parabirimlerinin donusumunu saglayan API sitesi.
+- API'lar aralarinda Json ile konusur.
+- Endpoint Type: Regional normal bolgesel calisirken, Edge optimized ise CloudFront ile calisir.
+- Hizmeti alacagimiz siteden Json dosyasi alinir.
+- iki cesit API var:
+  - Websocket APIs: full duplex mesaj uygulamalarda kullanilir. response'a gerek kalmaz.
+  - Restful API
+    - Rest API: response'li API'dir. client-server arasi transfer islemlerinde kullanilir. HTTP API'den daha cok imkani vardir. AWS servisleri ile de calisir. Privat olursa public'e acilmadan kullanilir.
+    - HTTP APIs: Kontrol nispeten az. Dahga hizli
+
+Hands on 2:
+- Lambda fonksiyonu ile clientlere her web'e girdiklerinde rastgele bir sehir verilmesi. 
+- API'dan alinan endpoint ile ilgili sayfaya ulasilmasi (lambda fonksiyonuna ulasilmasi).
+> Lambda: 
+  > functions > create function > Author from scratch (kendiniz yapiyorsunuz) > Runtime: Phyton 3.8 > Create a new role ... > create function
+  > Deploy > Test yanindaki ok > isim gir > save > Test yanindaki oktan eventini sec > Test (farkli sehir isimleri verir)
+> API Gateway:
+  > Rest API > Build > New API > isim / Regional > create
+  > Actions > create resource > name: city > create resource
+  > Actions > create method > GET + tik > Lambda Function > Lambda Function: hazirlanan lambda func sec > save
+  > Test > Test (sehir ismi alinir)
+  > Actions > Deploy API > New stage / stage name: dev > deploy (API Gateway olustu)
+  > Invoke URL tikla > sonuna "/city" ekle > her tiklandikca Lambda tetiklenir ve cevap verir.
+
+
+Hands on 3 (10_10_2020):
+- Web'e her giriste rastgele sayi veren lambda'dan sayilari alacagiz API ile. 
+- API'nin de baska yere veri transferi icin CORS enable edilir. Daha sonra API tekrardan deploy edilir.
+> Lambda:
+  > functions > create function > Author from scratch > Runtime: Phyton 3.8 > Create a new role > create function
+  > Deploy > Test yanindaki ok > create a new test event > isim gir ve "{ }" icindeki yazilari bosalt > create > 
+  > Test yanindaki oktan eventini sec > Test
+  > Configuration > Edit > Edit basic settings > Memory kapasitesini ve sureyi buradan degistirebilirsin. > save
+> API Gateway:
+  > Rest API > Build > New API > isim / Regional > create
+  > Actions > create resource > name: random number > create resource
+  > Actions > create method > GET + tik > GET > Lambda Function > Lambda Function: hazirlanan lambda func sec > save
+  > GET > Test > Test (rakam)
+  > randomnumber (resource) > Actions > Deploy API > New stage / stage name: dev > deploy (API Gateway olustu)
+  > Invoke URL tikla > sonuna (resouce'u ekle) > her tiklandikca Lambda tetiklenir ve cevap verir.
+  > Resources > Get > Actions > Enable CORS > GET sec > Enable CORS and replace existing CORS Headers
+  > Resources > random number > Actions > Deploy API > isim > Deploy
+> S3:
+  > Izinleri verilmis Static web hosting acik bir bucket olustur.
+  > icideki html dosyasinin veri alan kisminin adresini S3 CORS yerine API CORS invoke URL'i yapistirirsak ilgili site sayi gosterir.
+
+
+
+
+
+
+
+
+

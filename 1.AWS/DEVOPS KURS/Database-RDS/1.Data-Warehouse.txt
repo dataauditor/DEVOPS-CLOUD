@@ -1,0 +1,11 @@
+1.Data Warehouse (Redshift):
+  - Tum veriyi toplayip, depolayip analiz etmeye yardimci olur.
+  - It gives you fast querying capabilities over structured data using familiar SQL-based clients and business intelligence (BI) tools.
+  - Amazon Redshift also includes Amazon Redshift Spectrum, allowing you to directly run SQL queries in Amazon S3 data lakes.
+  - Database/RDS depolama ve manage icin kullanilip, OLTP(Online Transaction Processing); Data Warehouse/Redshift data analizi icin kullanilip, OLAP(Online Analytical Processing) yapma imkani sunar.
+  - RDS'te sorgulama, hem depolama hem de analiz is yukunu artirdigi icin Data warehouse yalniz online analiz yaparak sistemi agirlastirmaz. 
+  - Amazon Redshift integrates with various data loading and ETL (extract, transform, and load) tools and business intelligence (BI) reporting, data mining, and analytics tools.
+  - Redshift: SQL, BI ve ETL ile uyumlu calisir.
+  - Amazon Redshift communicates with client applications by using industry-standard JDBC and ODBC.
+  - Leader Node manages communications with client programs and all communication with compute nodes.
+  - The core infrastructure component of an Amazon Redshift data warehouse is a cluster.

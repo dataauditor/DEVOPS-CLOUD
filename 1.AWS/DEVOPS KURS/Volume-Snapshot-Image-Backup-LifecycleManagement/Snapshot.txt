@@ -1,0 +1,14 @@
+1.Volume/Instance > (Snapshot menu) Snapshot > Volume > Backup
+                                             > (Snapshot Action menu) Image > EC2
+
+2.Snapshot alma:
+  Snapshots > Create Snapshot > Volume/Instance > Instance ID secilir > create
+
+2.Instanceden image olusturma:
+  Instance > Actions Image and templates > Create image >  
+
+3.Imageten instance olusturma:
+  AMIs > tag yazili Image secilir > Actions > Launch
+
+3.AMI: imagetir.
+

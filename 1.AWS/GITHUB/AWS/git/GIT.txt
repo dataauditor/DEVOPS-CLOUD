@@ -1,0 +1,46 @@
+
+ 				GIT
+
+Ilk Kurulum:
+> GIT yuklenir. 
+> git --version 
+> git config --global user.name "umit ceylan"
+> git config --global user.email "byildiz2019@gmail.com"
+> git config --global core.editor "text editor" (zorunlu degil)
+> git config --global color.ui auto (renk ayarina izin verir)
+> git config --list (settingsleri kontrol eder.)
+
+GITHUB'tan Locale Baglanti Kurulumu:
+> git clone URL (localde istene konuma gelinerek GITHUB'ta code yazan yerden kopyalanan URL)
+> git add . (workingten staging areaya gonderme)
+> git add demo.txt (istenirse tek dosya da gonderilebilir.)
+> git status 
+> git commit -m "comment" (local repoya gonderme)
+> git pull / push (cekme, gonderme)
+
+Localden GITHUB'a Baglanti Kurulumu:
+> git init (repo olusturulur)
+> git status 
+> git add . 
+> git commit -m "yorum"
+> git commit -am "commit" (commitle birlikte local repoya add de yapar)
+> git commit -ammend "degisiklik" (yorumu degistirmeye yarar)
+> git remote add origin URL (GITHUB'ta repo olusturularak URL'si buraya kaydedilir.)
+> git push -u origin master (git remote ile baglanti kurulursa ilk gonderim bu komutla)
+> git push filename (muteakip gonderimler)
+
+Onemli Kodlar:
+> git log (repodaki tum commitleri gosterir.)
+> git log --online (repodaki commitleri HASH'leriyle gosterir.)
+> git diff C4786  C8976 (iki HASH numarasi bazinda degisimi gosterir 4 karakter yeter.)
+> git diff (iki referans arasindaki degisikligi gosterir)
+
+Diger:
+> git rm --cached filename (Staging'ten working areaya dosya geri gonderilir.)
+> git checkout filename (Repodan working areaya dosya atar.)
+> mkdir foldername 
+> touch filename
+> pwd
+> cd filename
+> ls
+> cd ..

@@ -1,0 +1,111 @@
+DynamoDB is a fully managed NoSQL key/value and documents database
+Applications that contain large amounts of data but require predictable read and write performance while scaling is a good fit for DynamoDB
+DynamoDB scales with whatever read and write capacity you specify per second
+DynamoDB can be set to have eventually consistent Reads (default) which data is returned immediately but data can be inconsistent and Strong Consistent Reads which will always read from the leader partition since it always has an up-to-date copy.
+Strong consistent reads will until data are inconsistent. Data will never be inconsistent but latency will be higher. Copies of data will be consistent with a guarantee of 1 second.
+DynamoDB stores 3 copies of data on SSD drives across 3 regions.
+DynamoDB Streams help you to keep a list of item level changes or provide a list of item level changes that have taken place in the last 24hrs.
+Amazon DynamoDB Accelerator (DAX) is a fully managed, highly available, in-memory cache for DynamoDB that delivers up to a 10x performance improvement.
+DAX does all the heavy lifting required to add in-memory acceleration to your DynamoDB tables, without requiring developers to manage cache invalidation, data population, or cluster management.
+ElastiCache can be used in front of DynamoDB for the performance of reads on infrequently changed data
+RedShift complements DynamoDB with advanced business intelligence
+Amazon DynamoDB global tables provide a fully managed solution for deploying a multi-region, multi-master database. When you create a global table, you specify the AWS regions where you want the table to be available. DynamoDB global tables are ideal for massively scaled applications, with globally dispersed users.
+A global table is a collection of one or more replica tables, all owned by a single AWS account. With a global table, each replica table stores the same set of data items. DynamoDB does not support partial replication of only some of the items.
+A replica table (or replica, for short) is a single DynamoDB table that functions as a part of a global table. Each replica stores the same set of data items. Any given global table can only have one replica table per region.
+DynamoDB auto scaling uses the AWS Application Auto Scaling service to dynamically adjust provisioned throughput capacity on your behalf, in response to actual traffic patterns. This enables a table or a global secondary index to increase its provisioned read and write capacity to handle sudden increases in traffic, without throttling.
+Multi-AZ NoSQL data store with Cross-Region Replication option.
+Priced on throughput, rather than compute
+DynamoDB supports two kinds of secondary indexes:
+  - Global secondary index – An index with a partition key and sort key that can be different from those on the table.
+  - Local secondary index – An index that has the same partition key as the table, but a different sort key.
+You can search using one of the following methods:
+  - Query operation – find items in a table or a secondary index using only the primary keys attributes.
+  - Scan operation – reads every item in a table or a secondary index and by default will return all items.
+
+
+
+
+2.Hands-on:
+- DynamoDB'de 4 tablo kuracagiz.
+- DynamoDB'deki tablolara yukleme yapmak icin ec2 kuracagiz.
+
+DynamoDB:
+> Tables > Create table > Table name: ProductCatalog 
+  > Partition Key: Id / Number > create table
+> Tables > Create table > Table name: Forum 
+  > Partition Key: Name / String > create table
+> Tables > Create table > Table name: Thread 
+  > Partition Key: ForumName / String 
+  > Sort key: Subject / String > create table
+> Tables > Create table > Table name: Reply 
+  > Partition Key: Id / String
+  > Sort key: ReplyDateTime / String > create table
+  > Costumize Settings > Provisioned
+  > Secondary indexes > Create global index
+  > Partition Key: PostedBy / String
+  > Sort key: Message / String
+  > Attribute projections: all > create index
+
+
+
+EC2:
+> Linux makine kurduk. 22, 80 portu acik.
+
+VSC:
+aws --version      
+  - cli 1 yuklu, cli 2'yi yukleyecegiz.
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  - ilgili dosyayi buraya bu isimle indirir.
+unzip awscliv2.zip
+sudo ./aws/install
+  - cli'i calistiriyoruz.
+aws --version
+aws configure
+aws sts get-caller-identity --query Account --output text
+  - aws account numarasini text olarak verir.
+mkdir dynamodb && cd dynamodb
+  - dynamodb ile islem yapmak icin dynamodb isimli bir klasor altinda calismak gerekebilir.
+wget https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/samples/sampledata.zip
+  - tablolara yuklenecek ornek verileri indiriyoruz.
+unzip sampledata.zip
+  - item olarak tek tek girmek yerine bu verileri kullanacagiz.
+aws dynamodb batch-write-item --request-items file://ProductCatalog.json
+  - Dynamodb table'a ayni isimli veriyi adres gostererek yukluyoruz.
+  - Tablo ismi ile json dosyasi isimleri ayni olmali.
+aws dynamodb batch-write-item --request-items file://Forum.json
+aws dynamodb batch-write-item --request-items file://Thread.json
+aws dynamodb batch-write-item --request-items file://Reply.json
+
+DynamoDB:
+- Tablolarda Scan ile filtreleme:
+> Tables > Forum > Explore Items (vb seklinde tablolara ulasilabilir.)
+> Tables > ProductCatalog > Explore Items > Scan
+  > Filters 
+    > Attribute name: Price > Type: Number > Condition: Greater than > Value: 400
+      - 400'den yuksek Price'li satirlari verir.
+    > Attribute name: ProductCategory > Type: String > Condition: Equal to > Value: Bicycle
+      - Bisiklet olan satirlari verir.
+
+DynamoDB:
+- Manuel olarak tablolara item olusturma/ekleme:
+> Tables > ProductCatalog > Explore Items > Create item
+  > Attribute name: Id / Value: 108 (unik olmali) 
+  > Add new attribute > Attribute name: Price / Value: 600   > Add new attribute > Attribute name: ProductCategory / Value: Bicycle 
+    - istendigi kadar mevcut ve yeni sutun (ozellik eklenebilir)
+
+DynamoDB:
+- Bir satira ek bilgi girme:
+> Tables > ProductCatalog > Explore Items >
+  > Id = 108 satirini sectik (bir satir sectik) 
+  > Add new attribute > Attribute name: Brand / Value: Bmx
+
+
+
+
+
+
+
+
+
+
+

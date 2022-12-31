@@ -1,0 +1,14 @@
+Elasticache:
+
+Elasticache is a managed in-memory caching service.
+The in-memory caching provided by ElastiCache can be used to significantly improve latency and throughput for many read-heavy application workloads or compute-intensive workloads
+Elasticache can launch either Memcache or Redis:
+  - Memcache is a simple key/value store preferred for caching HTML fragments and is arguably faster than Redis. Memcache is not persistent and cannot be used as a data store but employed cache the contents of a DB.
+  - Redis has richer data types and operations. Great for the leaderboard, geospatial data or keeping track of unread notifications. Data is persistent with Redis. Scales by adding shards, not nodes.
+Most frequently identical queries are stored in the cache
+Resources only within the same VPC may connect to Elasticache to ensure low latencies.
+Use cases:
+Web session store: In case with load-balanced web servers, store web session information in Redis so if a server is lost, the session info is not lost and another web server can pick it up
+Database caching: Use Memcached in front of AWS RDS to cache popular queries to offload work from RDS and return results faster to the user
+Leaderboards: Use Redis to provide a live leaderboard for millions of users of your mobile app
+Streaming data dashboards: Provide a landing spot for streaming sensor data on the factory floor, providing live real-time dashboards displays

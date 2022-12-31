@@ -1,0 +1,3 @@
+netsh wlan show profile Regus key=clear
+  - wlan sifresini gosterir security settings altinda.
+  - 'Regus': wlan'in ismi yazilir.

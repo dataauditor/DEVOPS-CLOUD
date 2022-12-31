@@ -1,0 +1,131 @@
+1.Database:
+  -Veri tabanindaki bilgileri okuyabilecegimiz organize tablolardir.
+  -Database'i ilk olustururken parametreleri girebilsek de daha sonra mudahale edemiyoruz. 
+  -Kurulumdan sonra yalniz ram ve cpu degisikligi yapabiliyoruz ama bu durumda da yeni bir RDS olusuyor.
+  -Kurulum esnasinda icinde ilgili SQL kurulu gelir.
+  -RDS acilabilir veya EC2'ya SQL kurup da kullanabiliriz. Ancak tum lisanslama islemleri takibi biz de olur.
+  -RDS, tek basina kullanilmaz. Genel olarak bir aplikasjonla calisir. cogunlukla backend olarak calisir.
+  -Database instance'in start ve stop ozelligi olup 7 gune kadar stop edilebilir. Daha sonra aws yuklemeler icin otomatik olarak onu calistirir. daha sonra yeniden stopa alinabilir.
+  - Makine degisimi ve disk artirimi imkani vardir.
+  - Bir db instance kapasitesine gore birkac db/db schemas calistirabilir. 
+
+
+2.Database cesitleri:
+  - Relational Database-SQL :
+    - MySQL Workbench/CLI ile ulasilabilir.
+    - tablo tabanlidir.
+    - Predefined schema.
+    - Vertically scalable.
+    - anlamli verilere ulasilabilir.
+    - database engines: Oracle, Microsoft SQL Server, MySQL, Amazon Aurora, PostgreSQL, MariaDb
+ 
+    - RDS cesitleri: 
+       - Pricing:
+         - On Demand instance
+         - Reserved instance
+       - Processing power and memory:
+         - Memory optimized Classes
+         - Standard Classes 
+         - Bustable Classes
+       - Storage:
+         - Magnetic Storage: 1000IOPS ve 3TB'la sinirlidir. hacim artirmaya izin vermez.
+         - General purpose (SSD) Storage: 3-3000 IOPS per GB, 20GB-64TB
+         - Provisioned IOPs (SSD) Storage: 1000-80000 IOPS per GB, 20GB-64TB
+
+
+  - Non-Relational Database-NoSQL : 
+    - kisitli sorgulama yapilamaz. tablolar arasi query/join islemi yapilamaz.
+    - dosya tabanli depolanir. So, instead of tables, there are documents called Collections that store data in JSON format.
+    - Dynamic schema.
+    - Horizantally scalable.
+
+      - Non-Relational Database-NoSQL cesitleri:
+        - Amazon Dynamodb 
+ 
+
+3.Amazon RDS:
+  - RDS Components: 
+    - Database Engine: MariaDB, PostgreSQL, Amazon Aurora, Oracle, MySQL, Microsoft SQL Server
+    - DB Instance: Database engine'i calistiran bir instance.
+    - Storage Disk: Db instance'a connect durumda sanal bir diskten olusur.
+  -Kurulum ve kaynaklarin bakimi ve guncellemeleri AWS yapar. Biz sadece tablolarimizla ilgileniriz.
+  - Amazon Aurora: MySQL and PostgreSQL-compatible'dir ve onlarin hiz ve availibility'sini daha yuksek sunar. 5 kat hizli ve 1/10 fiyatinadir digerlerine oranla.
+  - Database engine (MariaDB, PostgreSQL, Amazon Aurora, Oracle, MySQL, Microsoft SQL Server), db instance (db.t2.micro) ve storage disk secilir.
+  - Bu engineler disinda baska engine ihtiyac olursa veya baska gerekcelerle ec2'ya kurulabilir.
+  - Instance Storage:
+    - General Purpose (SSD Storage)
+    - Provisioned IOPs (hizlidir)
+    - Magnetic Storage (tavsiye edilmez)
+  - Amazon RDS Backups:
+    -Automated > Automated Backups > S3 (gorulmuyor)
+    -Manually > Database Snapshots (sonradan atomate edilebilir.) > S3 (gorulmuyor)
+    -35 gune kadar otomatik backup alinabilir. istenen gune/saate/dakikaya donulebilir. 5 dk'da bir log aliyor. Backup'tan restore yaparken yeni bir instance acilir.
+    -instance'i silerseniz automated backuplar silinirken manual backuplar silinmez.
+    -automated backup ilk olusturulurken alinir ve sonra transaction log alir. ayrica automated backup'in backup surelerini belirleyebilirsin. restore yaparsan once ilgili gunu yukler sonra istenen log ile istenen saate ulasilabilir.
+  -RDS Multi-AZ Deployment secilerek hasar durumuna karsi ikinci bir db'yi standbyda tutar. S3'te standby db instance gorulmez.
+    -primary ve standby db instance farkli zonelarda aws tarafindan kurulur.
+  -Read replica ile yogunluk durumunda otomatik olarak RDS Read Replica'ya gecer.  
+    -performans icindir ve RDS Read replica'lar write imkani olmaz yalniz read ozelligi olur.
+    -Primary DB instance'a veri girince RDS Read Replica'ya da yazilir.
+
+4.MySQL Workbench:
+  - Grafiksel bir tool. MySQL db ile calisir.
+  - MySQL Workbench > DB Instance 
+  > MySQL Workbench > + > connection name: umit > Hostname: db'nin Endpoint'i > port:3306 > Username: db'de tanimli isim > password: db'nin passwordu > Test Connection 
+  - https://www.mysql.com/products/workbench/
+  - https://support.microsoft.com/en-us/topic/the-latest-supported-visual-c-downloads-2647da03-1eea-4433-9aff-95f26a218cc0
+  
+5.RDS kurulum:
+  RDS > Create database > Standard database > MySQL > Version (MySQL 8.0.16) > Teaplates: Free Tier (normalde Production secilir) > Burstable classes > General Purpose > 
+
+  - Autoscaling: disk kapasitesi yetmezse belirlenen kapasiteye kadar ek disk hacmi verir AWS. Kullanmadikca ucretsizdir.
+
+  - Multi-AZ deployment: 
+    - Baska bir AZ'de primary db'nin replikasini Standby db instance kurar ama sen goremezsin. 
+    - sistem cokerse standby db devreye girer otomatik olarak.
+    - Automated backups standby db uzerinden alinir.
+    - MZ'den farkli olarak trafigi read eder. Source db ile senkronize calisir.
+
+  - Maintenance:
+    - Enable auto minor version upgrade:
+      - minor versiyon guncellemelerini belirledigimiz gun ve sure ile yapar.
+      - Backup window ile Maintenance window'a tanimlanan zaman araliklarinin cakismamasi gerekir.
+
+6.Read Replicas:
+  - Replica'nin yalnizca read ozelligi olur write ozelligi kapalidir.
+  - Sistemi hizlandirir. Genelde okuma islevi web serverda ihtiyac olunur.
+  - Ayni veya farkli regionlarda olusturulabilir.
+
+7.MySQL 8.0.16
+  -8: major surum
+  -0: minor surum
+  -16:patch
+
+8.Backup Alma:
+  - Enable ile otomatik alir. 
+  - retention period ile saklama suresini belirleriz.
+  - backup window: backup alma periyodunu ve saatini-alma suresini (duration) belirleriz.
+  - Automated backups ve snapshots S3'te depolanir.
+  - Backing up:
+    - Automated Backup: Backup enable edilirse belirlenen sure (maks 35 gun) backup alir. Her gun yeni bir backup alip ilk backupi siler. Uzerine 5dk'da bir transaction loglari da alir. Rds silinince automated backuplar da silinir.
+    - Database Snapshot: Manuel alinir. Silmedikce saklanir.
+
+9.Restore:
+  - Point in time recovery: back up'i geri yukledikten sonra uzerine istenen saat-dk-sn dilimine kadar olan transaction loglarin ilave edilmesidir.
+  - Recovery: backup'in geri yuklenmesidir.
+
+10.RDS'e MySQL Workbench ile ulasma:
+  - Baska bir instance'a Workbench yuklenir.
+  > db (AWS Consol) > connectivity & security > Endpoint (kopyalanir)
+  > MySQL WorkBench > + > hostname: Endpoint/user: db username/password:db password > Test Connection
+
+11.MySQL Workbench:
+  - Tablo olusturma:
+    - Tables RC > Create table > Tablo ismi, sutun isimleri ve en az bir sutunda Primary key secilir. NN: not null > simsek/apply
+  - Tabloya veri girme:
+    >INSERT INTO Personel_Info
+     (ID_number,Name,Surname,Gender)
+     VALUES
+     ('007','James','Bond','Male');
+  - Sorgulama:
+    >SELECT * FROM awsdevopsteam.Personel_Info;

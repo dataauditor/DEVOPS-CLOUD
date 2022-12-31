@@ -1,0 +1,38 @@
+                         VIM
+
+Gezinme:
+i           : insert mode
+exit        : command mode
+o           : bir satir bosluk yapar. -c
+O           : bir satir bosluk yapar yukarda. -c
+$           : satirin sonuna gider.
+w           : kelime bazinda ileri gider.
+b           : kelime bazinda geri gider.
+gg          : dosyanin basina gider.
+G           : dosyanin sonuna gider.
+ndd         : n adet satir siler. 3dd vb
+ndw         : n adet kelime siler. 5dw
+x           : silme
+:n          : n'inci line'a ilerler.
+u           : son islemi geri alir.
+ctrl + r    : rodo the last undo.
+
+Dosya islemleri:
+:w          : save file
+:q          : exit the editor.
+:q!         : save etmeden kapatma
+:wq         : save and exit
+:w newfile  : yeni bir dosyaya kaydetme (:w file2.txt)
+:recover    : herhangi hata durumunda kurtarma komutu.
+
+Kopyalama ve yapistirma komutlari:
+v           : secer harf bazinda.
+y           : secili metni kopyalar.
+p           : secili metni yapistirir.
+
+Arama ve yerlestirme komutlari:
+/text       : arama
+?text       : arama asagidan yukari.
+:%s/t1/t2/g : t1 yerine t2 texti yazilir tum file'da.
+:%s/t1/t2/gc: t1 yerine t2'yi yazar ama onceden confirm alir.
+

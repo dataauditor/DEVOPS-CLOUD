@@ -1,0 +1,34 @@
+1.Application/Service Bazinda Feil Søking:
+ps -ef | grep java
+  - tum calisan service binary'lerinin PID'lerinin verir.
+lsof | grep 4795
+  - PID'in tum islemlerinin detayli gosterir.
+sudo systemctl list-unit-files 
+  - tum calisan service'leri gosterir.
+
+
+2.Konum Bulma:
+grep -iRl ugur /home    : dosya ve konumlarini gosterir
+
+
+3.Network/Baglanti Hata Arama:
+Baglanti/ariza arama komutlari:
+ping 127.0.0.1    : 1.Loopback adresi ile TCP/IP'nin calistigini gosterir. Aksi halde TCP/IP protocolu yeniden yuklenir.
+ping 172.16.10.2  : 2.Localhostun IP adresini girerek NIC'in calisip calismadigi kontrol edilir.
+ping 172.16.10.1  : 3.Default gateway (router)'e ping atarak local lan ile irtibat kontrol edilir. calismazsa fiziki bir network problemi vardir.
+ping 54.9.234.11  : 4.Remote hostu pingleyerek DNS'in calisip calismadigi, remote ilgili adresin calistigi kontrol edilir.
+ctrl + c          : ping kodunu durdurur.
+ifconfig          : IP address, local IP, mask vb bilgileri verir.
+iwconfig          : wi-fi baglantisi var mi diye sorgular.
+whoami            : user, group vb bilgileri gosterir.
+uname -a          : os hakkinda bilgi veir.
+top               : task manager/system monitor vb bilgiler verir.
+df                : available/unavailable disk space bilgisi verir.
+who               : sisteme kimlerin log oldugunu/aktif oldugunu gosterir.
+w                 : sistemde kim ne yapiyor gosterir.
+id                : mevcut hesabin userid'sini, gruplarini gosterir.
+id user1          : ilgili  hesabin userid'sini, gruplarini gosterir.
+route print       : Tum IP routing table'i gosterir.
+tracert           : ping attiginda ya da nete girdihinde yavaslama varsa guzergahtaki hangi routerda asiri yuklenme vb problemi bulabilriz.
+
+

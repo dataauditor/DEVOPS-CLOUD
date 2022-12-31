@@ -1,0 +1,102 @@
+1.Installing MariaDB Client on Ubuntu Instance and Setting up Database on RDS Instance Remotely:
+- EC2 (security grup olusturma)
+  - Security group olustur (MySQL/Aurora: 3306) 
+- RDS (db olusturma)
+  - Create database > MySQL/8.0.20/Free tier/db.t2.micro/default-No preference > create
+- EC2 (MariaDb-client yuklu Instance olusturma)
+  - 22 portu acik ubuntu yuklu instance olustur.
+    >sudo apt update -y
+    >sudo apt-get install mariadb-client -y
+- MariaDb-client yuklu Instancedan MySQL yuklu RDS DB'ye baglanti:
+  - Visual Studio Code:
+    >SSH baglantisi yap
+    >mysql -h Your RDS Endpoint -u admin -p 
+    >SHOW DATABASES;
+    >USE clarusway;     : database secme
+    >SELECT Host, User, authentication_string FROM user;
+- Tablo olusturup icine veri girme:
+
+CREATE TABLE `offices` (
+  `office_id` int(11) NOT NULL,
+  `address` varchar(50) NOT NULL,
+  `city` varchar(50) NOT NULL,
+  `state` varchar(50) NOT NULL,
+  PRIMARY KEY (`office_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  
+INSERT INTO `offices` VALUES (1,'03 Reinke Trail','Cincinnati','OH');
+INSERT INTO `offices` VALUES (2,'5507 Becker Terrace','New York City','NY');
+INSERT INTO `offices` VALUES (3,'54 Northland Court','Richmond','VA');
+INSERT INTO `offices` VALUES (4,'08 South Crossing','Cincinnati','OH'); 
+
+CREATE TABLE `employees` (
+  `employee_id` int(11) NOT NULL,
+  `first_name` varchar(50) NOT NULL,
+  `last_name` varchar(50) NOT NULL,
+  `job_title` varchar(50) NOT NULL,
+  `salary` int(11) NOT NULL,
+  `reports_to` int(11) DEFAULT NULL,
+  `office_id` int(11) NOT NULL,
+  PRIMARY KEY (`employee_id`),
+  KEY `fk_employees_offices_idx` (`office_id`),
+  CONSTRAINT `fk_employees_offices` FOREIGN KEY (`office_id`) REFERENCES `offices` (`office_id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `employees` VALUES (37270,'Yovonnda','Magrannell','Executive Secretary',63996,NULL,10);
+INSERT INTO `employees` VALUES (33391,'Darcy','Nortunen','Account Executive',62871,37270,1);
+INSERT INTO `employees` VALUES (37851,'Sayer','Matterson','Statistician III',98926,37270,1);
+INSERT INTO `employees` VALUES (40448,'Mindy','Crissil','Staff Scientist',94860,37270,1);
+INSERT INTO `employees` VALUES (56274,'Keriann','Alloisi','VP Marketing',110150,37270,1);
+INSERT INTO `employees` VALUES (63196,'Alaster','Scutchin','Assistant Professor',32179,37270,2);
+INSERT INTO `employees` VALUES (67009,'North','de Clerc','VP Product Management',114257,37270,2);
+INSERT INTO `employees` VALUES (67370,'Elladine','Rising','Social Worker',96767,37270,2);
+INSERT INTO `employees` VALUES (68249,'Nisse','Voysey','Financial Advisor',52832,37270,2);
+INSERT INTO `employees` VALUES (72540,'Guthrey','Iacopetti','Office Assistant I',117690,37270,3);
+INSERT INTO `employees` VALUES (72913,'Kass','Hefferan','Computer Systems Analyst IV',96401,37270,3);
+INSERT INTO `employees` VALUES (75900,'Virge','Goodrum','Information Systems Manager',54578,37270,3);
+INSERT INTO `employees` VALUES (76196,'Mirilla','Janowski','Cost Accountant',119241,37270,3);
+INSERT INTO `employees` VALUES (80529,'Lynde','Aronson','Junior Executive',77182,37270,4);
+INSERT INTO `employees` VALUES (80679,'Mildrid','Sokale','Geologist II',67987,37270,4);
+INSERT INTO `employees` VALUES (84791,'Hazel','Tarbert','General Manager',93760,37270,4);
+INSERT INTO `employees` VALUES (95213,'Cole','Kesterton','Pharmacist',86119,37270,4);
+INSERT INTO `employees` VALUES (96513,'Theresa','Binney','Food Chemist',47354,37270,5);
+INSERT INTO `employees` VALUES (98374,'Estrellita','Daleman','Staff Accountant IV',70187,37270,5);
+INSERT INTO `employees` VALUES (115357,'Ivy','Fearey','Structural Engineer',92710,37270,5);
+
+  >SHOW TABLES;
+  >SELECT * FROM offices;
+  >EXIT;                     : clarusway database'inden cikilir.
+
+- RDS (RDS'e Snapshot alma)
+  - Ilgili db sec > Action > Take Snapshot > name > create
+
+- Instance'daki MariaDb-client araciligi ile RDS'ten yanlislikla veri silme:
+  >mysql -h RDS_ENDPOINT -u admin -p
+  >USE clarusway;
+  >DELETE FROM employees WHERE salary > 70000;     : bircok kisi yanlislikla silindi.
+
+- RDS (Restore database from Snapshot)
+  - Snapshot > Restore snapshot > MySQL/22 Port/Burstable/*sifre ve kullanici adi ayni olur otomatik olarak.* > create
+
+- VSC (Restored database'e baglanma)
+  >mysql -h [***restored-from-man-snapshot RDS endpoint] -u admin -p
+  >USE clarusway;
+  >SHOW TABLES;
+  >SELECT * FROM employees;    : tum verilerin snapshottan restore ettigimiz eksiksiz db'de oldugunu gorduk. 
+  >EXIT;
+
+- RDS (Restore database from a Point in Time)
+  - Ilgili db'yi sec > Actions > Restore to point in time > MySQL/22 Port/Burstable/*sifre ve kullanici adi ayni olur otomatik olarak.* > create.
+
+- VSC (Point in Time ile restored edilen db'ye baglanma)
+  >mysql -h [DNS Name of point in time recovery RDS Instance] -u admin -p clarusway
+  >SELECT * FROM employees ORDER BY salary ASC;
+
+- VSC (Dumping and Migrating Database)
+  >mysqldump -h [restored-from-point-in-time-RDS endpoint] -u admin -p clarusway > backup.sql   : Point in Time'dan dosya cekme. Daha detayli zaman araligi secilebilir.
+  >mysql -h [***restored-from-man-snapshot RDS endpoint] -u admin -p clarusway > backup.sql     : Snapshottan dosya cekme. ikisi de ayni ise yarar.
+  >mysql -h [RDS-mysql endpoint] -u admin -p clarusway < backup.sql
+  >mysql -h [RDS-mysql endpoint] -u admin -p; 
+  >SHOW DATABASES;
+  >USE clarusway;
+  >SELECT * FROM employees;       : tum veriler eski db'ye gelmis.

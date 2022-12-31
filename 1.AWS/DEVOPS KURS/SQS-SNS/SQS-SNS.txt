@@ -1,0 +1,123 @@
+1.SQS (Simple Queue Service):
+- AWS tarafindan fully managed.
+- Bolumleri:
+  - Producer: client veya application gibi ureten taraf.
+  - Consumer: mesaji isleyen taraf.
+  - Queue: mesajlari ceker islem yapar siler. iki cesittir. Producerdan ceker consumere gonderir.
+- Webserver ile backendserver arasinda problem olmasina karsin (ornegin backendserverlar hata verirse) SQS kurulur. 
+- SQS mesajlari tutar islenene kadar sonrasinda siler.
+- Producerlar (owner, baska accountlar ve IAM role ile baska servisler) tarafindan uretilen mesajlar gonderilir.
+- Iki cesittir:
+  - Standard Queue:
+    - Unlimited per sec
+    - Mesaj birden fazla islem gorebiliyor. Mesaj duplicate olabilir.
+    - Sira onemsizdir.
+    - islem goren mesaj SQS'ten silinir.
+  - FIFO MESSAGE QUEUE:
+    - 300 messages per sec gonderilebilir.
+    - Mesajlar tek bir islem gorur. ilk giren ilk cikar sirali bir sekilde. 
+    - islem goren mesaj SQS'ten silinir.
+- Producerdan cekilen mesajlar hata olursa 5 kere denenir yine de islenemezse dead li... ye gondrilerek hata kodu uretilir.
+- mesajlar icinde 14 gune kadar durabiliyor. Consumerlar tarafindan cekilene kadar mesajlari saklar.
+- FIFO biraz daha pahali. 
+- 64kb bir request kabul edilir. Maksimum 256kb'lik request gonderilir ve 4 mesaj olarak ucretlendirilir.
+- Ilgili programla 2GB'a kadar mesaji artirabiliriz.
+- Tipini sectikten sonra degistiremiyoruz.
+- SQS'de konfigurasyon:
+  - Dead letter queue: consumer cektigi mesaji isleyemezse 5 kere sonunda troubleshooting icin buraya gonderilir.
+  - Visibility timeout: Consumer mesaji islerken (mesaj ayni anda SQS'de) SQS diger consumerlardan gizler. Ilgili consumer mesaji isleyebilirse SQS'ten silinir.
+  - Message RetentionPeriod: Mesajlar consumerler yavas calisirsa diye mesajlari 14 gune kadar saklama suresi.
+  - Delivery delay: Producer tarafindan mesajlar yavas geliyor ama consumer cok hizli cekiliyor ve isleniyorsa Consumer'a ilgili mesaji gostermez belli sure cektirmez.
+  - Receive message wait time: Her mesaj isteme ucretli. bu yuzden producerlardan az mesaj geliyorsa mesaj yok (bos mesaj) almamak icin 20sn'yeye kadar bekleme sure verilir.
+
+
+1.a.Hands on:
+
+SQS olusturma:
+> create queue > standard > name > default > method: basic > owner sectik (default) > create queue
+
+Mesaj gonderme:
+> send and receive messages > bir mesaj yaz > send message > 
+
+Mesaj alma:
+- poll for messages: tum gonderilen mesajlari ceker.
+> poll for messages > Messages (asagida olusan yeni mesaj)mesaj gelir > body (gonderilen mesaji goruruz.)
+> mesaji sec > delete
+
+Lambda:
+- Consumer yerine gorev icra eder. Ornegin S3'e gelen mesajlara islem yapar S3 yerine.
+- Buradaki ornekte gelen mesajlari log kayitlarini olustur.
+- Hazirladigimiz SQS trigger olur. ama trigger olarak baglamamiz gerekir.
+- Triggere baglamadan yapilan testte fonksiyonun icindeki yazi cloudwatch'a gonderilir.
+- Consumer gibi mesaji SQS'ten ceker isler ve CloudWatch'ta loga yazar.
+- Consumer olarak lambda kullanilirsa SQS'de gonderilen mesajlar asagida gorulmez.
+> functions > create > Use a blueprint > sqs diye ara > sqs-poller 
+  > configure > name > create a new role from AWS policy templates > rle name: 
+  > policy templates: SQS poller permissions (hazir secili) > SQS queue: (hazirladigin SQS'i sec) 
+  > enable trigger > create function
+> Test > name > create > test 
+> Triggers > SQS tikle > Enable > close
+
+CloudWatch:
+- lambdayi tiklarsak test mesaji gelir.
+- Trigger olarak SQS'i enable ettikten sonra SQS ile send mesaj dersek buraya yazilir lambda ile.
+> log groups > /aws/lambda/sqs-poller > log kayitlarini goruruz.
+
+
+2.SNS (Simple Notification Service):
+- Sistemde olusabilecek instance arizalari/kapanmasi gibi durumlari mesajla takip edebiliriz.
+- Farkli programlara SNS topicleri (mesajlari) gonderebiliriz.
+- Bir topic olusturup ayni anda bircok kullaniciya gonderebiliriz ve ayni anda birden fazla program/servise gonderebiliriz.
+- SNS Topic Fanout: Farkli protokollere gondermesine topic'i denir.
+- Notification serviste gondericileri subscribe yapmaliyiz.
+
+2.a.Hands on:
+
+SNS:
+> topics > create topic > standard > name > default > create topic
+> create subscription > Topic ARN: olusturdugun topic'i sec > email > email-adresini yaz > create subscription
+
+Mail:
+> confirm maili onayla
+
+SNS:
+> Topics > Ilgili topic > publish message > subject > Identical > mesaj yaz > publish message
+
+Mail:
+> ilgili mesaj gelmis
+
+
+2.b.Hands on:
+- Bir telefona/maile ... mesaj gonderecek sekilde SNS ayarlanir.
+- CloudWatch - rules ile belirlenen servisteki/ec2 takibi istenen olaylar yukarda ayarli SNS topic ile gonderilir.
+- Instance'larin acilma kapanma ve hata durumu takip edilir.
+
+EC2:
+> Instance olustur > Instance stage degistir.
+
+CloudWatch:
+> Rules > create rule > event pattern > service name: ec2 / event type: ec2 instance state-change notification 
+  > any state > add target > Target: sns topic > topic: olusturulan topic (onceki hands on) > configure > name > create rule
+
+Mail:
+> Her instance start-stop-terminate durumunda mesaj alirim.
+
+
+2.c.Hands on:
+- SMS ile ilgili cloudwatch mesajlarini gonderme.
+- Topics: mesaj konfigurasyonu ve mesaj atma buradan olur.
+- Subscription: onay islemleri yapilir.
+- Confirmation ile tanimlanan numaraya mesaj gonderilir.
+- Cloudwatch'u tanimlasaydik topic arn olarak ariza billing vb mesajlari da alabilirdik.
+
+SNS:
+> Topics > create topic > standard > name > default > create topic
+> create subscription > Topic ARN: SNS (ilgili cloudwatch veya SNS secilir) > Protocol: SMS > Endpoint: tel numarasi eklenir. > create subscription
+
+Telefon:
+> gelen mesajdaki kod nete yazilir.
+
+SNS:
+> Topics > publish message > identical payload for all delivery > mesaji yaz > publish message
+
+

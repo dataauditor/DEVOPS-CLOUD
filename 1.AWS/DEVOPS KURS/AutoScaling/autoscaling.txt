@@ -1,0 +1,74 @@
+1.scale out: yeni makine acma
+  scale in: makine kapatma
+
+2.Launch Template veya launch Configurations ile yani makineler tanimlanir.
+  Fault tolerance
+  Load balancer ile kullanilabilir.
+
+3.Auto scalingin calisma sureci:
+  Auto scaling > Launch template/launc configuration > create auto scaling groups > scaling option
+
+!!!
+4.Auto scalingteki policy bekleme suresi health check bekleme suresinden fazla olmaliki duruma gore yeni makinein durumu degerlendirilsin. bu kapsamda her policy bekleme suresinde ancak belirlenen add ve remove adetleri kadar islem yapar. Dilerse tum cihazlar %100'e ulassin.
+
+!!!!!
+5.Auto Scaling with ALB Olusturma:
+- Launch template'te VPC secilmez.
+- ASG ve ALB'yi ayni VPC ve Subnetlerde calistir.
+- ASG olusturma:
+  > SG olusturulur: 
+    > ugur-sg (22, 80, 443)
+  > Launch Template: 
+    > name: ugur-lt
+    > AMI > Recently launched > Istenen AMI yazilir 
+    > Instance type: t2.micro 
+    > Key pair name: ugur
+    > Subnet: "secilmez"
+    > Security Group: ugur-sg
+    > Advanced details > User data
+---------------------------------------------------------
+#!/bin/bash
+yum update -y
+yum install -y httpd
+echo "Hi" > /var/www/html/index.html
+chmod -R 777 /var/www/html/index.html
+systemctl start httpd
+systemctl enable httpd
+---------------------------------------------------------
+    > create template
+  > Target groups: 
+    > Chose a target type: Instances
+    > Target group name: ugur-tg
+    > Protocol: HTTP
+    > Protocol Version: HTTP1
+    > Health checks: HTTP > Health check path: /
+    > Advanced health check
+    > create
+  > Load balancer:
+    > Application load balancer 
+    > name: ugur-alb
+    > internet-facing > IPv4
+    > VPC: default > Mappings: us-east-1, us-east-2 (en az 2 subnet)
+    > Security group: ugur-sg
+    > Listeners and routing > Listener HTTP > Forward to: ugur-tg
+    > Listener HTTPS (certifika almalisin) > Forward to: ugur-tg
+    > create alb
+  > Auto scaling:
+    > name: ugur-asg
+    > launch template: ugur-lt
+    > VPC: default > Subnet: us-east-1, us-east-2 (en az 2 subnet)
+    > Load balancing: Attach to an existing load balancer
+    > Choose from your load balancer target groups: ugur-tg
+    > ELB
+    > Enable group metrics collection within CloudWatch
+    > Group size: Desired: 2, Minimum capacity: 1, Maximum capacity: 3
+    > Scaling policy: Target tracking scaling policy
+    > Add notification > create
+  > Load Balancer:
+    > Listeners > HTTP > Edit > Remove > Forward: HTTPS - ugur-tg
+    > Description: DNS name kopyala ve Browsere yapistirarak baglan.
+  > Cloudwatch > In alarm > create alarm > select metric > auto scaling > 
+    > Group metrics > ugur-asg > GroupMaxSize 
+    > Select metric > Grater, Anomaly... 
+    > Add notification
+ 

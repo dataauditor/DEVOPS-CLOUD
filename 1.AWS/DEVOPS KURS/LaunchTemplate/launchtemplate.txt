@@ -1,0 +1,66 @@
+1.Otomasyon/ayni anda bircok cihaza kumanda etmek:
+  -Launch template ile calisilir.
+  -launch template bir kaliptir.
+  -launch template'de degisiklikler yaparak farkli versiyonlar   ini da olusturabiliriz.
+  -launch template'i olustururken baska bir launch template'i    kaynak olarak kullanabiliriz.
+  -template basina 1000 versiyon olusturulabilir.
+  -
+2.nginx calistirma:
+  >sudo yum update -y
+  >sudo amazon-linux-extras install nginx1.12
+  >sudo systemctl start nginx
+  >cd /usr/share/nginx/html
+  >sudo chmod -R 777 /usr/share/nginx/html
+  >sudo rm index.html
+  >wget https://raw.githubusercontent.com/awsdevopsteam/ngniex/master/index.html
+  >wget https://raw.githubusercontent.com/awsdevopsteam/ngniex/master/ryu.jpg
+  >fotolarin raw hali cikmaz index dosyasini sonunu degistirerek ilgili adrese ulasiriz.
+  >sudo systemctl restart nginx
+  >sudo systemctl enable nginx
+  -ec2'nun public ip'si ile browserdan girilir.
+
+3.Userdata ile nginx valistirma:
+  -ec2 kurulurken userdataya:
+   #! /bin/bash
+
+   yum update -y
+   amazon-linux-extras install nginx1.12
+   systemctl start nginx
+   cd /usr/share/nginx/html
+   chmod -R 777 /usr/share/nginx/html
+   rm index.html
+   wget https://raw.githubusercontent.com/awsdevopsteam/ngniex/master/index.html
+   wget https://raw.githubusercontent.com/awsdevopsteam/ngniex/master/ryu.jpg
+   systemctl restart nginx
+   systemctl enable nginx
+
+   girilir.
+   -ec2'nun public adresi ile browserdan baglanilir.
+
+ 4.Launch template:
+   -ec2'dan Launch templates
+   createte launch templates
+   isim girilir
+   Template description: origin/versiyon girilir.
+   tag girilir.
+   sifirdan temp, samdan veya calisan bir templateden template olusturulabilir.
+   calisacagi cihaz secilir: AMI
+   t2, pem, sec-grup secilir.
+   network settins default kalir.
+   sec groups: 22, 80 portu acan sg secilir.
+   resource tags: 
+     key: Name, 
+     Value: Webserver-Origin
+     Resource type: Instance
+
+   -ec2'dan Launch templates
+   Origin template > Actions > Launch instance from template
+
+   -Instances > ilgili instance > public IP address
+
+   -browsere adres yapistirilarak ulasilir.
+
+   5.Versiton olusturma:
+   -ec2'den Launch templates
+   -origin template secilir
+   -

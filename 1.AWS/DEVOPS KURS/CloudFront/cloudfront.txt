@@ -1,0 +1,34 @@
+1.Genel:
+- AWS'nin Edge bolgeleri gibi cacheleme imkani veren bir servistir.
+- CloudFront is CDN (Content Delivery Network) of AWS.
+- CDN servisi AZ ve Regionlardan bagimsiz olarak verinin daha hizli ulasimi icin edge location ve regional edge servicelerde calisir.
+- Global bir servistir. 
+- 230+ tane PoP (Points of Presence) vardir.
+  - 218+ Edge locations
+  - 13 Regional Edge Caches. (Regionla Edge Location arasinda bulunur.) Regional Edge Caches are located between origin web servers and global edge locations and have a larger cache.
+- Browsere girilince once CloudFrontCache'e gelir. Icerik varsa cvp verir yoksa originden cvp ister ve cvbi gonderir. ilgili bilgiyi kendisinde de cache eder.
+- Dinamik, Statik veri ayrica akiskan veri de caclenebilir.
+- AWS'den aldigimiz serifilari heryere baglatmiyor: CloudFront'a, Load Balanser'a baglayabilirsiniz, ama instance'a baglanmak icin AWS izin vermiyor. Instance vb cihazlar icin sertifika almak icin 3.parti programlar kullanilir.
+- Function associations edge locationlarda, Lambda fuctionlar ise regional edge cache'de calistiriliyor.
+- Origin and Origin Groups: Origin olarak birden kaynak grup olarak secilebilir ama sadece GET, HEAD ve OPTIONS HTTP methodlari calisir.
+- Error Pages: Originde hata olmasina karsi Error sayfasi da tanimlanabilir. 
+- Restrictions: Bolgesel/ulkesel olarak Route53 gibi white list veya black list olusturarak kisitlama uygulayabilirsiniz.
+- Invalidations: Halihazirda yayimlanan ve cache'deki veriyi degistirmek icin kullanilir.
+
+
+2.Hands on:
+CloudFront:
+- domain adresi ve https sertifikasi alinmis S3 bucket kurup buna CloudFront ekleyip, disardan bir instance ile client olarak girilecek:
+Domainname Alma:
+> Console > acm > sertifikat manager > ... > request a public sertifikat > Domain name: *.umitdevopsaws.com > DNS validation > confirm > create a record in Route 53 > create > ucgene basinca 
+Root 53 ile 
+S3 Bucket Kurulumu:
+> izinleri verilmis ve domainname ile ayni isimli bir bucket kurulur. 
+CloudFront Kurma:
+> create CF distribution > origin domain: bucketin static webhosting adresini kopyalariz (static web hosting yaptigimiz icin. www. oncesi silinir.) / Protocol: Match viever /  Origin path: ayri bir klasor altinda degilse ilk tanimlanan dosya altinda bos kalsin yoksa "/dosyaname" /  name: otomatik > compress objects automatically: yes / Viewer protocol policy: Redirect HTTP to HTTPS / Allowed HTTP methods: GET, HEAD (static oldugu icin) /Restrict viewer access: no / Caching Optimized /  use all edge locations / AWS WAF web ACL: kullanmadik(web server firewall) > alternate domain name: www.umitdevopsaws.com > Custom SSL certifikate: sec /Enabled: bos birak > create
+
+Route53:
+
+
+Invalidation:
+- Tum edge locatuonlarda degisim saglar.

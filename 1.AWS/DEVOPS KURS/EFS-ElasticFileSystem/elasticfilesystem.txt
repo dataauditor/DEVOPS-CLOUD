@@ -1,0 +1,185 @@
+1.Elastic File System (EFS):
+- Depolama servisidir.
+- Serverless ve set ve forget file systemdir.
+- Cloud servislerle ve premises ile kullanilabilir.
+- Storage capacity, add ve remove ile otomatik olarak degisir.
+- Simple, scalable, Fully managed Elastic NFS file system. Amazon kontrol eder. Biz sadece baslangic configurasyonunu yapariz.
+- EBS, block storage; S3, object storage; EFS ise file storagedir.
+- Block storage'de ornegin bir resim 10 parcaya bolunerek kaydediliyor. istenince toplanip veriliyor.
+- Object, verinin kendisi, metadatasi ve id'sinden olusur. S3'ten veriye id ile ulasilir.
+- EFS hiyerarsik yapidadir.
+- EFS ile S3 olceklenebilir (Scalable). Add ile artan remove ile azalan kapasitesi vardir. 
+- Minumum ucreti yoktur. Baslangicta bir kapasite belirlenmez. Kullandigin kadar odersin. EBS'de ise actigin kapasite kadar odersin.
+- Veri tipine gore konfigurasyonu degisir. 
+- Ucuncu parti database icin EBS kullanilir.
+- EBS'ler tek instance ile ayni AZ'de calisabiliyor iken EFS, farkli AZ'lerdeki birden fazla instance ile calisabiliyor.
+- EFS yalniz linux tabanli sistemlerle calisiyor.
+- Peering ile baska VPC'lerden de ulasilabilir.
+- On premisten VPN veya direct .. ile ulasilabilir EFS'e.
+- Ilgili AZ'de mount target olursa EFS'ye ulasilabiliyor.  Her subnette olmasina gerek yok.
+- VPC'de en az bir AZ'de mount target olursa da calisir ama verim duser. Tum AZ'lere birer tane kurulmasi talep edilir.
+- Storage Classes: Kullanim durumlarina gore kendi arasinda gecisler olur.
+  - Standard
+    - EFS Standard 
+    - Standard Infrequent Access (Standard-IA))
+  - One Zone
+    - EFS one zone
+    - EFS one zone-IA
+- One Zone: tek AZ'de olur.
+- Pahalilik: EFS > EBS > S3 
+- Hiz: EBS, EFS > S3
+- Storage capacity: S3, EFS = sinirsiz ; EBS= 16TB
+- EC2 mount: S3 : no
+             EBS: single
+             EFS: multiple
+
+- Ucret hem kapasite hem de infrequent olup olmamasina gore degisiyor. Bununla birlikte infrequent access request basina ucret alinir.
+- EBS, NFS file system protokol sistemini kullanir.
+- EBS olusturulurken IP address yerine sg vererek 
+- Monitoring ile kac client EFS'ye bagli, throughput, I/O gorulebilir.
+
+
+2.Hands on:
+- EFS kurulur. EFS'den once kurulan instance'lara VSC'den script yazarak mount pointleri sabitlerken, sonra kurulan instancelara kurulum esnasinda file systemi seceriz.
+
+EC2:
+> 2 Instance kur. 22 portu acik kalsin.
+> EFS icin TCL: NFS olan ve EC2'yu source olarak gorecek sekilde sg olustur. 
+
+EFS:
+> name > VPC > regional > customize > automatic bacups: uncheck > Lifecycle management: none (infrequent olmayi engeller) 
+  > general purpose > bursting > enable encryption > Tum AZ'lere security group sec (NFS acik olan sg'yi sec) 
+  > File system policy: default > create
+- Access point olusturma:
+> Access points > Create access point > File system: olusan EFS > Root directory path: / > create access point
+- Baglanti noktasinin kodunu alma:
+> Ilgili Access point > Attach > sudo mount -t efs -o tls,accesspoint=fsap-0dc4d84b6cb6aca58 fs-0e62a9877cfb16e79:/ efs  (kopyala)
+
+VSC:
+- EFS calisma programi indirip, mounting point kurulur instance basina.
+- EFS'de ilgili EFS secilerek attach yazinca "Using the EFS mount helper:" altindaki komut yazilir.
+- 
+>sudo yum update -y
+>sudo yum install -y amazon-efs-utils
+>sudo mkdir efs
+>sudo mount -t efs -o tls fs-4ca3fbf8:/ efs 
+>cd efs
+>sudo vim deneme.tx    
+-----------------------------------
+burasi 1. ec2
+-----------------------------------
+
+VSC:
+>sudo yum update -y
+>sudo yum install -y amazon-efs-utils
+>sudo mkdir efs
+>sudo mount -t efs -o tls fs-4ca3fbf8:/ efs 
+>cd efs
+>ls
+  - deneme.tx gorulur.
+>sudo vim deneme.tx  
+-----------------------------------
+burasi 1. ec2
+burasi 2. ec2
+-----------------------------------
+  - 1. instance'ye gidince orada her iki satir da gorulur.
+
+
+EC2:
+- Acilis esnasinda file system tanimli instancelar reboot edilse de EFS'ye ulasabilir.
+> Instance kur. > file system: add file system (ilgili EFS'yi sec) > EFS'de secilen sg'yi sec
+>cd /mnt/efs/fs1/
+>df -h
+
+
+EC2:
+- EFS'den once kurulan instancelar icin her reboot'da EFS'nin dusmemesi icin sistem dosyasina eklenir.
+>cd ets
+>vim fstab
+>EBS'deki gibi ilgili dosyaya eklenir.
+
+
+
+
+
+
+fs-0e62a9877cfb16e79.efs.us-east-1.amazonaws.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
