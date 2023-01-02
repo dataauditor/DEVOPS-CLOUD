@@ -1,0 +1,144 @@
+1.Terraform Cloud Hesabi Olusturma:
+> hesap olustur > company : bspoke11 > workspace: bspoke > CLI-dreiven workflow (github kullanilmayacak)
+  > Workspace Name: bspoke > create workspace 
+  > example code > vim backend.tf 
+----------------------------------------------------------------------------
+terraform {
+  cloud {
+    organization = "bspoke11"
+
+    workspaces {
+      name = "bspoke"
+    }
+  }
+}
+----------------------------------------------------------------------------
+    - localde calisma klasoru altinda file icine kaydet. 
+  > terraform login (VSC'de) > yes > VSC'de cikan linke tikla > Description: bspoke-login
+  > create API token > olusan token'i kopyalayip VSC'ye yapistir.
+  > terraform cloud'a giris yaptin.
+  > bsoke11 > Workspaces > bspoke > Settings > General > Execution mode: Local > Save
+
+
+
+2.Terraform ile GitHub'i Eslestirme:
+
+2.a.GitHub repo kurma:
+terraform-cicd/
+git clone https://github.com/derekops/terraform-aws-networking.git
+cd terraform-aws-networking/
+rm -rf .git
+git init
+git config --global user.email byildiz2019@gmail.com
+git config --global user.name dataauditor
+git add .
+git commit -m "initial"
+git branch -M main
+git remote add origin https://github.com/dataauditor/terraform-aws-networking.git
+git push -u origin main
+
+
+2.b.Terraform hesabina Github accountunu tanitma:
+> bspoke11 (company) > Settings > Providers > Add a VCS Provider > GitHub.com (custom) > 
+  > Application name: Terraform Cloud (bspoke11) (copy) > 1. On GitHub, register a new OAuth Application. > 
+  > Application name: Terraform Cloud (bspoke11) (GitHub'a kopyaladik) > Homepage URL ve Authorization callback URL de kopyalanir.
+  > register application (Github'ta) > Client ID: e758481f16856e872829 (kopyala)
+  > Client ID: e758481f16856e872829 (Terraform'a kopyala)  
+  > Generate a new client secret (GitHub'ta) > Client Secret: 1161420064a59273386942d9ce8972077f33e98e (Terraform'da yapistir.)
+  > connect and continue (terraform) > Authorize dataauditor > Skip and finish (Private SSH key kullanmadik)
+
+
+2.c.Github'la Calisacak Workspace olusturma:
+> bspoke11 > Workspaces > New workspace > Version control workflow > GitHub (dataauditor) 
+  > dataauditor/terraform-aws-networking > Advanced options > VCS branch (trigger icin belli bir branch secilebilir)
+  > Create workspace 
+  > Variables (AWS credentialslari tanimliyoruz)
+
+AWS-IAM:
+> Users > kepteyn (deploy yetkisi olan bir hesap) > Security Credentials > create access key > 
+  > Download .csv file 
+
+VSC:
+> terraform-aws-networking > token:
+----------------------------------------------------------------------
+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
+
+AWS_ACCESS_KEY_ID = AKIASDQ3JRUWUJSF6F55
+AWS_SECRET_ACCESS_KEY = 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
+----------------------------------------------------------------------
+  - yukardaki token, asagidaki degiskenlerimiz.
+
+Terraform:
+  > Variables (yukardan devam ediyoruz) > Add variable 
+  > Environment variable > Key: AWS_ACCESS_KEY_ID / Value: AKIASDQ3JRUWUJSF6F55 / Sensitive > Save variable > Add variable
+  > Environment variable > Key: AWS_SECRET_ACCESS_KEY / Value: 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 / Sensitive > Save variable > Add variable
+  > Terraform variable > Key: aws_region / Value: us-east-1 (variable.tf'de tanimli olmali. .tfvars veya variable.tf dosyasi ile tanitabilirdik) (Liste seklinde verirsek HCL de secilir.) > Save variable
+  > Overview (kontrol ettik)
+
+Terraform:
+  > Actions > Start new plan > plan (most commen) (terraform plani gosterir.)
+  > Confirm & Apply (terraform apply) 
+
+VSC:
+- trigger olarak GitHub kullaniyoruz.
+variable.tf'te subnet cidr'ini degistirdik
+git add .
+got commit -m "subnet degisikligi"
+git push
+
+Terraform:
+> refresh > Latest run > See details > Confirm & Apply
+
+
+
+3.VSC'deki Mevcut Terraform Module ile Terraform Cloud Module olusturarak Github ile Kullanma:
+- Her module icin ayri bir GitHub repo ve VSC'de ayri bir module olusturulur.
+- Bu projede mevcut projeyi terraform-aws-networking bir modul olarak tanimlayacagiz.
+- Yeni bir repo olusturup VSC'de de yeni bir module olusturarak 2. bir module olusturacagiz.
+- Soz konusu Module Github'ta bir repo ile eslesmis durumda.
+
+VSC:
+- Module kurarken reponun tagli olmasi gerek. 
+git tag -a v1.0.0 -m "first version"
+git tag
+  - v1.0.0  seklinde verir.
+git push origin v1.0.0
+
+Terraform:
+- Module olusturup surekli kullanmaya calisacagiz.
+- Module Resource'larini, input ve outputlarini gosterir.
+- Module inputs olarak .tfvars disindaki degiskenleri value'leri ile kaydeder. .tfvars dosyasinin yalniz keyini kaydeder.
+> bspoke11 > Registry > Modules > Publish a module > GitHub dataauditor > Wi8IjVhrNm31pzBRVeWIDWhjB4qCdcfJvFgtsZrt
+  > Publish module > ok (dosyayi module olarak tanittik)
+
+
+
+4.Yeni terraform module/Repo/Terraform Cloud Module:
+Github:
+> Repositories > New > terraform-aws-compute > private > create repository
+
+VSC:
+- Yeni module olusturacagiz.   
+cd ~/terraform-cicd
+git clone https://github.com/derekops/terraform-aws-compute.git
+cd terraform-aws-compute/
+rm -rf .git
+git init
+git add .
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/dataauditor/terraform-aws-compute.git
+git tag -a v1.0.0 -m "initial compute tag"
+git push origin v1.0.0
+
+Terraform:
+> bspoke11 > Workspaces > New workspace > Version control workflow > Github dataauditor 
+  > create workspace
+> bspoke11 > Registry > Modules > Publish > module > GitHub dataauditor > dataauditor/terraform-aws-compute > 
+  > Publish module
+
+
+5.Module ile Resource Olusturma:
+> bspoke11 > Registry > Modules > Design configuration > networking + add / compute + add (iki module'u de ekledik.) (farkli versiyon secilebilir)
+  > next > networking (secili) > Configure Variables > access_ip: "0.0.0.0/0" / aws_region: "us-east-1" / digerleri optional 
+  > compute (sectik) > 

@@ -1,0 +1,68 @@
+Hands-on: Birden fazla ec2'ya K3s cluster yukleyip icine Nginx deploy edip Mysql ile baglama:
+
+EC2:
+- K3s kurup mysql db ile bilgileri verilir.
+- Terraformda "templatefile Function" kullanilir.
+t3.medium > user_data.tpl
+------------------------------------------------------------------------------------------------------
+#!/bin/bash
+sudo hostnamectl set-hostname ${nodename} &&
+curl -sfL https://get.k3s.io | sh -s - server \
+  --datastore-endpoint="mysql://${dbuser}:${dbpass}@tcp(${db_endpoint})/${dbname}" \
+  --write-kubeconfig-mode 644 \
+------------------------------------------------------------------------------------------------------
+  - dbuser, dbpass, db_endpoint, dbname bilgileri girilir.
+
+VSC:
+- Nginx yuklenecek.
+sudo ssh -i ~/.ssh/rsa-ssh-keyim ubuntu@54.67.124.143
+  - cluster'a baglanilir.
+kubectl get nodes
+  - 2 node var.
+vim deployment.yaml
+------------------------------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      # manage pods with the label app: nginx
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+          hostPort: 8000
+------------------------------------------------------------------------------------------------------
+kubectl apply -f deployment.yaml 
+kubectl get pods
+  - 2 pode var.
+curl localhost:8000
+  - nginx'in icerigini gosterir.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

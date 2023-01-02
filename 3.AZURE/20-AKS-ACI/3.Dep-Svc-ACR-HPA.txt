@@ -1,0 +1,189 @@
+1.Portal'dan AKS olusturulur.
+
+
+2.az cli yuklenir.
+
+
+3.az cli configure edilir belki profile ile.
+
+
+4.Localden AKS ile Baglanti Kurulmasi:
+kubectl config get-contexts
+  - Yalniz localde mevctsa gosterir.
+kubectl config get-clusters
+az login
+  - az hesabina baglanilir.
+az get-credentials --resource-group RGa --name myaks
+  - clusterin ismi ile verileri cekilir.
+kubectl config get-contexts
+  - Localdeki cluster ve aks'yi gosterir.
+kubectl config get-clusters
+  - 3 adet cluster var. Biri aks.
+kubectl get pods
+  - gostermez cunki daha yuklenmedi.
+
+
+5.Localden AKS'ye Application Deployment:
+vim myfile.yaml
+------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-vote-back
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: azure-vote-back
+  template:
+    metadata:
+      labels:
+        app: azure-vote-back
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+      - name: azure-vote-back
+        image: mcr.microsoft.com/oss/bitnami/redis:6.0.8
+        env:
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "yes"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 6379
+          name: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: azure-vote-back
+spec:
+  ports:
+  - port: 6379
+  selector:
+    app: azure-vote-back
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-vote-front
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: azure-vote-front
+  template:
+    metadata:
+      labels:
+        app: azure-vote-front
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+      - name: azure-vote-front
+        image: mcr.microsoft.com/azuredocs/azure-vote-front:v1
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+        env:
+        - name: REDIS
+          value: "azure-vote-back"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: azure-vote-front
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+  selector:
+    app: azure-vote-front
+------------------------------------------------------------------
+
+kubectl apply -f myfile.yaml
+  - Iki deployment ve iki services olustu.
+kubectl get pods
+  - iki deployment icin 1'er pode gosterir.
+kubectl get services
+  - 3 service gosterir.
+
+
+
+6.ACR'ye Image Yukleme:
+az acr build --image azure-vote-front --registry demoaks --file Dockerfile .
+  - Build and publish image to ACR from Dockerfile.
+  - Localde Dockerfile ile image'i yapar sonra ACR'ye gonderir.
+
+Container Registries:
+> demoaks
+  > Repositories
+  > azure-vote-front
+
+
+
+7.Horizontal Pod AutoScaling (HPA):
+https://github.com/labdemo2233/AKS-HPA
+Once deployment ve serviceler deploy edilir sonra HPA deploy edilir.
+Horizontal scaling icin 3 turlu metric kullanilabilir.
+Metrics:
+a.Resource Metrics:
+  * CPU
+  * Memory
+b.Custom Metrics: Biz kendimiz tanimlariz.
+  * Metrics created using Custom resource definition. ex: application specific
+  * Resource metrics in terms of direct values by using a "target.type" of "AverageValue" instead of Utilization.
+c.External Metrics: Disardaki resource verilerine gore scaling.
+  * Requests on Service Bus.
+
+kubectl get nodes
+  - 2 node var.
+
+vim hpa.yaml
+------------------------------------------------------------------
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache-hpa
+spec:
+  maxPeplicas: 5
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/1
+    kind: Deployment
+    name: php-apache
+    targetCPUUtilizationPercentage: 20
+------------------------------------------------------------------
+  - Deployment'te "replicas: 1" tanimladik. autoscaling de ise min max tanimliyoruz.
+  - Deployment'in ismi tanimlanarak HPA olusturulur.
+
+kubectl apply -f php-apache.yaml
+  - Deployment once yuklenir. Bu ornegin deploymentinin yaml file'i burada yok.
+kubectl apply -f hpa.yaml
+kubectl autoscale deployment php-apache --cpu-percent=20 --min=1 --man=5
+  - Her ikisinden biri ile autoscaling calistirilir.
+
+kubectl run -i --tty load-generator --rm --image=busybox --restart=Never -- /bin/sh -c "while sleep 0.01; do wget -q -0- http://php-apache; done"
+  - Yuku artirma.
+
+kubectl get dep
+kubectl get svc
+kubectl get po
+kubectl get hpa --watch
+  -HPA ile min, max ve replicas (mevcut pode sayisi) sayisini gosterir.
+
+
+
+

@@ -1,0 +1,141 @@
+1.Azure Monitor for Resources:
+- Ilgili resource'lara agent yuklenerek istenen veriler cekilir.
+- Veri transferi ucretlidir.
+
+
+2.Diagnostic:
+
+a.Virtual Machines:
+- Web-App'lar ile applicationlari monite eder.
+
+(1) Virtual Machines Agent Yukleme:
+> Monitor > Virtual Machines > Not monitored
+  > mon-vm enable (vm olusturmustuk)
+  > enable 
+  > Choose a Log Analytics Workspace (ilgili regionunki secilir) DefaultWorkspace-7ad168... 
+  > Enable (vm'e agent yuklenir)
+
+(2) Diagnostic Settings Configuration:
+- Diagnostic'i Enable yapariz.
+> Monitor > Diagnostic settings 
+  > RG: mon-rg
+  > Name: web-app (disabled)
+  > + Add diagnostic setting
+    > Diagnostic setting name: appinsight1
+    > log: AppExceptions, AppTraces, AppPageViews, AppRequests, AppPerformanceCounters
+    > metric: AllMetric (CPU, RAM...)
+    > Destination details:
+      > Send to Log Analytics workspace: Log Ananlytics workspace: DefaultWorkspace-7ad168...
+    > Stream to an event hub: surekli bir veri ise ve diger tarafta listener (sms, email) varsa secilir.
+    > save
+
+(3) Diagnostic'in Incelenmesi:
+- Diagnostic'i Enable yapariz.
+> Monitor > Diagnostic settings 
+  > RG: mon-rg
+  > Name: web-app (enabled oldugu gorulur)
+  > Name: mon-key-vault
+  > + Add diagnostic setting
+    > Diagnostic setting name: mon-key-vault1
+    > log: / AuditEvent 
+    > metric: / AllMetric (secmedik)
+   > Destination details:
+      > Send to Log Analytics workspace: Log Ananlytics workspace: DefaultWorkspace-7ad168...
+   > save
+  
+(4) Configuration'un Incelenmesi:
+> Monitor > Virtual Machines
+  > mon-vm - upgrade available (vm muhtemelen kapali olabilir. vm (mon-vm) start yapilmali bu arada.)
+  > why? > Upgrade (agent install edilir veya upgrade)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+(5) Tablolarin Acilmasi:
+> Monitor > Logs > Resource type: App Services > "x" kapat > "<<" (ustteki) ">>" alttaki
+  > settings (koseli somon isareti) > 
+    > Show tables with no tables: on > save
+      - Birsuru tablo gorebiliriz.
+
+> Monitor > Logs > Resource type: App Services > "x" kapat > "<<" (ustteki) ">>" alttaki
+  > App Services: (birsuru tablo acildi)
+
+(6) Select Scope:
+
+(a) "AzureActivity" Monite Etme:
+> Monitor > Logs > Resource type: App Services > "x" kapat > "<<" (ustteki) ">>" alttaki
+  > Select scope 
+    > Resource group: mon-rg 
+  > web-app-mon (mon-vm ... secilebilir)
+  > Tables: App Services: AzureActivity:
+    > Time range: Last 4 hours
+    > run
+      - tum aktiviteleri gosterir.   
+
+(b) "AzureActivity"de Specific bir Bolum/Isim ile Kisitli Monite Etme: 
+> Monitor > Logs > Resource type: App Services > "x" kapat > "<<" (ustteki) ">>" alttaki
+  > Select scope 
+    > Resource group: mon-rg 
+  > web-app-mon (mon-vm ... secilebilir)
+  > Tables: App Services: AzureActivity:
+      - AzureActivity altinda olusan bir satirdaki "OperationNameValue" kategosrisinde ve "MICROSOFT.INSIGHTS/DIAGNOSTICSETTINGS" ozel siniflandirmasini sorguluyoruz.
+    > AzureActivity | OperationNameValue contains "MICROSOFT.INSIGHTS/DIAGNOSTICSETTINGS"
+    > Time range: Last 24 hours
+    > run  
+
+(c) "AzureMetrics" Monite Etme:
+> Monitor > Logs > Resource type: App Services > "x" kapat > "<<" (ustteki) ">>" alttaki
+  > Select scope 
+    > Resource group: mon-rg 
+  > web-app-mon (mon-vm ... secilebilir)
+  > Tables: App Services: AzureMetrics:
+    > AzureMtrics | take 10
+    > Time range: Last 24 hours
+    > run ("AzureMetrics | take 10" seciliyken "run" edilirse yalniz bu query calisir.)
+      - tum aktiviteleri gosterir.   
+
+(d) "AzureMetrics" Specific bir Bolum/Isim ile Kisitli Monite Etme:
+> Monitor > Logs > Resource type: App Services > "x" kapat > "<<" (ustteki) ">>" alttaki
+  > Select scope 
+    > Resource group: mon-rg 
+  > web-app-mon (mon-vm ... secilebilir)
+  > Tables: App Services: AzureMetrics:
+    > AzureMtrics | where MetricName == "IoReadBytesPerSecond"
+    > Time range: Last 12 hours
+    > run 
+
+
+b.Virtual Machines:
+> Monitor > Virtual Machines
+
+
+c.Storage accounts:
+- Storage accounta transactions, latency ... vb monite eder.
+> Monitor > Storage accounts
+
+d.Containers:
+- K8s containerleri dahil buradan monite edilebilir.
+> Monitor > Containers
+
+...
+
+
+
+3.Hazir Query'lerin Kullanimi:
+- 2.a.(6)'da yazilan queries yerine hazir queries kullanabiliriz.
+- Yukarda Tables uzerinden table secip kendimiz query yaziyorduk.
+- Burada Tablo yerine Queries'ten ilerleyecegiz.
+> Monitor > Logs > Resource type: App Services > "x" kapat > "<<" (ustteki) ">>" alttaki
+  > Select scope 
+    > Resource group: mon-rg 
+  > web-app-mon (mon-vm ... secilebilir)
+  > Queries: Azure Metrics: Line chart of response times
+  > run
+    
+
+
+
+4.Diagnostic Settings:
+- Herhangi bir resource'u diagnose edebilmek icin once ilgili resource'un diagnostic settings active edilir.
+- Boylece Azure monitor'e veriler cekilebilir.
+
+a.App services:
+> App services > app-ser-1
+  > Diagnostic settings > + Add diagnostic setting 
+  > 

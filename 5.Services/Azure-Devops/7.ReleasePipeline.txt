@@ -1,0 +1,68 @@
+
+
+1.Test Stage ve Artifact Olusturma:
+> Pipelines
+  > Releases
+  > New pipeline
+  > Azure App Service deployment
+  > Apply
+    > Stage name: Test
+    > Close the screen
+  > Test - 1 job, 1 task 
+    > Azure subscription: New Windows Azure MSDN 
+    > Authorize
+      > Azure hesabina giris username ve password girilir.
+    > App type: Web App on Windows
+    > App service name: vstoolboxtest
+    > Save
+  > Add an artifact
+      - Sol tarafta. Deployment'a gonderilecek artifact tanimlanir.
+    > Source type: Build
+    > Project: Toolbox Devops Show
+    > Source (build pipeline): Toolbox Devops Show
+    > Add
+  > Artifacts
+    > Continuous deployment trigger
+      - Artifacts'in simsek sekli.
+    > Continuous deployment trigger - enabled
+      - Her basarili build islemi sonrasi Release islemi baslayacak. 
+
+
+2.Approval ile Calisan Production Stage Ilave Etme:
+  > Stages
+    - Test'in ustunde.
+  > Clone stage
+      - "+ New stage"de secilebilirdi. Hersey ayni oldugu icin Clone sectik.
+    > Stage name: Production
+    > Close the screen
+  > Production - 1 job, 1 task 
+    > Azure subscription: New Windows Azure MSDN 
+    > App type: Web App on Windows
+    > App service name: vstoolboxtest
+    > Save
+  > Pre-deployment conditions
+      - Production'un solundaki yildirim isareti.  
+    > Select trigger: After Stage  
+    > Stage Test
+    > Pre-deployment approvals - enabled
+      > Approvers: umit
+      > Timeout: 30 Days
+      > The user requesting a release or deployment should not approve it - check
+    > Post deployment conditions
+      - istenilen konf yapilabilir.
+    > Save
+
+
+
+> Repos
+  > Files
+  > in progress 
+  § Set up release
+
+
+
+
+
+
+> https://vstoolbox.azurewebsites.net
+  > 

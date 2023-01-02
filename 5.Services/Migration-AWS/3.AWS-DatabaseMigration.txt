@@ -1,0 +1,100 @@
+A.DATABASE MIGRATION:
+https://docs.aws.amazon.com/dms/index.html
+
+
+1.AWS Storage Gateway:
+- On prem ile AWS'yi secure baglayarak veri taransferini saglar.
+- On-prem ile on-prem veya On-prem ile AWS veya AWS ile AWS arasi transfer yapilabilir. 
+- On-prem ile on-prem arasinda data transferi yapilsa da muhakkak bir endpoint AWS'de olur.
+- Gateway endpoint within AWS
+- 3 Cesittir::
+  - File based: 
+    * File Gateway is a file based solution.
+    * Supports a file interface into S3.
+    * NFS (Network File System) ve SMB (Server Message Block) ile 
+  - Volume-based: 
+    * Volume Gateway provides cloud back storage volumes.
+    * You can mount as ISCSI devices from your on-premises application servers.
+    * Cached volumes ve Stored volumes seklinde 2'ye ayrilir.
+      - Cached Volumes: Store data in S3 and retain a copy of frequently accessed data subsets locally.
+      - Stored Volumes: for low-latency access to entire dataset.
+  - Tape-based:
+    * Durably archive backup data into AWS. 
+
+
+2.DataSync:
+- Hibrid env icin kullanilir.
+- Data transfer service that simplifies, automates, and accelerates moving and replicating data between on-prem storage systems and AWS storage systems.
+- Baglanti: Internet veya AWS Direct Connect ile calisabilir.
+- NFS'den EFS veya S3'e transfer icin kullanilabilir.
+- NFS: Storage Gateway'den farkli olarak ozellikle NFS formatli bir source'tan yapilacak transferler icin kullanilir. Ayrica EFS'ye transfer yapabilir.
+- Agent:
+  * Storage Gateway gibi DataSync de bir VM'i agent olarak kullanir. 
+  * It's used to read and write data from on-prem storage systems.
+  * Ilk once VM, VMvare ESXI hypervisor'a deploy edilir.
+  * Daha sonra DataSync Management Console veya API ile agent setup ve activate edilir.
+
+
+3.DMS (AWS Database Migration Service):
+- Isin tamamini yapmaz. Sadece isi kolaylastirir.
+- Relational databases, Data warehouses, NoSQL databases ve baskaca data stores migrationi icin kullanilir.
+- On-prem'den AWS'ye, On-prem ile On-prem arasinda ve On-prem + AWS'den baska ortama transfer icin kullanilir.
+- Tek seferlik ve sync olacak sekilde kullanilabilir.
+- Surekli sync gerekiyorsa AWS DataSync kullanilir.
+- AWS Schema Conversion Tool: Eger farkli database engineler arasi migration yapilacaksa kullanilir. Migration esnasinda SCT yardimiyla schema convert edilebilir. Mevcut db schemasini bir db engine'den digerine convert eder.
+!!!
+- To perform a migration, DMS connects to the source, reads the source data, and formats the data for consumption by the target data store where it can then load the data into the target. 
+
+
+4.Storage Schema Conversion Tool:
+https://docs.aws.amazon.com/dms/index.html
+  - Cikan hatalari manual duzeltme usullerini playbooklar ile cozeriz.
+- Bir db'yi baska bir engine'a gonderirken convert etmeye yarar.
+- Bazi dosyalari otomatik degistiremez. Bu durumda manual olarak degistirme yolunu gosterir.
+- Ilgili tool tasinacak source db'ye install edilir.
+
+
+5.Hands on:
+- On-premdeki Mysql engine'li server'daki db'lerden "BikeStorages" isimli db, AWS RDS'te Amazon Aurora engine Migrate edilecek.
+- Once destination RDS kurulur. Sonra Storage schema conversion yapilir ve sonra data gonderilir. 
+a.EC2 icinde SQL server calisiyor ve icinde "BikeStores" isimli bir db var.
+> EC2
+  > Launch ec2
+  > Install mysql server
+  > download data to db
+
+b.Once db transferinin yapilacagi Destination/Target db kurulur.
+> RDS 
+  > Create database
+     > Engine: Amazon Aurora | Mysql compatibility | Regional | One writer and multiple readers | Prod | 
+     | DB cluster identifier: sct-target | Master username: admin | Master password: 123 | default 
+     > Create database
+
+c.Target Database'in endpoint'i Alinir:
+- Mevcut Aurora db'in writer ve reader db'leri oldugu icin writer db'nin endpointi alinir.
+> RDS
+  > Databases
+  > sct-target
+  > Connectivity & security
+  > Endpoint name: "sct-target.cluster-cm5p13qhz9pc.us-west-2.rds.amazonaws.com" - writer - kopyala
+
+c.Schema Conversion Tool ile datanin cevrilmesi:
+> Schema Conversion Tool 
+  > File
+  > New project wizard
+  > Proj name: Deneme | Location: C:...\AWS Schema Conversion Tool\Projects | Transactional database (OLTP)
+  | Source database engine: Microsoft Mysql Server | I want to switch engines and optimize for the cloud 
+  > Server name: EV2AMAZ-3R33JVP | Authentication: Windows Authentication
+  > EC2AMAZ-3R33JVP\Administrator@AMAZ-3R33JVP - Databases - BikeStores     
+    - Databases'lerden "BikeStorages" db'i secilir.
+  > Target database engine: Amazon Aurora (MySQL Compatible)
+  > Server name: sct-target.cluster-cm5p13qhz9pc.us-west-2.rds.amazonaws.com 1 Server port: 3306 | User name: admin | Password: 123
+  > Test connection
+  > Finish
+  
+d.Asseement Report:
+> Schema Conversion Tool 
+  > View
+  > Assessment Report view
+  > Database objects with conversion actions for Amazon Aurora: ... , we identified (100%) database .. can be converted ...
+    - Donusumde problem olmadigini yaziyor.

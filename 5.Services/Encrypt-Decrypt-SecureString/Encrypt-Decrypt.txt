@@ -1,0 +1,5 @@
+echo 'PHBvd2Vyc2hlbGw+ ... vcG93ZXJzaGVsbD4=' | base64 --decode
+  - decrypt
+
+echo  'linuxhint.com' | base64
+  - encode

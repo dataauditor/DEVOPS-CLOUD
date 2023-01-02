@@ -1,0 +1,160 @@
+1.Backend:
+------------------------------------------------------------------------------------
+options:
+  max-time: 4
+
+pipelines:
+  default:
+    - step:
+        name: Unit-Test
+        image: eclipse-temurin:17-jdk-jammy
+        caches:
+          - gradle
+        script:
+          - ./gradlew check 
+
+  branches:
+    main:
+      - step:
+          name: Flyway Migrate
+          image: kroniak/ssh-client:3.15
+          script:
+            - ssh ubuntu@${IP_Address} "cd eyvi-akvakultur && git fetch --all --prune --verbose && git switch ${BITBUCKET_BRANCH} && git pull --ff-only --verbose origin ${BITBUCKET_BRANCH}"
+            - ssh ubuntu@${IP_Address} "cd eyvi-akvakultur && ./gradlew flywayClean flywayMigrate"
+
+      - step:
+          name: Build and Test 
+          image: eclipse-temurin:17-jdk-jammy
+          caches:
+            - gradle
+          script:
+            - ./gradlew build
+          artifacts:
+            - application/build/libs/application-0.0.1-SNAPSHOT.jar
+    
+      - step:   
+          name: Package and Deploy 
+          image: kroniak/ssh-client:3.15
+          script:
+             - scp application/build/libs/application-0.0.1-SNAPSHOT.jar ubuntu@${IP_Address}:/home/ubuntu/backend/
+             - ssh ubuntu@$IP_Address "sudo systemctl restart eyvid"
+
+    eyvi_staging:
+      - step:
+          name: Flyway Migrate
+          image: kroniak/ssh-client:3.15
+          script:
+            - ssh ubuntu@${IP_Address2} "cd eyvi-akvakultur && git fetch --all --prune --verbose && git switch ${BITBUCKET_BRANCH} && git pull --ff-only --verbose origin ${BITBUCKET_BRANCH}"
+            - ssh ubuntu@${IP_Address2} "cd eyvi-akvakultur && ./gradlew flywayClean flywayMigrate"
+
+      - step:
+          name: Build and Test 
+          image: eclipse-temurin:17-jdk-jammy
+          caches:
+            - gradle
+          script:
+            - ./gradlew build
+          artifacts:
+            - application/build/libs/application-0.0.1-SNAPSHOT.jar
+    
+      - step:   
+          name: Package and Deploy 
+          image: kroniak/ssh-client:3.15
+          script:
+             - scp application/build/libs/application-0.0.1-SNAPSHOT.jar ubuntu@${IP_Address2}:/home/ubuntu/backend/
+             - ssh ubuntu@$IP_Address2 "sudo systemctl restart eyvid"
+------------------------------------------------------------------------------------
+
+
+2.Frontend:
+------------------------------------------------------------------------------------
+options:
+  max-time: 4
+
+pipelines:
+  default:
+    - step:
+        name: Install dependencies and build project
+        image: node:16.14.0
+        caches:
+          - node
+          - npm
+          - cypress
+        script:
+          - npm ci && npm run build
+        artifacts:  
+          - build/**
+
+  pull-requests:
+    '**': 
+      - step:
+          name: Install dependencies
+          image: node:16.14.0 
+          caches:
+            - node 
+            - npm
+            - cypress
+          script:
+            - npm ci
+            - npm run build 
+            -  
+          artifacts:
+            - build/** 
+
+      - step:
+          name: Package and Deploy 
+          image: node:16.14.0
+          caches: 
+            - node
+            - serve 
+          script:
+            - scp -r build/** ubuntu@${IP_Address}:/home/ubuntu/frontend
+            - ssh ubuntu@$IP_Address "sudo cp -r /home/ubuntu/frontend/. /var/www/eyvi"
+            - ssh ubuntu@$IP_Address "sudo service nginx stop  &&  sudo service nginx start"
+            - ssh ubuntu@$IP_Address "rm -R /home/ubuntu/eyvi-client"
+            - ssh ubuntu@$IP_Address "git clone git@bitbucket.org:eyvi_project/eyvi-client.git"
+            - ssh ubuntu@$IP_Address "sudo npm i -g serve"
+            - ssh ubuntu@$IP_Address "serve -s /home/ubuntu/frontend -n"
+
+  branches:
+    eyvi_staging: 
+      - step:
+          name: Install dependencies
+          image: node:16.14.0 
+          caches:
+            - node 
+            - npm
+            - cypress
+          script:
+            - npm ci
+            - npm run build 
+            -  
+          artifacts:
+            - build/** 
+
+      - step:
+          name: Package and Deploy 
+          image: node:16.14.0
+          caches: 
+            - node
+            - serve 
+          script:
+            - scp -r build/** ubuntu@${IP_Address2}:/home/ubuntu/frontend
+            - ssh ubuntu@$IP_Address2 "sudo cp -r /home/ubuntu/frontend/. /var/www/eyvi"
+            - ssh ubuntu@$IP_Address2 "sudo service nginx stop  &&  sudo service nginx start"
+            - ssh ubuntu@$IP_Address2 "rm -R /home/ubuntu/eyvi-client"
+            - ssh ubuntu@$IP_Address2 "git clone git@bitbucket.org:eyvi_project/eyvi-client.git"
+#            - ssh -p 22 ubuntu@IP_Address2 "cd /home/ubuntu/eyvi-client  &&  git pull"
+#            - ssh ubuntu@$IP_Address2 "npm install --prefix /home/ubuntu/eyvi-client   &&  npm --prefix /home/ubuntu/eyvi-client run build"
+#            - ssh ubuntu@$IP_Address2 "sudo npm i -g serve && serve -s /home/ubuntu/frontend -n"
+            - ssh ubuntu@$IP_Address2 "sudo npm i -g serve"
+            - ssh ubuntu@$IP_Address2 "serve -s /home/ubuntu/frontend -n"
+
+ 
+
+definitions:
+  caches:
+    npm: $HOME/.npm
+    serve: ¤
+    cypress: $HOME/.cache/Cypress
+------------------------------------------------------------------------------------

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-scd</id>
+    <version>19.09</version>
+    <description>Install and configure SCD for Citrix in Multi Account</description>
+    <authors>NaveenG naveen.gujar@nbim.com</authors>
+    <title>nbim-scd</title>
+    <tags>scd</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

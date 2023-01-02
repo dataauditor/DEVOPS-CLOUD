@@ -1,0 +1,275 @@
+GENEL:
+- Eger AWS managed key ile encrypt edilmis bucket baska hesaba gonderilecekse:
+> Destination'da bucket olustur ve KMS key'inin arn'ini al.
+  > Source'ta dest ve source bucket policy ile kms'e ulasacak ve s3 ve ec2 ile kullanilacak role olustur.
+  > Dest ve Source Bucket'ta object ve bucket seviyesinde role'e belki dest hesabina (...id:root) izin "s:*" ver.
+  > Dest'te ec2 olustur ve ilgili rolu bagla.
+  > aws s3 cp/sync s3://<source bucket/path> s3://<dest bucket/path> --sse AES256 --force
+
+
+
+A.Ilk Yol Sadece Source Account'un Principal'ina Destination'in accountID'si eklenir.
+1.Source Bucket Policy'sine Bucket ve Object Duzeyinde Destination Accountuna Izin Verilir:
+---------------------------------------------------------------------------
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Statement1",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::495195341034:root"
+                ]
+            },
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-p-s3-prod-euwe1-archdb"
+        },
+        {
+            "Sid": "Statement2",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::495195341034:root"                ]
+            },
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-p-s3-prod-euwe1-archdb/*"
+        }
+    ]
+}
+---------------------------------------------------------------------------
+  - "arn:aws:iam::495195341034:root"  ilave edilir.
+
+
+2.CLI ile Destination Hesabina Baglanilir.
+- Profil ile baglandim.
+aws s3 sync s3://nbim-p-s3-prod-euwe1-archdb/ARCHPROD/ s3://nbuce1-archprod-kms --force
+
+
+
+
+B.Ikinci Yol Destinationda Rol Olusturup Source Bucket'in Policy'sine Eklenir.
+1.Destination AWS Account Copy Credentials:
+> AWS SSO - multi account
+  > nbim-cafe-prod
+  > Command line or programmatic access
+  > Option 1: Set AWS environment variables
+--------------------------------------------------------------------------
+export AWS_ACCESS_KEY_ID="ASIAXGS7RIDVKNHO6Z6M"
+export AWS_SECRET_ACCESS_KEY="pMNDawn58MeU4+PC9FO731aZrFnzeC64URv+g5wl"
+export AWS_SESSION_TOKEN="IQoJb3JpZ2luX2VjEBQaCWV1LXdlc3QtMSJIMEYCIQCpQaH371fABTubQ2RSYdErvnkO6n64gfls14b67OiCaAIhAPMp+84J/7knftd6HcPNFYAX8bL0Hi5M6ETF4t5YYn+2KqcDCO3//////////wEQABoMNDk1MTk1MzQxMDM0IgxwkEPBJhTWJu30T7Uq+wJn0fOHA0hoZkF7rtpnd0ce/IXD4OG5pikf36woXmQ22PK7XgWdkT511F98MEHf4LIuCvwEKc1EsvxCT+Wc6FbUuI/db+jmr0yovIYhJWXlizhjZclc4xfUuX7Tr05fhwqp0vR/6SMOwxEMuGA2vDKgYtZU3wSzk2ti0qBi0/B4OlHtUSzmG2LtFz4OOI2qCMkXJNH2GrdVaDEL9R7EQ4BK+qNGj5QgBR74DA4N4UxJlTnKbYIlparplT5p0kUdd7G+zJQvJs0so56ae2tE+b1G4SuLU+ivzuPaWjVp9iLprp3GOknbm2SsVysK1Rek3dksKIWfZpC2sQKAmrXqoP87FXe8GOy6Px00Xc8XXoAWBwr5aLTTnh7/OByvNhsoVc3Do8sRUczI5dcb27onylQT+ceeJyH7aD2jwFJsPUunG+M6V0IWMuR/tEyDCeIqsSSrbV3vjHdW7+LUsxl7U9jvVNm0U5liMVq8veFXRdQPi7MAxCVC/8DMjHOPMJLD5JoGOqUBXE96I2h/zOxSWqk+w4elDaWJFS0m8bPjvy44QUABJa372InotrXbvky7OoZVyxhYdBKX9MqmX40sXVagCjLIr1FEejjzdBS+KEkui3nlOVJEuuei5LcgSQsSapl5oA2OoA9fN60t+bhiqizvJoj3ACVLxcgQaFLt/5L60ZxjXMOSTV8DqLCKx1WQ3BT64xj8WMAj1Z6NZ80gVPpZD7aoVl/04+Fd"
+---------------------------------------------------------------------------
+  - Tiklayinca kopyalandi.
+
+
+
+
+2.Bash ile Destination Hesabina Baglanma:
+---------------------------------------------------------------------------
+export AWS_ACCESS_KEY_ID="ASIAXGS7RIDVKNHO6Z6M"
+export AWS_SECRET_ACCESS_KEY="pMNDawn58MeU4+PC9FO731aZrFnzeC64URv+g5wl"
+export AWS_SESSION_TOKEN="IQoJb3JpZ2luX2VjEBQaCWV1LXdlc3QtMSJIMEYCIQCpQaH371fABTubQ2RSYdErvnkO6n64gfls14b67OiCaAIhAPMp+84J/7knftd6HcPNFYAX8bL0Hi5M6ETF4t5YYn+2KqcDCO3//////////wEQABoMNDk1MTk1MzQxMDM0IgxwkEPBJhTWJu30T7Uq+wJn0fOHA0hoZkF7rtpnd0ce/IXD4OG5pikf36woXmQ22PK7XgWdkT511F98MEHf4LIuCvwEKc1EsvxCT+Wc6FbUuI/db+jmr0yovIYhJWXlizhjZclc4xfUuX7Tr05fhwqp0vR/6SMOwxEMuGA2vDKgYtZU3wSzk2ti0qBi0/B4OlHtUSzmG2LtFz4OOI2qCMkXJNH2GrdVaDEL9R7EQ4BK+qNGj5QgBR74DA4N4UxJlTnKbYIlparplT5p0kUdd7G+zJQvJs0so56ae2tE+b1G4SuLU+ivzuPaWjVp9iLprp3GOknbm2SsVysK1Rek3dksKIWfZpC2sQKAmrXqoP87FXe8GOy6Px00Xc8XXoAWBwr5aLTTnh7/OByvNhsoVc3Do8sRUczI5dcb27onylQT+ceeJyH7aD2jwFJsPUunG+M6V0IWMuR/tEyDCeIqsSSrbV3vjHdW7+LUsxl7U9jvVNm0U5liMVq8veFXRdQPi7MAxCVC/8DMjHOPMJLD5JoGOqUBXE96I2h/zOxSWqk+w4elDaWJFS0m8bPjvy44QUABJa372InotrXbvky7OoZVyxhYdBKX9MqmX40sXVagCjLIr1FEejjzdBS+KEkui3nlOVJEuuei5LcgSQsSapl5oA2OoA9fN60t+bhiqizvJoj3ACVLxcgQaFLt/5L60ZxjXMOSTV8DqLCKx1WQ3BT64xj8WMAj1Z6NZ80gVPpZD7aoVl/04+Fd"
+---------------------------------------------------------------------------
+  - Yapistirdik. Suan nbim-cafe-prod hesabina programatic olarak baglandik. aws cli kullanilabilir.
+aws sts get-caller-identity
+  - "Arn": "arn:aws:sts::495195341034:assumed-role/AWSReservedSSO_NBIMAdministratorAccess_a3bc9cf07d7cd889/c1-uce1@nbimprod.onmicrosoft.com"
+  - Yukardaki arn'i destinationda olusturacagimiz role'e ve source bucket'in policy'sine ekleyecegiz.
+  
+
+
+
+3.Destination KMS Olustur:
+- AWS-Key degistirilemedigi icin KMS key olusturacagiz.
+> Key Management Service (KMS)
+  > Create KEy
+  > Symmetric | Encrypt and decrypt
+  > Advanced options
+  > Regionality: Multi-Region
+  > Alias: replication-umit
+  > Other AWS accounts: arn:aws:iam::495195341034:root
+    - Source accountun ID'si yazilir.
+    - Boylece Source account da dest KMS key'i kullanabilir.
+  > Finish
+KMS arn: arn:aws:kms:eu-west-1:495195341034:key/mrk-379b6e77f67943b68ec1a66da7cd4540
+
+
+
+
+
+4.Destination Role Olusturma:
+Role name: umit-arch-role
+Trust relationship
+--------------------------------------------------------------------------
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:sts::095894169734:assumed-role/AWSReservedSSO_NBIMAdministratorAccess_e0074f8e340dfd87/c1-uce1@nbimprod.onmicrosoft.com",
+                    "arn:aws:sts::495195341034:assumed-role/AWSReservedSSO_NBIMAdministratorAccess_a3bc9cf07d7cd889/c1-uce1@nbimprod.onmicrosoft.com"
+                ],
+                "Service": [
+                    "s3.amazonaws.com",
+                    "batchoperations.s3.amazonaws.com"
+                ]
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+--------------------------------------------------------------------------
+Permission: (policy)
+--------------------------------------------------------------------------
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-p-arch-euwe1"
+        },
+        {
+            "Sid": "VisualEditor2",
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-p-arch-euwe1/*"
+        },
+        {
+            "Sid": "VisualEditor3",
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-p-s3-prod-euwe1-archdb"
+        },
+        {
+            "Sid": "VisualEditor4",
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-p-s3-prod-euwe1-archdb/*"
+        },
+        {
+            "Sid": "AllowAccessToUseDestKMS",
+            "Effect": "Allow",
+            "Action": "kms:Encrypt",
+            "Resource": "arn:aws:kms:eu-west-1:495195341034:key/mrk-379b6e77f67943b68ec1a66da7cd4540"
+        }
+    ]
+}
+--------------------------------------------------------------------------
+
+
+
+
+
+5.Source Bucket Policy Olusturma:
+> Bucket policy:
+---------------------------------------------------------------------------
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Statement1",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::495195341034:role/umit-arch-role",
+                    "arn:aws:sts::623608658945:assumed-role/AWSReservedSSO_NBIMAdministratorAccess_aaee7a2ba5586138/c1-uce1@nbimprod.onmicrosoft.com",
+                    "arn:aws:sts::495195341034:assumed-role/AWSReservedSSO_NBIMAdministratorAccess_a3bc9cf07d7cd889/c1-uce1@nbimprod.onmicrosoft.com"
+                ]
+            },
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-p-s3-prod-euwe1-archdb"
+        },
+        {
+            "Sid": "Statement2",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::495195341034:role/umit-arch-role",
+                    "arn:aws:sts::623608658945:assumed-role/AWSReservedSSO_NBIMAdministratorAccess_aaee7a2ba5586138/c1-uce1@nbimprod.onmicrosoft.com",
+                    "arn:aws:sts::495195341034:assumed-role/AWSReservedSSO_NBIMAdministratorAccess_a3bc9cf07d7cd889/c1-uce1@nbimprod.onmicrosoft.com"
+                ]
+            },
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-p-s3-prod-euwe1-archdb/*"
+        }
+    ]
+}
+---------------------------------------------------------------------------
+  - Sadece ilgili destinationun sts rolu yeterli (ikinci sts rolu). Digerleri baskaca hesaplara yetki veriyor.
+
+
+
+
+6.Destination Bash ile AWS CLI:
+aws sts get-caller-identity 
+aws s3 ls s3://umit-dest-test
+aws s3 ls s3://nbim-p-arch-euwe1
+aws s3 sync s3://umit-source-new s3://nbim-p-arch-euwe1
+aws s3 ls s3://nbim-p-arch-euwe1
+
+
+
+aws s3 sync s3://nbim-p-s3-prod-euwe1-archdb s3://nbim-p-arch-euwe1
+aws s3 cp s3://nbim-p-s3-prod-euwe1-archdb/ s3://nbim-p-arch-euwe1/
+
+
+
+
+7.Glacier'deki Objelerin Restore Edilmesi:
+- Eger source bucket glacier ise objeler aslinda orada degil sadece isimleri orada. Kopyalayabilmek icin once restore etmelisin.
+aws s3api restore-object --bucket nbim-p-s3-prod-euwe1-archdb --key ARCHPROD/Arch_ITPROD_ES1Search.bak --restore-request '{"Days":3,"GlacierJobParameters":{"Tier":"Standard"}}'
+aws s3api restore-object --bucket nbim-p-s3-prod-euwe1-archdb --key ARCHPROD/Arch_ITPROD_GEMS_DOC.bak --restore-request '{"Days":1,"GlacierJobParameters":{"Tier":"Standard"}}'
+
+
+aws s3api restore-object --restore-request Days=1 --bucket nbim-p-s3-prod-euwe1-archdb --key ARCHPROD/Arch_ITPROD_NBDC5PDDC.bak
+  - Gecici restore yapar.
+aws s3 cp s3://nbim-p-s3-prod-euwe1-archdb/ARCHPROD/Arch_ITPROD_NBDC5PDDC.bak s3://nbim-p-arch-euwe1/ARCHPROD/Arch_ITPROD_NBDC5PDDC.bak --force-glacier-transfer --storage-class STANDARD --recursive
+  - Gecici restore sonrasi kalici restore yapar.
+
+
+
+8.Hesaplar Arasi Kopyalanmasi:
+aws s3 sync s3://nbim-p-s3-prod-euwe1-archdb s3://nbim-p-arch-euwe1
+aws s3 cp s3://nbim-p-s3-prod-euwe1-archdb/ s3://nbim-p-arch-euwe1/ --sse AES256
+  - kullanilan KMS'in Server Side olarak destinationda ayarlanmasi durumunda aktarim esnasinda sifrelemeyi degistirir.
+
+
+aws s3 cp --metadata-directive REPLACE--storage-class "STANDARD" s3://nbim-p-s3-prod-euwe1-archdb/ARCHPROD/Arch_ITPROD_GEMS_CONNECT.bak s3://nbim-p-s3-prod-euwe1-archdb/Arch_ITPROD_GEMS_CONNECT.bak --recursive
+
+
+
+Arch_ITPROD_External_Systems_Report_Data.bak  
+Arch_ITPROD_GEMS_CONNECT.bak
+
+
+
+------------------------------------------------
+nbim-p-s3-prod-euwe1-archdb/ARCHPROD/Arch_EQDWPROD_hpi_2016_full_20180821.bak
+
+arn:aws:kms:eu-west-1:618573361433:key/8cbc0869-ff86-4fc5-877b-c32904e72037
+arn:aws:kms:eu-west-1:538217567914:key/bacdd455-e1f7-41e4-9472-4cd14fdc74a7
+source: 618573361433
+	nbim-p-s3-prod-euwe1-archdb/ARCHPROD/Arch_ITPROD_External_Systems_Report_Data.bak	
+
+
+
+
+Arch_consprod_fi_lending_full_20180821.bak
+
+
+Copy-S3Object -BucketName nbim-p-s3-prod-euwe1-archdb -Key ARCHPROD/Arch_EQDWPROD_hpi_2016_full_20180821.bak -LocalFile C:\Temp\11.bak
+Read-Object -BucketName nbim-p-s3-prod-euwe1-archdb -Key ARCHPROD -Folder C:\Temp
+
+
+Copy-S3Object -BucketName cf-templates-16fo92mkak991-ap-southeast-1 -Key 20202540M0-new.templatec6f2pzopi46 -LocalFile C:\Temp\11.bak
+
+Read-Object -BucketName cf-templates-16fo92mkak991-ap-southeast-1 -Key 20202540M0-new.templatec6f2pzopi46 -Folder C:\Temp\11.bak
+
+get-object -BucketName cf-templates-16fo92mkak991-ap-southeast-1 -Key 20202540M0-new.templatec6f2pzopi46 -Folder C:\Temp\11.bak
+
+
+aws s3 cp s3://cf-templates-16fo92mkak991-ap-southeast-1/20202540M0-new.templatec6f2pzopi46 c:/Temp/11.bak
+aws s3 cp s3://nbim-p-s3-prod-euwe1-archdb/ARCHPROD/Arch_EQDWPROD_hpi_2016_full_20180821.bak c:/Temp/12.bak

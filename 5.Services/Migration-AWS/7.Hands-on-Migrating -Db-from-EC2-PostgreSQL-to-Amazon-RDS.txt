@@ -1,0 +1,173 @@
+Migrating From PostgreSQL in EC2 to Amazon RDS PostgreSQL
+- Elimizde halihazirda EC2'da yuklu Source PostgreSQL Database var oldugunu varsayiyoruz.
+- Source, target database'ler ile replication instance'in VPC uyumu, sg uyumu onemli.
+
+1.Create a PostgreSQL Database Instance in Amazon RDS as Target DB:
+> AWS RDS
+  > Create database
+  > Standard Create
+  > Engine type: PostgreSQL
+  > Version: PostgreSQL 13.7-R1
+    - 9 ve uzerini AWS DMS destekliyor.
+  > Dev/Test
+  > DB instance identifier: fully-managed-database
+  > Master username: Master username
+  > Master password: 123
+  > DB instance class: Burstable classes (includes t classes): db.t3.micro
+  > Storage type: General purpose (gp2)
+  > Allocated storage: 20
+  > Virtual private cloud (VPC): Default VPC
+  > DB Subnet group: default-vpc-c997e9a
+  > Public access: No
+  > VPC security group (firewall): Create new
+  > New VPC security group name: fully-managed-database
+  > Additional configuration
+    > Database port: 5432
+  > Database authentication options: Password authentication
+    - Sonradan IAM authentication eklenebilir. Programlar icin password authentication onemli.
+  > Create database
+
+
+
+
+2.Create a Replication Instance in AWS DMS
+> AWS DMS
+  > Replication instances
+  > Create replication instance
+    > Name: my-replication-instance
+    > Instance class: dms.t2.medium
+    > Engine version: 3.4.0 (Beta)
+    > Allocated storage (GiB): 50
+    > VPC: vpc-095678
+      - Amazon RDS ile ayni VPC'yi sec.
+    > Multi AZ: - uncheck
+    > Publicly accesible - uncheck
+    > Advanced security and network configuration
+      > Replication subnet group: default-vpc-c780
+      > Availability zone: No preference
+      > VPC security group(s): fully-managed-database
+        - Amazon RDS'in sg'sini sec.
+      > KMS key: (Default) aws/dms
+  > Create
+
+
+
+
+3.Security Group Configuration:
+- PostgreSQL ve Replication instance'in SG'si secilir.
+> EC2
+  > Security Groups
+  > fully-managed-database
+    > Add rule
+    > PostgreSQL | TCP | 5432 | Custom | fully-managed-database
+      - security group'a kendisine izin verdiriyoruz.
+      - Diger rule'lar silinebilir. Tek rule yeter.
+    > Save rules
+
+
+
+
+4.a.Create Target Endpoints:
+> AWS DMS
+  > Endpoints
+  > Create endpoint
+  > Endpoint type: Target endpoint
+  > Select RDS DB instance - check
+  > RDS instance: fully-managed-database
+  > Endpoint identifier: fully-managed-database
+  > Target endine: postgres
+  > Server name: fully-managed-database.cv6.us-east-1.rds.amazonaws.com
+  > Port: 5432
+  > Secure Socket Layer (SSL) mode: none
+  > User name: postgres-admin
+  > Password: 123
+  > Database name: postgres
+  > Test endpoint connection
+    > Replication instance: my-replication-instance
+    > Run test
+  > Create endpoint
+
+4.b.Create Source Endpoints:
+> AWS DMS
+  > Endpoints
+  > Create endpoint
+  > Endpoint type: Source endpoint
+  > Select RDS DB instance - uncheck
+  > Endpoint identifier: self-managed-database
+  > Target endine: postgres
+  > Server name: ec2-3....compute-1.amazonaws.com
+    - EC2'nun endpointi yazilir sanirim.
+  > Port: 5432
+  > Secure Socket Layer (SSL) mode: none
+  > User name: dms_user
+  > Password: 123
+  > Database name: postgres
+  > Test endpoint connection
+    > Replication instance: my-replication-instance
+    > Run test
+  > Create endpoint
+
+
+
+
+5.Create a Replication Task:
+> AWS DMS
+  > Database migration tasks
+  > Create task
+    > Task identifier: my-replication-task
+    > Replication instance: my-replication-instance-vpc-0425289
+    > Source database endpoint: self-managed-database
+    > Target database endpoint: fully-managed-database
+    > Migration type: Migrate existing data and replicate ongoing changes
+      - EC2'dan RDS'e atilirken bu secilmeli.
+    > Editing mode: Wizard
+    > Target table preparation mode: Drop tables on target
+    > Stop task after full load completes: Don't stop
+    > Include LOB columns in replication: Limited LOB mode
+    > Maximum LOB size (KB): 32
+    > Start migration task: 
+    > Table mappings
+      > Editing mode: Guided UI
+      > Add new selection rule: 
+        > Schema: Enter a schema
+        > Schema name: public
+          - public isimli schema'yi yukle demek. % yazarsak tumunu aktaririz.
+        > Table name: %
+        > Action: Include
+    > Create task
+
+
+
+
+6.Clean the Migration Resources:
+- Her iki database write/read denenir.
+- Tum datanin tasindigindan emin olunca app ile baglanti yeni db'ye aktarilir.
+
+a.Database Migration Task Silinir:
+> AWS DMS
+  > Database migration tasks
+  > my-replication-task
+    > Action
+      > Stop
+    > Action
+      > Delete
+
+b.Endpointler Silinir:
+> AWS DMS
+  > Endpoints
+  > self-managed-database - check, fully-managed-database - check
+  > Action
+    > Delete
+
+c.Replication Instance Silinir:
+> AWS DMS
+  > Replication instances
+  > my-replication instance - check
+  > Action
+    > Delete
+
+d.EC2 Database Silinir:
+> EC2
+  > self-managed-database - check
+  > Action
+    > Delete

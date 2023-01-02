@@ -1,0 +1,17 @@
+Budget:
+- Belirlenen butcenin asildigini bildiren notification system.
+- 1-2 gun icinde olusur.
+
+> Budgets > + Add 
+  > Name: butcem 
+    / reset period: monthly 
+    / expiration: 2024 
+    / Amount: 3 > next
+  > Type: actual 
+    / % of budget: 80
+  > Alert recipents (email): umit.ceylan@bspoke.no
+  > create
+
+
+2.Pricing Calculator:
+- Browserde aratilarak tahmini fiyat cikarilabilir.

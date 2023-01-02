@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-puppet</id>
+    <version>6.19.1</version>
+    <description>Install and configure puppet</description>
+    <authors>Ruben the Great</authors>
+    <title>nbim-puppet</title>
+    <tags>puppet</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

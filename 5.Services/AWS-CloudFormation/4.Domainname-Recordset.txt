@@ -1,0 +1,532 @@
+Private Hostname Manuel Alinir ve Cfn ile Record olusturulup Ilgili Resource'lara Baglanir.
+
+
+Description: Deployment of dciq  at 2019051314331655638
+
+Parameters:
+  VpcId: 
+    Type: String 
+    Description: NBIM vpc id 
+    Default: 'vpc-045eae34e9fc40318'
+  env: 
+    Type: String
+  envshort:
+    Type: String  
+  easyriskid:
+    Type: String 
+
+Resources:
+
+  DciqKeyPair:
+    Type: 'AWS::EC2::KeyPair'
+    Properties:
+      KeyName: DciqKeyPair 
+
+  appSecurityGroupdciqaccess:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: 'vpc-045eae34e9fc40318'
+      GroupDescription: dciq access from NBIM offices
+      Tags:
+        - Key: Name
+          Value: !Sub "nbim-${env}-euwe1-dciqsecgroup"
+        - Key: env 
+          Value: !Ref env 
+        - Key: easyrisk_id
+          Value: !Ref easyriskid  
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.224.72.0/23
+          Description: Allow HTTP from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.224.72.0/23
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.210.72.0/21
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.212.70.0/23
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.215.70.0/23
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.224.64.0/21
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.220.0.0/16
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.225.64.0/21
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.216.72.0/21
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.210.70.0/23
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.215.72.0/21
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.213.72.0/21
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.211.70.0/23
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.225.72.0/23
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.178.0.0/16
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.212.72.0/21
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.211.72.0/21
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 10.208.0.0/13
+          Description: Allow HTTP from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.208.0.0/13 
+          Description: Allow RDP from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.178.0.0/16 
+          Description: Allow RDP from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.220.0.0/16 
+          Description: Allow RDP from NBIM Office          
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.170.0.0/13
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.220.0.0/16
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.224.64.0/21
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.216.72.0/21
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.211.70.0/23
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.215.0.0/16
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.224.72.0/23
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.214.70.0/23
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.215.70.0/23
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.225.72.0/23
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.178.0.0/16
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.211.72.0/21
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.69.254.0/23
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.213.72.0/21
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.217.72.0/21
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.213.10.0/23
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.225.64.0/21
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.215.72.0/21
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.210.70.0/23
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.212.72.0/21
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: tcp
+          FromPort: 8443
+          ToPort: 8443
+          CidrIp: 10.178.0.0/16
+        - IpProtocol: tcp
+          FromPort: 8443
+          ToPort: 8443
+          CidrIp: 10.224.72.0/23
+        - IpProtocol: tcp
+          FromPort: 8443
+          ToPort: 8443
+          CidrIp: 10.220.0.0/16
+        - IpProtocol: tcp
+          FromPort: 8443
+          ToPort: 8443
+          CidrIp: 10.208.0.0/13
+        - IpProtocol: tcp
+          FromPort: 8443
+          ToPort: 8443
+          CidrIp: 10.225.72.0/23       
+          Description: Allow HTTPS from NBIM Office
+        - IpProtocol: udp 
+          FromPort: 161
+          ToPort: 161
+          CidrIp: 10.192.0.0/10
+          Description: Allow HTTPS from NBIM Office    
+        - IpProtocol: udp 
+          FromPort: 162
+          ToPort: 162
+          CidrIp: 10.192.0.0/10
+          Description: Allow HTTPS from NBIM Office     
+        - IpProtocol: udp 
+          FromPort: 162
+          ToPort: 162
+          CidrIp: 10.192.0.0/10
+          Description: Allow HTTPS from NBIM Office   
+        - IpProtocol: tcp  
+          FromPort: 2510
+          ToPort: 2510
+          CidrIp: 10.178.0.0/16
+          Description: Allow HTTPS from NBIM Office  
+        - IpProtocol: tcp  
+          FromPort: 514
+          ToPort: 514
+          CidrIp: 10.211.186.5/32
+          Description: Allow HTTPS from NBIM Office 
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.212.70.0/23 
+          Description: Allow HTTPS from NBIM Office 
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.211.72.0/21
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.211.70.0/23
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.220.0.0/16
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.220.0.0/16
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.178.0.0/16
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.215.70.0/23
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.224.64.0/21
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.216.72.0/21
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.225.72.0/23
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.217.72.0/21
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.217.72.0/21
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.213.72.0/21
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.210.72.0/21
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.210.70.0/23
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.215.72.0/21
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.212.72.0/21
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.225.64.0/21
+        - IpProtocol: tcp  
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 10.224.72.0/23
+
+  appSecurityGroupcircdciqaccess03:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "nbim-${env}-euwe1-dciqaccesscirc"
+        - Key: env 
+          Value: !Ref env 
+        - Key: easyrisk_id
+          Value: !Ref easyriskid 
+      GroupId: !Ref  appSecurityGroupdciqaccess
+      IpProtocol: tcp
+      FromPort: 1433
+      ToPort: 1433
+      SourceSecurityGroupId: !Ref appSecurityGroupdciqaccess
+      Description: Allow inter instance
+
+
+  IMDSv2LaunchTemplate: # Require Instance Metadata Service Version 2
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+        LaunchTemplateName: IMDSV2
+        LaunchTemplateData:
+          MetadataOptions:
+            HttpEndpoint: enabled
+            HttpPutResponseHopLimit: 1
+            HttpTokens: required
+        TagSpecifications:
+          - ResourceType: launch-template    
+            Tags:
+              - Key: Name
+                Value: !Sub "nbim-${env}-euwe1-dciqtemp"
+              - Key: env 
+                Value: !Ref env 
+              - Key: easyriskid
+                Value: !Ref easyriskid
+
+  Ec2Instancedciq01:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      LaunchTemplate: 
+        LaunchTemplateName: IMDSV2
+        Version: !GetAtt IMDSv2LaunchTemplate.LatestVersionNumber
+      ImageId: 'ami-025f0f6496db28860'
+      KeyName: !Ref DciqKeyPair
+      InstanceType: "t3.xlarge"
+#      PrivateIpAddress: '10.147.24.5'
+      BlockDeviceMappings: 
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp2
+            DeleteOnTermination: true
+            Encrypted: true
+      SubnetId: 'subnet-07c937e0a43cb1f64'
+#      SubnetId: !ImportValue p-stack-eu-west-1-mgmt-subaprivate
+      SecurityGroupIds: 
+        - !Ref appSecurityGroupdciqaccess
+#        - !Sub appSecurityGroupdciqaccess
+#        - !ImportValue p-stack-eu-west-1-mgmt-spoke-sgmgmt
+
+      UserData: 
+        Fn::Base64:  !Sub |
+          <powershell>
+          Rename-Computer -NewName NBUCE1
+          choco install -y nbim-domainjoin
+          </powershell>   
+
+#          Start-Transcript -Path "$($env:SystemDrive)/userdata.txt"       
+#          Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key install-media/DCIQ/QlikViewServer_Win2012andUp.exe -LocalFile C:\Temp\QlikViewServer_Win2012andUp.exe
+#          Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key install-media/DCIQ/NBIM.zip -LocalFile C:\Temp\NBIM.zip 
+#          Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key install-media/DCIQ/SQL_Svr_Standard_Edtn_2014_SP3_64Bit.ISO -LocalFile C:\Temp\SQL_Svr_Standard_Edtn_2014_SP3_64Bit.ISO
+#          choco install -y nbim-domainjoin
+#          Stop-Transcript
+#          Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key 'install-media/DCIQ/PanduitSZReports 9.1.exe' -LocalFile C:\Temp\PanduitSZReports 9.1.exe
+           
+      #PHBvd2Vyc2hlbGw+CkNvcHktUzNPYmplY3QgLUJ1Y2tldE5hbWUgbmJpbS1wLXMzLW1nbXQtZXV3ZTEtZmlsZXMyIC1LZXkgaW5zdGFsbC1tZWRpYS9EQ0lRL05CSU0uemlwIC1Mb2NhbEZpbGUgQzpcVGVtcFxOQklNLnppcApDb3B5LVMzT2JqZWN0IC1CdWNrZXROYW1lIG5iaW0tcC1zMy1tZ210LWV1d2UxLWZpbGVzMiAtS2V5IGluc3RhbGwtbWVkaWEvRENJUS9QYW5kdWl0U1pSZXBvcnRzIDkuMS5leGUgLUxvY2FsRmlsZSBDOlxUZW1wXFBhbmR1aXRTWlJlcG9ydHMgOS4xLmV4ZQpDb3B5LVMzT2JqZWN0IC1CdWNrZXROYW1lIG5iaW0tcC1zMy1tZ210LWV1d2UxLWZpbGVzMiAtS2V5IGluc3RhbGwtbWVkaWEvRENJUS9RbGlrVmlld1NlcnZlcl9XaW4yMDEyYW5kVXAuZXhlIC1Mb2NhbEZpbGUgQzpcVGVtcFxRbGlrVmlld1NlcnZlcl9XaW4yMDEyYW5kVXAuZXhlCkNvcHktUzNPYmplY3QgLUJ1Y2tldE5hbWUgbmJpbS1wLXMzLW1nbXQtZXV3ZTEtZmlsZXMyIC1LZXkgaW5zdGFsbC1tZWRpYS9EQ0lRL1NRTF9TdnJfU3RhbmRhcmRfRWR0bl8yMDE0X1NQM182NEJpdC5JU08gLUxvY2FsRmlsZSBDOlxUZW1wXFNRTF9TdnJfU3RhbmRhcmRfRWR0bl8yMDE0X1NQM182NEJpdC5JU08iCmNob2NvIGluc3RhbGwgLXkgbmJpbS1kb21haW5qb2luCjwvcG93ZXJzaGVsbD4KPHBlcnNpc3Q+dHJ1ZTwvcGVyc2lzdD4=
+
+      IamInstanceProfile: dciq
+      Tags:
+        - Key: role
+          Value: "dciq"
+        - Key: swrx:devicetype
+          Value: "windows"
+        - Key: Name
+          Value: !Sub "nbim-${env}-euwe1-dciqec2"
+        - Key: env 
+          Value: !Ref env 
+        - Key: easyrisk_id
+          Value: !Ref easyriskid
+
+  Ec2Instancedciq02:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      LaunchTemplate: 
+        LaunchTemplateName: IMDSV2
+        Version: !GetAtt IMDSv2LaunchTemplate.LatestVersionNumber
+      ImageId: 'ami-07b6664729c340ebb'
+      KeyName: !Ref DciqKeyPair
+      InstanceType: "t3.xlarge"
+#      PrivateIpAddress: '10.147.24.19'
+      BlockDeviceMappings: 
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp2
+            DeleteOnTermination: true
+            Encrypted: true
+      SubnetId: 'subnet-07c937e0a43cb1f64'
+#      SubnetId: !ImportValue p-stack-eu-west-1-mgmt-subaprivate
+      SecurityGroupIds: 
+        - !Ref appSecurityGroupdciqaccess
+#        - !Ref appSecurityGroupdciqaccess
+#        - !ImportValue p-stack-eu-west-1-mgmt-spoke-sgmgmt
+
+
+      UserData: 
+        Fn::Base64:  !Sub |
+          <powershell>
+          Rename-Computer -NewName NBUCE2
+          choco install -y nbim-domainjoin
+          </powershell>   
+
+#          Start-Transcript -Path "$($env:SystemDrive)/userdata.txt"       
+#          Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key install-media/DCIQ/QlikViewServer_Win2012andUp.exe -LocalFile C:\Temp\QlikViewServer_Win2012andUp.exe
+#          Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key install-media/DCIQ/NBIM.zip -LocalFile C:\Temp\NBIM.zip 
+#          Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key install-media/DCIQ/SQL_Svr_Standard_Edtn_2014_SP3_64Bit.ISO -LocalFile C:\Temp\SQL_Svr_Standard_Edtn_2014_SP3_64Bit.ISO
+#          choco install -y nbim-domainjoin
+#          Stop-Transcript
+#          Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key 'install-media/DCIQ/PanduitSZReports 9.1.exe' -LocalFile C:\Temp\PanduitSZReports 9.1.exe
+      # PHBvd2Vyc2hlbGw+CkNvcHktUzNPYmplY3QgLUJ1Y2tldE5hbWUgbmJpbS1wLXMzLW1nbXQtZXV3ZTEtZmlsZXMyIC1LZXkgaW5zdGFsbC1tZWRpYS9EQ0lRL05CSU0uemlwIC1Mb2NhbEZpbGUgQzpcVGVtcFxOQklNLnppcApDb3B5LVMzT2JqZWN0IC1CdWNrZXROYW1lIG5iaW0tcC1zMy1tZ210LWV1d2UxLWZpbGVzMiAtS2V5IGluc3RhbGwtbWVkaWEvRENJUS9QYW5kdWl0U1pSZXBvcnRzIDkuMS5leGUgLUxvY2FsRmlsZSBDOlxUZW1wXFBhbmR1aXRTWlJlcG9ydHMgOS4xLmV4ZQpDb3B5LVMzT2JqZWN0IC1CdWNrZXROYW1lIG5iaW0tcC1zMy1tZ210LWV1d2UxLWZpbGVzMiAtS2V5IGluc3RhbGwtbWVkaWEvRENJUS9RbGlrVmlld1NlcnZlcl9XaW4yMDEyYW5kVXAuZXhlIC1Mb2NhbEZpbGUgQzpcVGVtcFxRbGlrVmlld1NlcnZlcl9XaW4yMDEyYW5kVXAuZXhlCkNvcHktUzNPYmplY3QgLUJ1Y2tldE5hbWUgbmJpbS1wLXMzLW1nbXQtZXV3ZTEtZmlsZXMyIC1LZXkgaW5zdGFsbC1tZWRpYS9EQ0lRL1NRTF9TdnJfU3RhbmRhcmRfRWR0bl8yMDE0X1NQM182NEJpdC5JU08gLUxvY2FsRmlsZSBDOlxUZW1wXFNRTF9TdnJfU3RhbmRhcmRfRWR0bl8yMDE0X1NQM182NEJpdC5JU08iCmNob2NvIGluc3RhbGwgLXkgbmJpbS1kb21haW5qb2luCjwvcG93ZXJzaGVsbD4KPHBlcnNpc3Q+dHJ1ZTwvcGVyc2lzdD4=
+      
+      IamInstanceProfile: dciq
+      Tags:
+        - Key: role
+          Value: "dciq"
+        - Key: swrx:devicetype
+          Value: "windows"
+        - Key: Name
+          Value: !Sub "nbim-${env}-euwe1-dciqec2"
+        - Key: env 
+          Value: !Ref env 
+        - Key: easyrisk_id
+          Value: !Ref easyriskid
+
+
+  dnsrecordweb:
+    Type: AWS::Route53::RecordSet
+    Properties:
+#      HostedZoneName: dciq.a.nb.im
+      HostedZoneId: Z06509311IBF9I5HK5CQD
+      Name: web.dciq.a.nb.im
+      ResourceRecords:
+#        - !GetAtt Ec2Instancedciq01.PrivateDnsName
+        - !GetAtt Ec2Instancedciq01.PrivateIp
+      TTL: 300
+#      Type: CNAME
+      Type: A
+
+  dnsrecorddb:
+    Type: AWS::Route53::RecordSet
+    Properties:
+#      HostedZoneName: dciq.a.nb.im
+      HostedZoneId: Z06509311IBF9I5HK5CQD
+      Name: db.dciq.a.nb.im
+      ResourceRecords:
+#        - !GetAtt Ec2Instancedciq02.PrivateDnsName
+        - !GetAtt Ec2Instancedciq02.PrivateIp
+      TTL: 300
+#      Type: CNAME
+      Type: A
+
+
+Outputs:
+  vmdciq01dns:
+    Value: !GetAtt    Ec2Instancedciq01.PrivateDnsName
+  vmdciq01ip:
+    Value: !GetAtt    Ec2Instancedciq01.PrivateIp
+  vmdciq02dns:
+    Value: !GetAtt    Ec2Instancedciq02.PrivateDnsName
+  vmdciq02ip:
+    Value: !GetAtt    Ec2Instancedciq02.PrivateIp

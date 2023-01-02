@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-supporttools</id>
+    <version>0.1</version>
+    <description>Install and configure support tools required for various applications like Citrix, others..</description>
+    <authors>NaveenG naveen.gujar@nbim.com</authors>
+    <title>nbim-supporttools</title>
+    <tags>supporttools</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

@@ -1,0 +1,152 @@
+1.Region basina 250 tane olusturulabilir. Ucretsizdir.
+
+a.Olusturma:
+> Virtual networks > create > subs / RG: vn-rg / Name: ugur-vn / Region: East us 1
+  > IPv4 address space: 10.0.0.0/16 (Onerilen adres grubunu secebilir veya yeni olusturabilirim.) 
+    > + Add subnet > Subnet name: Frontend / Subnet address range: 10.0.0.0/24 > add
+    > + Add subnet > Subnet name: Backend / Subnet address range: 10.0.1.0/24 > add
+  > BastionHost: Disable / DDoS Protection Standard: Disable (genel Azure korumasi mevcut enable ederse fazlasi ve ucretli)
+  > Firewall: Disable > create
+
+
+
+2.Public IP Address:
+> Public IP addresses > create public IP address
+  > IPv4 / SKU: basic (LB sku ile uyumlu olmali) / Tier: Global
+  > Name: ugur-public-ip / IP address assignment: Dynamic 
+  > DNS name label: ugur.westeurope.cloudapp.azure.com
+  > Subs / RG / Location: West Europe
+
+
+
+3.Route Tables:
+
+a.Olusturma:
+- Network trafigini kontrol eder.
+> Route Tables > + create > Subs / RG / Region / Name: ugur-rt / create
+
+b.Routes:
+> ugur-rt > Routes > + Add 
+  > Route name: SendToFirewall / Address prefix: 190.0.2.0/23 
+  / Next hop type: Virtual Appliance (Firewall olarak olusturacagiz) / Next hop address: 190.0.4.1 (muteakip gidecegi adres daha olusturulmadi)  
+  > ok
+
+
+c.Subnets:
+- Ilgili Route'u Subnete baglar.
+> ugur-rt > Routes > SendToFirewall > Subnets > + Associate
+  > Virtual Network: ugur-vn > Subnet: backend > ok
+
+
+
+4.Gateway Subnet:
+- VPN ve ExpressRoute kurmak icin gerekir.
+- Vnet kurulduktan sonra:
+> Ilgili Vnet
+  > Subnets
+  > + Gateway subnet
+
+
+
+5.DNS servers:
+- VPN ile ic networku (Vnet'i) custom DNS server uzerinden bagladiysam bunu yapilandiririz.
+- Kendi ic networkumde DNS serverimiz var ve onu kullanmak istiyorsak:
+> Virtual network
+  > Ilgili Vnet
+  > DNS servers
+  > DNS servers: custom
+  > IP Address: 192.168.10.5  (Kendi DNS serverimin adresi)
+
+
+
+6.Service endpoints:
+- Public Serviceleri, PaaS resourcelari yalnizca Vnet icinde kullanmayi saglar. Disardan erisime kapatir.
+
+
+
+7.IP Address:
+a.Public IP Address:
+  - Firewall, Load balancer ve ihtiyac duyulan VM'lere atanir.
+- Olusturma:
+> Public IP addresses
+  > + Create
+  > IPv4 | Standard | Regional | Name: pip-test01 | Routing preference: Internet 
+  > DNS name label: umitpip11.northeurope.cloudapp.azure.com (unik isim verilir) 
+  > Subs | RG: Test-RG-01 | Location: North Europe 
+  > create
+
+b.Private IP Address:
+  - Vnet, (VPN gateway, ExpressRoute kullaniliyorsa 
+  - Load balancerin private IP address'i de olmali.
+  - Dinamik ve static olabilirler public IP Address'i gibi.
+  - Kullanimi:
+    * VM                  - NIC                                         - Dinamic/Static
+    * Internal LB         - On uc (internal taraflarina) yapilandirmasi - Dinamic/Static
+    * Application Gateway - On uc (internal taraflarina) yapilandirmasi - Dinamic/Static
+
+c.Dinamik IP Address:
+  - VM her acilip kapandiginda degisir.
+
+d.Static IP Address:
+  - IP Address'i degismez.
+  - VM silinse bile static IP address'i kalir ve baska bir VM'e atanabilir.
+  - Bir resource'tur.
+
+e.Standard:
+  - Farkli AZ'lere konumlandirabiliriz.
+  - Regional/Global address secebilirsiniz.
+  - Routing imkani saglar.
+  - Varsayilan olarak tum trafik kapali olur ve siz acarsiniz.
+  - Standard IP address'i yalniz Static olur.
+
+f.Basic:
+  - Varsayilan olarak tum gelen/giden trafic acik olacaktir.
+  - Hem Static hem de Dynamic secilebilir.
+
+g.VM'in Private IP address'ini Static Yapma:
+- Ethernet card uzerinden degistirilir.
+> Ilgili VM
+  > Networking
+  > Network Interface: testvm0123
+    > IP configuration
+    > ipconfig1 ... 10.1.0.4   (tanimli IP)
+    > Static
+    > IP address: 10.1.0.11
+    > Save
+
+h.Public IP Address'i VM'e Attach Etme:
+- Ethernet card uzerinden eklenir.
+> Ilgili VM
+  > Networking
+  > Network Interface: testvm0123
+    > IP configuration
+    > ipconfig1 ... 10.1.0.4   (tanimli IP)
+    > Public IP Address: Associate
+    > Public IP address: pip-test01  (yeni de olusturulabilir.)
+    > Save
+
+
+
+4.Hands-on:
+> Virtual network
+  > create
+  > subs | rg: Test-RG-01 | name: vnet-prod-ne-01 | region: North Europe
+  > IPv4 address space: 10.1.0.0/16
+  > default > Remove subnet
+  > + Add subnet
+    > Subnet name: FE-App-subnet
+    > Subnet address range: 10.1.0.0/24
+    > Add
+  > + Add subnet
+    > Subnet name: BE-App-subnet
+    > Subnet address range: 10.1.1.0/24
+    > Add    
+  > + Add subnet
+    > Subnet name: DB-subnet
+    > Subnet address range: 10.1.2.0/24
+    > Add   
+
+
+
+
+

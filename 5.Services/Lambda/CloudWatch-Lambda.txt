@@ -1,0 +1,138 @@
+- https://boto3.amazonaws.com/v1/documentation/api/latest/guide/ec2-example-managing-instances.html
+- https://www.youtube.com/watch?v=RL-mQWFWJcM
+
+EC2'da bir durum oldugunda EC2 acip SNS notification gondermesi icin:
+- CloudWatch ile event olusturacagiz.
+- Lambda ile SNS notification ve EC2 olusturacagiz.
+
+1.Lambda icin Role Olusturulur:
+> IAM
+  > Role
+    > Policy 
+      > ec2fullaccess
+      > SNSfullaccess
+    > Name: lambda_boto3demo
+  > create role
+
+
+
+2.Lambda Olusturma:
+> Lambda
+  > Functions
+  > Create function
+  > Author from stratch
+  > Function name: ec2_check_tags
+  > Runtime: Python 3.6
+  > Choose or create an execution role
+  > Use an existing role
+  > Existing role: lambda_boto3demo
+  > Create function
+
+boto3 docs'tan ilgili code'lar alinir.
+----------------------------------------------------
+import json                                   # Basta gelir.
+
+import boto3                                  # boto3 doc'un EC2.Client sayfasindan alinir.
+client = boto3.client('ec2')                  # boto3 doc'un EC2.Client sayfasindan alinir.
+
+def labda_handler(event, context):            # Basta gelir.
+
+  response = client.describe_tags(            # EC2.Client'in availible methodlardan describe_tags() sayfasindan alinir.
+  Filters=[                                   # EC2.Client'in availible methodlardan describe_tags() sayfasindan alinir.
+      {                                       # EC2.Client'in availible methodlardan describe_tags() sayfasindan alinir.
+          'Name': 'string'                    # EC2.Client'in availible methodlardan describe_tags() sayfasindan alinir.
+          'Values': [                         # EC2.Client'in availible methodlardan describe_tags() sayfasindan alinir.
+             'string',                        # EC2.Client'in availible methodlardan describe_tags() sayfasindan alinir.
+             ]                                # EC2.Client'in availible methodlardan describe_tags() sayfasindan alinir.
+      },                                      # EC2.Client'in availible methodlardan describe_tags() sayfasindan alinir.
+  ]
+)                                             # EC2.Client'in availible methodlardan describe_tags() sayfasindan alinir.
+
+  return {                                     # Basta gelir.
+      'statusCode': 200,                       # Basta gelir.
+      'body': json.dumps(Hello from lambda')   # Basta gelir.
+  }
+  
+----------------------------------------------------
+  - Gereksiz kodlar silindi.
+- Son hali:
+------------------------------------------------------------------
+import json
+import boto3
+
+ec2 = boto3.client('ec2')
+sns = boto3.client('sns')
+
+
+def lambda_handler(event, context):
+    # TODO implement
+    #print(event)
+    ec2_instance_id=event['detail']['instance-id']
+    
+    # Put Logic
+    tag_response= ec2.describe_tags(
+    Filters=[
+        {
+            'Name': 'resource-id',
+            'Values':[ec2_instance_id],
+        },
+    ],
+    )
+
+    alltags=tag_response['Tags']
+    
+    flag='STOP'
+    for item in alltags:
+        print(item['Key'])
+        if item['Key']=='SPECIAL_EXCEPTION':
+            flag='DONT_STOP'
+            break
+            
+    print(flag)    
+    
+    # Decision Making
+    
+    if flag=='STOP':
+        ec2.stop_instances(InstanceIds=[ec2_instance_id])
+        snsarn="arn:aws:sns:us-east-1:123456789123:email-SNS-topic"
+        errormsg="EC2 "+ ec2_instance_id + " stopped"
+        snsresponse=sns.publish(TopicArn=snsarn,
+                                Message=errormsg,
+                                Subject="EC2 Violated Company Policy")
+    
+    
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Hello from Lambda!')
+    }
+------------------------------------------------------------------
+
+
+
+
+
+2.Event Olusturma:
+> CloudWatch
+  > Events
+  > Rules
+  > Create rule
+  > Event pattern 
+      - Schedule'da secilebilir.
+    > Service name: ec2
+    > Event type: EC2 Instance State-change Notification
+    > Specific state(s)
+      > running
+        - pending, stopped, stopping, shutting-down vb de secilebilirdi.
+      > Any instance
+        - Specific instance Id(s) da secilebilirdi.
+      > Show sample event(s)
+----------------------------------------
+{
+ "version":"0",
+...............
+}
+----------------------------------------
+  - Sample event kopyalanir ve lambda'ya yapistirilir.
+  - Oncesinde notepad'e kaydet.
+
+

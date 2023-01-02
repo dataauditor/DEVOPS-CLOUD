@@ -1,0 +1,51 @@
+#!/bin/bash
+#!/bin/bash
+apt update -y
+apt install -y openjdk-17-jdk
+
+curl https://dlcdn.apache.org/maven/maven-3/3.8.5/binaries/apache-maven-3.8.5-bin.tar.gz --output apache-maven-3.8.5.tar.gz
+tar xzf apache-maven-3.8.5.tar.gz -C /opt/
+cd /opt
+sudo ln -s /opt/apache-maven-3.8.5 maven
+echo 'export M2_HOME=/opt/maven' >> /etc/profile.d/maven.sh
+echo 'export PATH=${M2_HOME}/bin:${PATH}' >> /etc/profile.d/maven.sh
+source /etc/profile.d/maven.sh
+
+apt install apt-transport-https ca-certificates curl software-properties-common -y
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic test" -y
+apt install docker-ce -y
+groupadd docker
+usermod -aG docker $USER
+newgrp docker 
+apt update -y
+docker swarm leave --force
+
+curl -L https://github.com/docker/compose/releases/download/v2.4.1/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+
+curl -sL https://deb.nodesource.com/setup_16.x | sudo bash -
+cat /etc/apt/sources.list.d/nodesource.list
+apt -y install nodejs
+
+curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+apt-get install -y nodejs
+
+apt install git -y
+
+echo 'export MYSQL_ROOT_PASSWORD=lindaelizabethremimarkusadrianumit' >> /home/ubuntu/.bashrc
+echo 'export MYSQL_DATABASE=eyvidb' >> /home/ubuntu/.bashrc
+echo 'export MYSQL_USER=eyvi' >> /home/ubuntu/.bashrc
+echo 'export MYSQL_PASSWORD=detregnermyesno' >> /home/ubuntu/.bashrc
+---------------------------------------------------------------------------------------------------------------
+  - ilave olarak .bashrc'de ilgili satirlar yorum satiri yapilir.
+
+  - bitbucket'da uretilen SSH key github repoya kaydediliyor. Daha sonra github repodan EC2'ya cekilip /.ssh dosyasinda kaydedilip izinler veriliyor.
+
+
+
+
+
+
+
+

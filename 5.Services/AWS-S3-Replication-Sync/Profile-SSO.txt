@@ -1,0 +1,37 @@
+vim Users/nbuce1/.aws/config
+------------------------------------------------------------------
+[default]
+region = eu-west-1
+output = json
+
+[profile nbim-cloudservices-dev-poweruser]
+region = eu-west-1
+sso_region = eu-west-1
+sso_start_url = https://nbim.awsapps.com/start
+sso_account_id = 623608658945
+sso_role_name = NBIMPowerUserAccess
+
+
+[profile 095894169734_NBIMAdministratorAccess]
+aws_access_key_id=ASIARMU545CDC3BO52HC
+aws_secret_access_key=K/Hgp5P4yZI/E3QemDBmeY6FbSFqqvGBlnYhVfyI
+aws_session_token=IQoJb3JpZ2luX2VjEBYaCWV1LXdlc3QtMSJHMEUCIQDLlnaBAx48qSy9Fh7DZTQ6UagPQCiyja1kzpTg4FFJlgIgWlTfJhdkHewhzzwnmvoRr3C4/bM+C6DpRR1dGbU/YoMqpwMI7///////////ARABGgwwOTU4OTQxNjk3MzQiDMj7kGG1IBJpYlvcuSr7Airw2VrFAzEwIqvFSuf4g9d1lLWc8+nwvP8QoWU/+djnW8VJqm/3sGkb47x4D6diqZ9VDLFHJYdBOlLmAmX7O3U78kGPV3SRvAQAIWEGqma3PJlq9xDEMe3/DrLdHDS+NSccvW9LYvAvWpeGYt5iWS+rXSC+EZd1VlJ0QIBMhWs9pkrCvdrqq8qZsLD3GcZ/5Qks1e9sQMQzmpNL1bp110mC6RXus3V9FnRKimBF3ADgzMNQsZvIIhJu2TRjgIMjVnV+orMlUAOl/pizhude2nInmqQ2DaIy9tC1EmA1B2tVg5pBHKyda1QzBI6oCf9ckfp24zXkV9johQIXhsZkJ1rvREl0xE8cLr7hi8YaPn3MUQmFwenyhqX3V1dWN8uf1nXViKLKUsaRb68h9swENdr0At4lLCRLL+KtKQZvNYUCCTIJMlDSIgh6USf+xVRpM0lDyFrXIDljv0m3eGVTCY2rbadGj2VucPaLQqAaKZDJl5OUDpVHbjAlTqowsv/kmgY6pgGwGOF6RR55ByBPuyL/NY/Riitfn9o17NBFo5qul76DL4+4x7siSkDdREjFkOeRyVdI+fyfX99gGOnLjvcd7079AaveNJq31ylHFV94fdLeHkuiX7A85nTt7qv/EfhGfbVNPBmDK1Z/SDO3WhQlC1SRwkGAEr8G2VIsTNilvugG1YXLPuQpCoeZOJXG9HUyKBdmDteKVvKk0RBvnLz+d9aO8vYKMB0X
+sso_region = eu-west-1
+sso_start_url = https://nbim.awsapps.com/start
+------------------------------------------------------------------
+  - Iki adet profil olusturdum. Ilkine verileri manual ekledim. 
+  - Ikincisine verileri multi account > ilgili hesap > Command line or programmatic access > Option 2: Add a profile to your AWS credentials file - copy
+
+
+
+
+aws sso login --profile nbim-cloudservices-dev-poweruser
+  - seklinde her iki hesaba baglanilabilir.
+aws sts get-caller-identity --profile nbim-cloudservices-dev-poweruser
+
+aws cloudformation validate-template --template-body .\sys_dciq\cloudformation\iam-rds-cfn.yaml --profile nbim-dciq-admin --region eu-west-1
+aws cloudformation validate-template --template-body .\ec2-test-nbuce1.yaml --profile nbim-cloudservices-dev-poweruser
+aws cloudformation validate-template --template-body file:///home/local/test/sampletemplate.json
+  - profile da eklenir bircok ayri hesap oldugu icin.
+
+

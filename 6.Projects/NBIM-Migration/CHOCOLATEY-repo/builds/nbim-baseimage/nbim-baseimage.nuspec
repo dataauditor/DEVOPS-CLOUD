@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-baseimage</id>
+    <version>0.1.20210241</version>
+    <description>A wrapper package to install all components required for a base image</description>
+    <authors>HakonB</authors>
+    <title>nbim-baseimage</title>
+    <tags>baseimage splunk</tags>
+    <dependencies>
+      <dependency id="nbim-splunkforwarder" version="1.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

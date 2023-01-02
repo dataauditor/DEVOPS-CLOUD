@@ -1,0 +1,309 @@
+1.EC2 Migration
+ Image Al
+
+
+
+
+
+Hata Arama:
+nslookup smartzone.nbim.no
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+monolithic-mgmt
+
+db, s3, ec2, iam
+
+
+
+1.Ilk Remote Branch Olusumu:
+git checkout -b migration 
+git add . 
+git commit -m "first commit"  
+git push --set-upstream origin migration
+
+
+Uzun policy:
+qualys - silinecek
+nbim-p-s3-mgmt-euwe1-files - silinecek
+
+
+
+Encrption:
+$pwd = “Welcome@123”
+$securepwd = $pwd | ConvertTo-SecureString -AsPlainText -Force
+  - secure olarak kaydeder ama gostermez.
+$encryptedpwd = $securepwd | ConvertFrom-SecureString
+  - kriptolar.
+$encryptedpwd
+  - kriptolu sonuc verir.
+ 
+
+Decryption:
+$encryptedpwd
+  - Kriptolu.
+$securepwd = $encryptedpwd | ConvertTo-SecureString
+$securepwd
+  - Sifreli der.
+
+$Marshal = [System.Runtime.InteropServices.Marshal]
+  - Indirilir.
+$Marshal
+
+
+ami-028caf485f7688000
+
+
+
+rds-s3-access-migfiles
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "rds.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+
+p-stack-eu-west-1-account-iam-commonappaccessPolicy-7JUVWTCLP7FP
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "ssm:GetParameters",
+                "ssm:GetParameter"
+            ],
+            "Resource": [
+                "arn:aws:ssm:*:538217567914:parameter/AmazonCloudWatch-linux",
+                "arn:aws:ssm:*:538217567914:parameter/AmazonCloudWatch-windows",
+                "arn:aws:ssm:*:538217567914:parameter/qualys_cloudagent_activationid",
+                "arn:aws:ssm:*:538217567914:parameter/qualys_cloudagent_customerid",
+                "arn:aws:ssm:*:538217567914:parameter/mgmt/*"
+            ],
+            "Effect": "Allow",
+            "Sid": "LimitedSSMAccess"
+        },
+        {
+            "Action": [
+                "s3:Get*",
+                "s3:List*"
+            ],
+            "Resource": [
+                "arn:aws:s3:::nbim-p-s3-mgmt-euwe1-files",
+                "arn:aws:s3:::nbim-p-s3-mgmt-euwe1-files/*",
+                "arn:aws:s3:::nbim-p-s3-mgmt-usea1-files",
+                "arn:aws:s3:::nbim-p-s3-mgmt-usea1-files/*",
+                "arn:aws:s3:::nbim-p-s3-mgmt-apse1-files",
+                "arn:aws:s3:::nbim-p-s3-mgmt-apse1-files/*",
+                "arn:aws:s3:::nbim-p-s3-mgmt-uswe2-files",
+                "arn:aws:s3:::nbim-p-s3-mgmt-uswe2-files/*"
+            ],
+            "Effect": "Allow",
+            "Sid": "GetSharedFiles"
+        },
+        {
+            "Action": [
+                "ssm:DescribeAssociation",
+                "ssm:GetDeployablePatchSnapshotForInstance",
+                "ssm:GetDocument",
+                "ssm:GetManifest",
+                "ssm:ListAssociations",
+                "ssm:ListInstanceAssociations",
+                "ssm:PutInventory",
+                "ssm:PutComplianceItems",
+                "ssm:PutConfigurePackageResult",
+                "ssm:UpdateAssociationStatus",
+                "ssm:UpdateInstanceAssociationStatus",
+                "ssm:UpdateInstanceInformation"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "ec2messages:AcknowledgeMessage",
+                "ec2messages:DeleteMessage",
+                "ec2messages:FailMessage",
+                "ec2messages:GetEndpoint",
+                "ec2messages:GetMessages",
+                "ec2messages:SendReply"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "cloudwatch:PutMetricData"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "ec2:DescribeInstanceStatus",
+                "ec2:DescribeTags",
+                "ec2:DescribeInstances",
+                "elasticloadbalancing:DescribeLoadBalancers",
+                "elasticfilesystem:DescribeMountTargets",
+                "elasticfilesystem:DescribeFileSystems",
+                "autoscaling:DescribeAutoScalingInstances"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Condition": {
+                "ForAnyValue:StringLike": {
+                    "aws:TagKeys": [
+                        "Name",
+                        "scd:*",
+                        "hostgroup",
+                        "os_patch"
+                    ]
+                }
+            },
+            "Action": [
+                "ec2:CreateTags"
+            ],
+            "Resource": "arn:aws:ec2:*:538217567914:instance/*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "ds:CreateComputer",
+                "ds:DescribeDirectories"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "s3:ListBucket",
+                "s3:ListBucketMultipartUploads"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "kms:Decrypt",
+                "kms:ListKeyPolicies",
+                "kms:GenerateRandom",
+                "kms:ListRetirableGrants",
+                "kms:GetKeyPolicy",
+                "kms:GenerateDataKeyWithoutPlaintext",
+                "kms:ListResourceTags",
+                "kms:ReEncryptFrom",
+                "kms:ListGrants",
+                "kms:GetParametersForImport",
+                "kms:ListKeys",
+                "kms:GetKeyRotationStatus",
+                "kms:Encrypt",
+                "kms:ListAliases",
+                "kms:GenerateDataKey",
+                "kms:ReEncryptTo",
+                "kms:DescribeKey"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "AllowKMSusage"
+        },
+        {
+            "Action": [
+                "autoscaling:DescribeAutoScalingGroups",
+                "autoscaling:DescribeAutoScalingInstances",
+                "autoscaling:DescribeLifecycleHooks",
+                "autoscaling:DescribeLifecycleHookTypes"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "AllowDescribingASGs"
+        },
+        {
+            "Action": [
+                "autoscaling:CompleteLifecycleAction"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "CompleteLifecycleHooks"
+        },
+        {
+            "Action": [
+                "fsx:DescribeFileSystems",
+                "fsx:DescribeBackups",
+                "fsx:ListTagsForResource"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "AllowDescribingFSx"
+        },
+        {
+            "Action": "ssm:*",
+            "Resource": [
+                "arn:aws:ssm:*:538217567914:parameter/azuread-app-proxy/*",
+                "arn:aws:ssm:*:538217567914:parameter/LV*",
+                "arn:aws:ssm:*:538217567914:parameter/longview*"
+            ],
+            "Effect": "Deny",
+            "Sid": "DenyProtectedSSMSpacesAccess"
+        }
+    ]
+}
+
+
+
+
+arn:aws:kms:eu-west-1:982657707511:key/f52f057f-3b6d-49b2-9090-f6f544276ce5
+
+RDS password: fdsafFs5433P

@@ -1,0 +1,31 @@
+Deployment Strategies:
+
+1.Red-black:
+- Her iki ortam hazirlandiktan sonra DNS yeni env'a yonlendirilir.
+- Source ve Target environmetler olusturulmus ve her ikisi de test edilmis ve calisiyor.
+- You've set up the records and DNS for both endpoints and data is being replicated across the environments.
+- Once everything is ready to go, you simply switch the DNS over to the target environment.
+- Her hangi bir problem olma durumuna karsi source env kapatilmaz ve yeni ortam gozlemlenir. Olmazsa geri donulur.
+- Monite edilebilmeli.
+
+2.Blue-green:
+- Source ve Target environmetler olusturulmus ve her ikisi de test edilmis ve calisiyor.
+- You've set up the records and DNS for both endpoints and data is being replicated across the environments.
+- Trafik tamamen target env'a aktarilmaz, source ile paylastirilir.
+- DNS server her iki env'a belirlenen yuk dagitimi yapabilmeli. Route53'un imkani var.
+- Monite edilebilmeli.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

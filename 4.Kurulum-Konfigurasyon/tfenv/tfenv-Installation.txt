@@ -1,0 +1,12 @@
+git clone https://github.com/tfutils/tfenv.git ~/.tfenv
+echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> ~/.bash_profile
+  - Add ~/.tfenv/bin to your $PATH.
+sudo ln -s ~/.tfenv/bin/* /usr/local/bin
+  - sudo ln -s ~/.tfenv/bin/* /usr/local/bin.
+tfenv --version
+tfenv install 1.2.1
+  - Istenen terraform veriyonu indiriyoruz.
+tfenv use 1.2.1
+  - Indirdigimiz terraform versiyonunu kullaniyoruz.
+cd terraform-aws-opencbdc-tctl
+terraform --version

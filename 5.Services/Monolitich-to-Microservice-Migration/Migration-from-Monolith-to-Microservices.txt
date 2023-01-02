@@ -1,0 +1,188 @@
+GENEL:
+- Monolith service'in 3 microservice'e bolunup GKE Cluster'a aktarilmasi.
+> Monolith repo clone edilir.
+  > Cluster olusturulur.
+
+
+1.Reponun Indirilerek NodeJS Programinin Calistirilmasi:
+cd ~
+git clone https://github.com/googlecodelabs/monolith-to-microservices.git
+cd ~/monolith-to-microservices
+./setup.sh
+
+
+
+
+2.GKE Cluster Olusturma:
+- Portaldaki Environment set up section'dan region/zone konfigure edilebilir.
+gcloud services enable container.googleapis.com
+  - Enable the Containers API so you can use Google Kubernetes Engine.
+gcloud container clusters create fancy-cluster --num-nodes 3 --machine-type=e2-standard-4
+  - 3 node'u olan "fancy-cluster" isimli K8s cluster olusturduk.
+  - region/zone da eklenebilir.
+gcloud compute instances list
+  - Node'lari listeler.
+
+
+
+
+3.Deploy Monolith to Cluster:
+cd ~/monolith-to-microservices
+./deploy-monolith.sh
+  - deploy islemi.
+kubectl get service monolith
+  - IP address'ini aldik.
+  - IP addresi ile Browserdan baglanilabilir.
+
+
+
+
+4.orders'i Microservice Olarak Tanimlama:
+
+a.Microservice (orders) Image'leri Olusturup Registry'e Push Etme:
+- Halihazirda monolith yapi microserveces'lere bolunmus onceden. 
+cd ~/monolith-to-microservices/microservices/src/orders
+  - Burada hazir bolunmus 3 microsevice olusturulmus.
+gcloud builds submit --tag gcr.io/${GOOGLE_CLOUD_PROJECT}/orders:1.0.0 .
+  - Image olusturup Google Container Registry'e gonderiyor.
+  - /Navigation menu/Tools/Cloud Build/History: image surecini gosterir.
+
+
+b.Deployment orders-Microservices to GKE:
+kubectl create deployment orders --image=gcr.io/${GOOGLE_CLOUD_PROJECT}/orders:1.0.0
+  - "orders" isimli ve tek replicali bir pod (deployment) baslattik.
+kubectl get all
+  - Hem monolith hem de orders microservice'ini goruruz.
+  - /Navigation menu/Kubernetes Engine/Workloads: Deploymentlari inceleyebiliriz.
+
+
+c.Microservice orders'e Load Balancer Baglama:
+kubectl expose deployment orders --type=LoadBalancer --port 80 --target-port 8081
+  - Onceden 8081 portu acilmis, muhtemelen Dockerfile ile.
+kubectl get service orders
+  - IP address: orders microservice'inin public IP addresi ve 80 LB portu.
+
+
+d.Monolith Service'i Reconfigure Edip orders Microservice'i ile Baglama:
+- Monolith icindeki ".env.monolith" dosyasindaki order adresi orders microservice'ine baglanacak sekilde degistirilir.
+cd ~/monolith-to-microservices/react-app
+nano .env.monolith
+---------------------------------------------------------------------------
+REACT_APP_ORDERS_URL=http://<ORDERS_IP_ADDRESS>/api/orders
+REACT_APP_PRODUCTS_URL=/service/products
+---------------------------------------------------------------------------
+  - ORDERS_IP_ADDRESS: Private IP address of orders.
+  - REACT_APP_ORDERS_URL=/service/orders
+    - env klasoru (.env.monolith): yukardaki gibi cikti vermisti ama orders icin baglanti noktasini degistirdik.
+   - CTRL+0, Enter, CTRL+X
+
+
+e.Kalan Monolith'i Rebuild:
+- Monolith repoda yaptigimiz degisikligi monolith service tasimak icin yeniden container olustururuz monolith icin.
+npm run build:monolith
+  - Once Config files rebuild edilir.
+
+
+f.Monolith icin Yeni Image Olusturup Repository'e Push Edilir:
+- Geride kalan (orders bolumu microservice olarak yeniden configure edildi.) monolith yapi yukarda yeniden build edilip artifact olusturuldu.
+- Burada artifact alinarak image olusturup repository'e gonderilir.
+cd ~/monolith-to-microservices/monolith
+gcloud builds submit --tag gcr.io/${GOOGLE_CLOUD_PROJECT}/monolith:2.0.0 .
+  
+
+g.Deploy Monolith Container to GKE:
+kubectl set image deployment/monolith monolith=gcr.io/${GOOGLE_CLOUD_PROJECT}/monolith:2.0.0
+  - deployment/monolith deploymentinin imaji degistiriliyor.
+  - Artik Monolith, orders microservice'i ile API uzerinden konusuyor.
+
+
+
+
+5.products'i Microservice Olarak Tanimlama:
+
+a.Microservice (products) Image'leri Olusturup Registry'e Push Etme:
+cd ~/monolith-to-microservices/microservices/src/products
+gcloud builds submit --tag gcr.io/${GOOGLE_CLOUD_PROJECT}/products:1.0.0 .
+
+
+b.Deployment products-Microservices to GKE:
+kubectl create deployment products --image=gcr.io/${GOOGLE_CLOUD_PROJECT}/products:1.0.0
+kubectl get all
+
+
+c.Microservice products'e Load Balancer Baglama:
+kubectl expose deployment products --type=LoadBalancer --port 80 --target-port 8082
+kubectl get service products
+
+
+d.Monolith Service'i Reconfigure Edip products Microservice'i ile Baglama:
+cd ~/monolith-to-microservices/react-app
+nano .env.monolith
+---------------------------------------------------------------------------
+REACT_APP_ORDERS_URL=http://<ORDERS_IP_ADDRESS>/api/orders
+REACT_APP_PRODUCTS_URL=http://<PRODUCTS_IP_ADDRESS>/api/products
+---------------------------------------------------------------------------
+> Browser > 
+  > PRODUCTS_IP_ADDRESS
+
+
+e.Kalan Monolith'i Rebuild:
+- Frontend rebuild edilir.
+npm run build:monolith
+
+
+f.Monolith icin Yeni Image Olusturup Repository'e Push Edilir:
+cd ~/monolith-to-microservices/monolith
+gcloud builds submit --tag gcr.io/${GOOGLE_CLOUD_PROJECT}/monolith:3.0.0 . 
+
+
+g.Deploy Monolith Container to GKE:
+kubectl set image deployment/monolith monolith=gcr.io/${GOOGLE_CLOUD_PROJECT}/monolith:3.0.0
+
+
+
+
+6.frontend'i Microservice Olarak Tanimlama:
+
+a.frontend Microservice'in Build Etme:
+cd ~/monolith-to-microservices/react-app
+cp .env.monolith .env
+npm run build
+cat .env.monolith
+---------------------------------------------------------------------------
+REACT_APP_ORDERS_URL=http://<ORDERS_IP_ADDRESS>/api/orders
+REACT_APP_PRODUCTS_URL=http://<PRODUCTS_IP_ADDRESS>/api/products
+---------------------------------------------------------------------------
+  - Yukarda configure edilen env config file'ini tasiyoruz. Birsey degistirmiyoruz.
+> Browser > 
+  > PRODUCTS_IP_ADDRESS
+
+
+b.Microservice frontend Image'i Olusturup Registry'e Push Etme:
+cd ~/monolith-to-microservices/microservices/src/frontend
+gcloud builds submit --tag gcr.io/${GOOGLE_CLOUD_PROJECT}/frontend:1.0.0 .
+
+
+c.Deployment frontend-Microservices to GKE:
+kubectl create deployment frontend --image=gcr.io/${GOOGLE_CLOUD_PROJECT}/frontend:1.0.0
+kubectl get all
+
+
+d.Microservice frontend'e Load Balancer Baglama:
+kubectl expose deployment frontend --type=LoadBalancer --port 80 --target-port 8080
+kubectl get service frontend
+
+
+
+
+7.Delete The Monolith:
+kubectl delete deployment monolith
+kubectl delete service monolith
+kubectl get services
+-------------------------------------------------------------------------------
+NAME         TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)        AGE
+frontend     LoadBalancer   10.39.246.135   35.227.21.154    80:32663/TCP   12m
+kubernetes   ClusterIP      10.39.240.1                443/TCP        18d
+orders       LoadBalancer   10.39.243.42    35.243.173.255   80:32714/TCP   31m
+products     LoadBalancer   10.39.250.16    35.243.180.23    80:32335/TCP   21m
+-------------------------------------------------------------------------------

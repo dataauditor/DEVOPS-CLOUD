@@ -1,0 +1,2 @@
+1.Genel:
+- Rol atamalari, ilke atamalari, kaynak yoneticisi sablonlari, RG olusturulmasinda kolaylik ve hiz saglar.

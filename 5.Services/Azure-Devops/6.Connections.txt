@@ -1,0 +1,23 @@
+Connections:
+- Proje bazinda source repo ve image repository connectionlari yapilir.
+- Connect and authenticate the platforms:
+  * External Code Repository which hosts the source code: GitHub, GitLab... 
+  * Image repository connections.
+  * Deploy to remote server: AWS, Microsoft Azure, Cluster, On-prem...
+- Credentials, access tokens, username, passwords ...
+> Ilgili Project
+  > Project settings
+  > Service connections
+  > Create service connection
+    > Github 
+      > Authentication method: Grant authorization
+      > Oauth Configuration: AzurePipelines
+      > Authorize
+        > Kendi Github hesabin'a baglanip sifre girerek izin verilmis olur.
+      > Save
+  > New service connection
+    > Docker Registry
+      > Docker ID: umitceylan
+      > Docker Password: Mustafa11,d
+      > Service connection name: dockerhub
+      > Save

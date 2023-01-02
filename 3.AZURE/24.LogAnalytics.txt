@@ -1,0 +1,6 @@
+1.Genel:
+- Tum servicelerdeki loglari analiz edebiliriz.
+- SQL sorgu dili ile kullanilir.
+- Kendi sorgu sablonlarini da kullanabiliriz.
+- Kendi Dashboardlarinizi da olusturabilirsiniz.
+- Akilli uyarilar ve otomasyonlar olusturabiliriz.

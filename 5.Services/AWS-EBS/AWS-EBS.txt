@@ -1,0 +1,14 @@
+1.EBS Olusturup EC2'ya Baglama:
+> Create EBS in same AZ with EC2.
+  > Attach to EC2.
+    - "docker commit" ile image olusturup daha sonra eski containeri durdurup bu image ile yeni container actik.
+lsblk
+df -h
+sudo file -s /dev/nvme1n1
+sudo mkfs -t ext4 /dev/nvme1n1
+sudo file -s /dev/nvme1n1
+sudo mkdir /mnt/ebsvol
+sudo mount /dev/nvme1n1 /mnt/ebsvol/
+lsblk
+ls -lh /mnt/ebsvol
+cd /mnt/ebsvol

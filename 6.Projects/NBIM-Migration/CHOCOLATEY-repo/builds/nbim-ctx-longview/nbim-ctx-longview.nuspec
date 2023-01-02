@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-ctx-longview</id>
+    <version>75.11.6307</version>
+    <description>Install Longview client for Citrix</description>
+    <authors>NaveenG naveen.gujar@nbim.com</authors>
+    <title>nbim-ctx-longview</title>
+    <tags>longview</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

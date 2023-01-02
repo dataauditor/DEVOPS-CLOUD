@@ -1,0 +1,595 @@
+1.Genel:
+- Java projesini Maven ile test edip package olusturuyoruz.
+- Ilgili artifacti calismakta olan ve dependenciesleri yuklenmis bir ec2'ya deploy ediyoruz.S3'e 
+- Backend repo, Frontend repo ve Mysql var.
+- Her repo icin ayri CD pipeline yapiyoruz.
+- Pipelinelari staging branch'a bagliyoruz. 
+- Ec2'ya baglanabilmesi icin aws credentials'i variable olarak tanitiyoruz.
+- Ec2'ya girebilmesi icin Bitbucketta SSH key olusturup EC2'ya ekliyoruz.  
+
+
+
+2.EC2 Kurulumu:
+- 80, 3000, 8080, 22 portlari acik.
+# java kurulumu:
+sudo apt update -y
+sudo apt install -y openjdk-17-jdk
+
+# node v16.14 yuklemesi:
+cd ~
+curl -sL https://deb.nodesource.com/setup_16.x | sudo bash -
+cat /etc/apt/sources.list.d/nodesource.list
+sudo apt -y install nodejs
+
+# npm 8.5.5 yuklemesi: 
+curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# maven-3.8.5 yuklemesi:
+curl https://dlcdn.apache.org/maven/maven-3/3.8.5/binaries/apache-maven-3.8.5-bin.tar.gz --output apache-maven-3.8.5.tar.gz
+tar xzf apache-maven-3.8.5.tar.gz -C /opt/
+cd /opt
+sudo ln -s /opt/apache-maven-3.8.5 maven
+sudo vim /etc/profile.d/maven.sh
+------------------------------------------------------
+export M2_HOME=/opt/maven
+export PATH=${M2_HOME}/bin:${PATH}
+------------------------------------------------------
+source /etc/profile.d/maven.sh
+mvn -version
+~/opt/maven/bin/mvn -version     # versiyonu verir. PATH calismazsa
+vim /etc/environment
+----------------------------------
+/opt/maven/bin:
+----------------------------------
+  - root PATH'e maven'in binary adresi eklenir. ssh baglantisinda root ile giriyor.
+
+# gradle yuklemesi:
+wget -c https://services.gradle.org/distributions/gradle-7.4.2-bin.zip -P /tmp
+ls /tmp
+sudo apt-get install unzip
+sudo unzip -d /opt/gradle /tmp/gradle-7.4.2-bin.zip
+ls /opt/gradle
+sudo nano /etc/profile.d/gradle.sh
+---------------------------------------------------------------
+export GRADLE_HOME=/opt/gradle/gradle-7.4.2
+export PATH=${GRADLE_HOME}/bin:${PATH}
+---------------------------------------------------------------
+sudo chmod +x /etc/profile.d/gradle.sh
+source /etc/profile.d/gradle.sh
+gradle --version
+
+# docker yuklemesi:
+apt install apt-transport-https ca-certificates curl software-properties-common -y
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic test" -y
+apt install docker-ce -y
+groupadd docker
+usermod -aG docker $USER
+newgrp docker 
+apt update -y
+# snap install docker
+docker swarm leave --force
+
+# docker-compose yuklemesi:
+curl -L https://github.com/docker/compose/releases/download/v2.4.1/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+
+# git yuklemesi:
+apt install git -y
+
+
+
+3.Branch:
+- Her iki repoya da staging branchlari olusturulur. Birbirinden bagimsiz olarak ayni ec2'ya deploy ederler.
+
+
+4.Variables in Bitbucket (IPTAL):
+- AWS credentials S3 icin kullanilacakti. EC2'ya SSH key ile baglandik. Bu projede credentials'a gerek yok.
+Bitbucket Repo:
+> Repository settings > Repository variables 
+  > AWSAccessKeyId ... Secured   / Add
+  > AWSSecretKey   ... Secured   / Add
+  > IP_Address     ...           / Add
+
+
+5.SSH key:
+- Her bir repo tanitilir.
+> Repository settings > SSH keys > Create SSH key 
+  > copy Public key > ec2'daki /home/ubuntu/.ssh/authorized_keys 'e ekle   (chmod gerekebilir.)
+  > Host address: <ec2 public ip address> > Fetch 
+
+
+6.SSH Key:
+- EC2'daki public key de Bitbucketa tanitilabilir.
+- git clone icin gerekir.
+> avatar > Personal Settings > SSH keys > Add key > Key
+  - Buraya EC2'da /.ssh dosyasi altinda "ssh-keygen" komutu ile olusan id_rsa_pub dosyasi yapistirilir.
+  - id_rsa_pub icindeki kod ayni zamanda /.ssh/authorized_keys file'ina da yapistirilir.
+  - Ya da Burada generate an SSH key ile olusan key authorized_keys 'e eklenir.
+ssh -T hg@bitbucket.org
+ssh -T git@bitbucket.org
+  - connectionu gosterir terminalden.
+
+
+7.Systemd for Java Konfigure edildi.
+sudo -i
+which java               
+  # java'nin binary adresi
+  # /usr/bin/java
+cd /etc/systemd/system
+vim eyvid.service
+----------------------------------------------------------------------
+[Unit]
+Description=Manage Java service
+
+[Service]
+Environment=FLYWAY_USER=eyvi
+Environment=FLYWAY_PASSWORD=detregnermyesno
+Environment=FLYWAY_URL="jdbc:mysql://localhost:3306/eyvidb"
+WorkingDirectory=/home/ubuntu/backend/    # uygulama dosyasinin konumu
+ExecStart=/usr/bin/java -jar application-0.0.1-SNAPSHOT.jar  # file'in ismi 
+User=ubuntu
+Type=simple
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+----------------------------------------------------------------------
+sudo systemctl daemon-reload
+sudo systemctl status eyvid
+sudo systemctl enable eyvid
+sudo systemctl start eyvid
+sudo systemctl status eyvid
+
+# sudo systemctl restart eyvid
+  # compile edilmis dosya degistirilirse kullanilir.
+
+journalctl -fu eyvid
+  - eyvid (ilgili java app)'nin loglarini verir.
+
+
+
+8.Variables in EC2:
+- IPTAL: Bunun yerine systemd kullandim.
+- .Bashrc: her terminal acildiginda degiskenleri tanimlar. Dustugunde tekrar tanimlamaz.
+- MYSQL containere baglanirken java bu degiskenleri ceker. 
+vim /home/ubuntu/.bashrc
+-----------------------------------------------------------------
+#case $- in
+#    *i*) ;;
+#      *) return;;
+#esac
+export MYSQL_ROOT_PASSWORD=lindaelizabethremimarkusadrianumit  
+export MYSQL_DATABASE=eyvidb
+export MYSQL_USER=eyvi
+export MYSQL_PASSWORD=detregnermyesno
+-----------------------------------------------------------------
+  - ustteki dort satir bash env, ssh ile calisabilsin diye comment edilir.
+source ~/.bashrc
+  - komutu calistirilarak env variable tanitilir.
+
+
+
+9.a.Pipeline Backend with Maven:
+
+bitbucket.pipeline (backend)
+--------------------------------------------------------------------
+options:
+  max-time: 3
+pipelines:
+  default:
+    - step:
+        name: Unit-Test
+        image: maven:3.8.5
+        script:
+          - mvn test
+  branches:
+    staging:
+      - step:
+          name: Clone eyvi-akvakultur
+          image: maven:3.8.5
+          caches: 
+            - maven
+          script:
+#            - ssh ubuntu@${IP_Address} "git clone git@bitbucket.org:eyvi_project/eyvi-akvakultur.git  && cd eyvi-akvakultur" 
+            - ssh ubuntu@${IP_Address} "cd /home/ubuntu/eyvi-akvakultur  &&  git pull"
+            - ssh ubuntu@${IP_Address} 'mvn flyway:migrate -f /home/ubuntu/eyvi-akvakultur/ddl -Dmysql_database=$MYSQL_DATABASE -Dmysql_user=$MYSQL_USER -Dmysql_password=$MYSQL_PASSWORD'
+      - step:
+          name: Build and Test 
+          image: maven:3.8.5
+          caches:
+            - maven
+          script:
+##            - mvn -B verify --file pom.xml 
+            - mvn test install 
+          artifacts:
+            - application/target/*.jar
+   
+      - step:   
+          name: Package and Deploy 
+          image: maven:3.8.5
+#         image: maven:3.5.0-jdk-8
+#          script:
+#             - mvn install
+#          artifacts:
+#             - application/target/*.jar
+           script:
+             - scp -r application/target/application-0.0.1-SNAPSHOT.jar ubuntu@${IP_Address}:/home/ubuntu/backend 
+#             - ssh ubuntu@$IP_Address "pkill java"
+             - ssh ubuntu@$IP_Address "java -jar /home/ubuntu/backend/*.jar"  
+#             - appspec.yml   (CodeDeploy kullanirsak gerekli)
+
+## Push artifacts to S3 bucket:
+#      - step:
+#          name: Send to S3
+#          image: atlassian/pipelines-awscli
+#          script:
+#             - export AWS_ACCESS_KEY_ID=$AWSAccessKeyId
+#             - export AWS_SECRET_ACCESS_KEY=$AWSSecretKey
+#             - wget https://ftp.gnu.org/gnu/tar/tar-1.34.tar.gz
+#             - mv appspec.yml /target
+#             - tar cvf  target/*.jar.tar  target/*.jar 
+#             - aws s3 cp target/*.jar.tar s3://eyvi/
+#             - aws s3 cp target/*.jar s3://eyvi/
+
+
+## Push artifacts to ec2 destination using rsync:
+#      - step:
+#          name: Deploy artifacts using rsync to $SERVER instance
+#          image: node:10.15.3
+#          script:
+#            - pipe: atlassian/rsync-deploy:0.3.2
+#              variables:
+#                USER: ubuntu
+#                SERVER: 18.203.161.6
+#                REMOTE_PATH: /home/ubuntu/eyvi
+#                LOCAL_PATH: target/*.jar
+#            - ssh ubuntu@18.203.161.6 "cd eyvi  &&  java -jar application/target/application-0.0.1-SNAPSHOT.jar"   
+--------------------------------------------------------------------
+  - "USER", "SERVER", "LOCAL_PATH" variable olarak tanitilabilir. $USER olarak da cekilir. "USER ubuntu add"
+
+
+9.b.Pipeline Backend with Gradle:
+---------------------------------------------------------------------------------------------------------------------
+options:
+  max-time: 4
+
+pipelines:
+  default:
+    - step:
+        name: Unit-Test
+        image: eclipse-temurin:17-jdk-jammy
+        caches:
+          - gradle
+        script:
+          - ./gradlew check 
+
+  branches:
+    main:
+      - step:
+          name: Flyway Migrate
+          image: kroniak/ssh-client:3.15
+          script:
+            - ssh ubuntu@${IP_Address} "cd eyvi-akvakultur && git fetch --all --prune --verbose && git switch ${BITBUCKET_BRANCH} && git pull --ff-only --verbose origin ${BITBUCKET_BRANCH}"
+            - ssh ubuntu@${IP_Address} "cd eyvi-akvakultur && ./gradlew flywayClean flywayMigrate"
+
+      - step:
+          name: Build and Test 
+          image: eclipse-temurin:17-jdk-jammy
+          caches:
+            - gradle
+          script:
+            - ./gradlew build
+          artifacts:
+            - application/build/libs/application-0.0.1-SNAPSHOT.jar
+    
+      - step:   
+          name: Package and Deploy 
+          image: kroniak/ssh-client:3.15
+          script:
+             - scp application/build/libs/application-0.0.1-SNAPSHOT.jar ubuntu@${IP_Address}:/home/ubuntu/backend/
+             - ssh ubuntu@$IP_Address "sudo systemctl restart eyvid"
+
+    eyvi_staging:
+      - step:
+          name: Flyway Migrate
+          image: kroniak/ssh-client:3.15
+          script:
+            - ssh ubuntu@${IP_Address2} "cd eyvi-akvakultur && git fetch --all --prune --verbose && git switch ${BITBUCKET_BRANCH} && git pull --ff-only --verbose origin ${BITBUCKET_BRANCH}"
+            - ssh ubuntu@${IP_Address2} "cd eyvi-akvakultur && ./gradlew flywayClean flywayMigrate"
+
+      - step:
+          name: Build and Test 
+          image: eclipse-temurin:17-jdk-jammy
+          caches:
+            - gradle
+          script:
+            - ./gradlew build
+          artifacts:
+            - application/build/libs/application-0.0.1-SNAPSHOT.jar
+    
+      - step:   
+          name: Package and Deploy 
+          image: kroniak/ssh-client:3.15
+          script:
+             - scp application/build/libs/application-0.0.1-SNAPSHOT.jar ubuntu@${IP_Address2}:/home/ubuntu/backend/
+             - ssh ubuntu@$IP_Address2 "sudo systemctl restart eyvid"
+---------------------------------------------------------------------------------------------------------------------
+
+
+10.Pipeline Frontend:
+---------------------------------------------------------------------------------------------------------------------
+options:
+  max-time: 4
+
+pipelines:
+  default:
+    - step:
+        name: Install dependencies and build project
+        image: node:16.14.0
+        caches:
+          - node
+          - npm
+          - cypress
+        script:
+          - npm ci && npm run build
+        artifacts:  
+          - build/**
+
+  pull-requests:
+    '**': 
+      - step:
+          name: Install dependencies
+          image: node:16.14.0 
+          caches:
+            - node 
+            - npm
+            - cypress
+          script:
+            - npm ci
+            - npm run build 
+            -  
+          artifacts:
+            - build/** 
+
+      - step:
+          name: Package and Deploy 
+          image: node:16.14.0
+          caches: 
+            - node
+            - serve 
+          script:
+            - scp -r build/** ubuntu@${IP_Address}:/home/ubuntu/frontend
+            - ssh ubuntu@$IP_Address "sudo cp -r /home/ubuntu/frontend/. /var/www/eyvi"
+            - ssh ubuntu@$IP_Address "sudo service nginx stop  &&  sudo service nginx start"
+            - ssh ubuntu@$IP_Address "rm -R /home/ubuntu/eyvi-client"
+            - ssh ubuntu@$IP_Address "git clone git@bitbucket.org:eyvi_project/eyvi-client.git"
+            - ssh ubuntu@$IP_Address "sudo npm i -g serve"
+            - ssh ubuntu@$IP_Address "serve -s /home/ubuntu/frontend -n"
+
+  branches:
+    eyvi_staging: 
+      - step:
+          name: Install dependencies
+          image: node:16.14.0 
+          caches:
+            - node 
+            - npm
+            - cypress
+          script:
+            - npm ci
+            - npm run build 
+            -  
+          artifacts:
+            - build/** 
+
+      - step:
+          name: Package and Deploy 
+          image: node:16.14.0
+          caches: 
+            - node
+            - serve 
+          script:
+            - scp -r build/** ubuntu@${IP_Address2}:/home/ubuntu/frontend
+            - ssh ubuntu@$IP_Address2 "sudo cp -r /home/ubuntu/frontend/. /var/www/eyvi"
+            - ssh ubuntu@$IP_Address2 "sudo service nginx stop  &&  sudo service nginx start"
+            - ssh ubuntu@$IP_Address2 "rm -R /home/ubuntu/eyvi-client"
+            - ssh ubuntu@$IP_Address2 "git clone git@bitbucket.org:eyvi_project/eyvi-client.git"
+#            - ssh -p 22 ubuntu@IP_Address2 "cd /home/ubuntu/eyvi-client  &&  git pull"
+#            - ssh ubuntu@$IP_Address2 "npm install --prefix /home/ubuntu/eyvi-client   &&  npm --prefix /home/ubuntu/eyvi-client run build"
+#            - ssh ubuntu@$IP_Address2 "sudo npm i -g serve && serve -s /home/ubuntu/frontend -n"
+            - ssh ubuntu@$IP_Address2 "sudo npm i -g serve"
+            - ssh ubuntu@$IP_Address2 "serve -s /home/ubuntu/frontend -n"
+
+ 
+
+definitions:
+  caches:
+    npm: $HOME/.npm
+    serve: ¤
+    cypress: $HOME/.cache/Cypress
+---------------------------------------------------------------------------------------------------------------------
+
+
+11.MySQL:
+apt-get install mysql-client
+  - ilgili programla konusabilmesi icin ec2'ya mysql-client yukleriz.
+docker run \
+--detach \
+--name=[container_name] \
+--env="MYSQL_ROOT_PASSWORD=[my_password]" \
+--publish 6603:3306 \
+--volume=/root/docker/[container_name]/conf.d:/etc/mysql/conf.d \
+mysql
+
+docker run --name eyvidb -v /home/ubuntu/eyvidb:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=lindaelizabethremimarkusadrianumit -e MYSQL_USER=eyvi -e MYSQL_DATABASE=eyvidb -e MYSQL_PASSWORD=detregnermyesno -p 3306:3306 -d mysql:latest
+  - daha sonra baglantiyi -v /home/ubuntu/backend:/var/lib/mysql/eyvidb seklinde degistiririz. Acilista o dosya olmadigindan hata veriyor.
+docker exec -it eyvidb bash
+mysql -u root -p
+  - sifre girme sadece bas, bazen de girilir.
+SHOW databases;
+CREATE DATABASE eyvidb;
+USE eyvidb;
+SELECT User,Host FROM mysql.user;
+CREATE USER eyvi IDENTIFIED BY 'eyvi123';
+  -sifre olmadigi zaman hata verir.
+CREATE USER markus;
+GRANT ALL ON eyvidb TO eyvi;
+  - eyvidb seciliyken yap.
+FLUSH PRIVILEGES;
+
+
+12.EC2'ya Variable:
+- IPTAL: Systemd ile hallettim.
+- java kodu ec2'dan alarak containere baglanir.
+export MYSQL_ROOT_PASSWORD=eyvi123
+export DB_PASSWORD=$MYSQL_ROOT_PASSWORD
+
+
+13.Mevcut Containere Yeni Volume Ekleme:
+docker volume create hello
+docker run -d -v hello:/world busybox ls /world
+docker ps  -a
+docker commit 5a8f89adeead newimagename
+docker run -ti -v "$PWD/somedir":/somedir newimagename /bin/bash
+
+
+14.Flayway Ile Database Tablolarini Guncelleme:
+- Pipeline ile yapiyoruz.
+cd /eyvi-akvakultur/ddl
+mvn flyway:migrate
+
+
+15.Programi Calistirma:
+cd backend
+java -jar *.jar
+#sudo lsof -i tcp:8080
+  - 8080 portu kullanimda hatasi verirse "pid" bulma kodu.
+#kil <pid>
+
+
+
+16.a.NGINX ILE 80 PORTUNDAN CIKIS.
+
+a.Install Node.js, npm, NGINX:
+sudo su
+sudo apt update
+
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+sudo apt install nodejs
+node -v
+npm -v
+
+sudo apt install nginx
+nginx -v
+service nginx status (systemctl enable nginx)
+  - nginx'in calistigi gorulur.
+service nginx start (systemctl status nginx)
+  - stopta ise calistirilir.
+
+
+
+b.Clone React Repo:
+sudo apt-get install git-all -y
+> Ilgili repo 
+  > Repository Settings 
+  > SSH Keys  
+  > Public key copy (VM'in /.ssh/authorized_keys yapistir)
+  > VM'in IP adresini Host address bloguna yapistir 
+  > Fetch
+  > Add
+sudo chmod 644 authorized_keys 
+git clone https://umitceylan11@bitbucket.org/eyvi_project/eyvi-client.git
+
+
+
+c.NGINX Configurasyonu Port:
+sudo vim /etc/nginx/sites-enabled/eyvi
+-------------------------------------------------------------------------------
+server {
+       listen 81;
+       listen [::]:81;
+
+       server_name 87.123.4.56;
+
+       root /var/www/eyvi;
+       index index.html;
+
+       location / {
+               try_files $uri $uri/ =404;
+       }
+}
+-------------------------------------------------------------------------------
+  - 80 ve 81 portlari nginx icindir. Ikisinden birini kullanabiliriz.
+
+
+
+d.Bulid React Project ve Nginx'in Ilgili Adresine Transferi:
+- React'i build etmek icin repoda calistirilir.
+- npm, react'in maven'i gibi index.css dosyalarindan compile ederek index.html olusturur.
+- Daha sonra build folder olusturur.
+npm install
+npm run build
+
+
+
+e.Application'un 3000 Portunda Calistirilmasi:
+npm i -g serve
+   - repoda
+sudo serve -s /home/ubuntu/frontend -n
+
+
+
+f.NGINX Configurasyonu index.html:
+sudo mkdir /var/www/eyvi
+sudo cp -r /home/ubuntu/eyvi-client/build/. /var/www/eyvi
+  - npm ile olusturulan build dosyasinin icrerigi buraya aktarilir.
+service nginx restart
+service nginx stop
+service nginx start
+  - 80 portu calisiyor.
+
+
+
+
+16.b.NGINX ile 443 PORTU ve SSL CERTIFICATION:
+
+a.OpenSSL ile SSL Certificate:
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
+  - SSL keyi olusturduk.
+
+
+b.SSL Certificate Conf File:
+vim /etc/nginx/snippets/self-signed.conf
+------------------------------------------------------------------------
+ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
+ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+------------------------------------------------------------------------
+  - NGINX'te SSL key ve self-signed'i refere eden bir conf file olusturduk.
+sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+  - Ikinci bir key olusturduk.
+vim /etc/nginx/sites-enabled/client-config
+sudo vim /etc/nginx/sites-enabled/eyvi
+---------------------------------------------------------------------------
+server {
+       listen 80;
+#       listen [::]:80;
+       listen 443; # ssl http2 default_server;
+
+       server_name 16.170.108.70;
+
+       root /var/www/eyvi;
+       index index.html;
+
+       location / {
+               try_files $uri $uri/ =404;
+       }
+
+       listen [::]:443 ssl http2 default_server;
+       include /etc/nginx/snippets/self-signed.conf;
+
+}
+---------------------------------------------------------------------------
+service nginx restart

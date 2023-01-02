@@ -1,0 +1,616 @@
+1.Providers:
+  - Subscription'a ilgili providers (authorization, automation, storage, network) register edilir resource acmak icin.
+
+
+1.Azure Active Directory:
+a.Global administrator: 
+  - tenant olusturabilir.
+  - Baska tenantta user olusturabilir.
+  - Tenant root management group'ta policy olusturabilir. Access management for Azure resources da gerekli.
+
+b.Owner:
+  - Baska tenantta user olusturamaz.
+  - Resource uzerinde tum yetki vardir.
+  - Device'i Azure AD'ye join edebiliyorsa Owner'dir.
+  - Child management group'ta veya subscriptionlarda policy olusturabilir.
+
+c.User administrator:
+  - Baska tenantta user olusturamaz.
+  - External User'i Azure AD tenant'e Davet Etme: 
+    > User’s Settings > Manage external collaboration settings (External Users'in altinda) > Guest invite settings 
+
+
+d.Local Administrator:
+  - Owner (default olarak)
+  - Global administrator (default olarak)
+
+e.Contributer/MG Contributer:
+  - Her turlu resource'u create, rename, move, delete, read yapabilir.
+  - assign access, assign policy olusturamazlar. (Owner'dan farkli olarak baskasina access yetkisi veremez.)
+
+f.Resource Policy Contributer: 
+  - Yalniz aasign policy yapabilirler.
+
+d.Network contributor:
+  - Internal Load balancere backend pool eklemek icin yeterli.
+  - Public Load balancere health probe eklemek icin yeterli.
+  - LB ile backend pool veya health probe'u birlestirmek icin ayni RG'da olusturulur. Hem LB hem de backend pool'a ulasabilir.
+
+e.User administrator administrative role:
+  - Bu rolu verebilmek icin; from Directory role blade modify directory role.
+
+f.DevTest Labs User:
+  - You can connect, start, restart, and shutdown your virtual machines in your Azure DevTest Labs.
+
+f.Storage File Data SMB Share Reader role:
+  - User ve grouplara atanabilir. Cihazlara atanamaz.
+
+f.Azure AD Premium P2 licenses:
+  - From the Licenses blade of Azure AD, assign a license: Ilgili Userlarin Premium featurelari kullanabildiginden emin olunabilir.
+
+g.Role:
+  - Users > User1 > Assigned roles > + Add assignments
+    * Rolleri modify edebiliriz.
+
+h.UPN (User Principal Name):
+  - Name of a system user in an email address format. (example: firstname.lastname@domain.com)
+  - It consists of the user name (logon name), separator (the @ symbol), and domain name (UPN suffix).
+  - UPN should not be confused with email addresses. A UPN is not the same as an email address. Sometimes, a UPN can match a user's email address, but this is not a general rule.
+
+
+i.IdFix tool:
+  - UPNs, special character sebebiyle Azure AD desteklemeyebilir.
+  - When there is a mismatch in UPN then the IdFix tool should be run and should be updated to synchronize on-premise AD to Azure AD.
+
+
+!!!
+2.Subscription:
+- Azure AD Tenant'ta bir developer group tanimli ve Subscription'da ugur RG var. Developer group, ugur'da Azure logic apps olusturabilmek icin ugur RG'da developer group'a Logic App Contributer rolu atanir.
+a.Izin:
+  - "Set-AzMarketplaceTerms cmdlet" komutu PowerShell'de calistirilarak yeni User'a Marketplace'ten template deploy yetkisi verildi.
+  - User'a yetki verirken Subscription uzerinden IAM'e gidilerek istenen role tanimlanir.
+
+b.Tenant:
+  - Global Access'i olan User'da olsa Subscriptionu goremez. Yetkilendirilmeli.
+  - Tenant'ta olusturulan group Subscription'daki RG'da Logic App Contributor rolu ile resource olusturabilir.
+
+3.OAuth 2.0 endpoint:
+- consonto.com'a OAuth 2.0 authorization endpoint kurarak AKS ile tenanttaki user'larin grant access olmasini saglar.
+
+
+4.SSPR (self-service password reset)
+  - SSPR is enabled for all users (non-enterprise admins). Ornegin BillAdmin, SecAdmin'i kapsamaz.
+  - SSPR policy does not apply for Administrator roles in Azure AD
+  - Sifre resetleme, degtistirme gibi islemler icin kullanilir.
+
+
+5.Storage:
+- Hepsi icin oncelikle Storage account acmak gerekli.
+a.Storage account type:
+  - General-purpose V2
+    * Blob
+    * Table
+    * Files
+    * Queues
+  - General-purpose V1
+    * Blob
+    * Table
+    * Files
+    * Queues
+  - BlockBlobStorage
+    * Blob
+  - FileStorage
+    * Files
+  - BlobStorage: Account altinda Containerler (pictures vb dosya). Container icinde de Blob (img001.jpg vb file)'lar olusturulur.
+    * Container
+      > Blob
+
+b.Object Type:
+  - Container: image store edip replica edebiliriz.
+  - File Share
+  - Table
+  - Queue
+
+a.Azure File Share:
+  - Sadece file depolar.
+  - Only FileStorage type of storage account supports Premium file share.
+  - Storage, StorageV2 veya BlobStorage'de file share kurulamaz.
+  - Containerler icin persistent storage imkani saglar.
+
+b.Azure File Sync:
+  - Azure file share ile on-premise server arasinda "azure file sync" kurabilmek icin Subscription'da "Storage Sync Service" olusturulur.
+  - Bir azure file sync group'a yalniz bir cloud endpoint baglanabilirken; birden fazla server endpoint baglanabilir.
+  - Register edilen server basina yalniz bir server endpoint tanimlanabilir. (D:\Folder1) yanina (E:\Folder2) olmaz.
+  > Daha sonra on-prem server'a agent download edilir. 
+    > Sonra on-prem server, storage sync service'e register edilir. Boylece arasinda bir link olusur.
+    > Subscription'da "sync group" olusturulur. Sync group'ta cloud endpoint olusur.
+
+c.Archive access tiering:
+  - StorageV2 ve BlobStorage olur. 
+  - Storage, FileStorage ... olmaz.
+
+d.Blob Storage:
+  - Serving Image ve documents'leri directly to a browser.
+  - File'lar burada saklar ve distributed access.
+  - Streaming video/audio.
+  - Writing the log files.
+  - Storing backup and restore, disaster recovery, archiving.
+  - Storing data for analysis bu an on-perm or Az service.
+  - image'ler icin uygun.
+  - LRS destekler.
+
+e.Table Storage:
+  - File'lar saklanamaz.
+  - NoSQL icin kullanilir. 
+
+f.Azure Queue Storage:
+  - Stores large numbers of messages. HTTP, HTTPS ile her yerden ulasilabilir. 
+  - Asynronized ve 64 kb max calisir.
+
+h.General-purpose v1 Azure Storage account:
+  - locally-redundant storage (LRS): tek storage.
+
+i.General-purpose v2 Azure Storage account:
+  - ZRS redundancy model: farkli AZ'lerde replica imkani. Zone faillerine karsi iyi. Yalnizca GPV2 destekler.
+  - image'ler icin uygun. Blob'u destekler.
+  - LRS destekler.
+  - RA-GRS destekler.
+
+j.AzCopy:
+  - Yalnizca blob ve file service'lerde kullanilir.
+
+k.Replication: 
+  - Storage account ayni anda en fazla 2 adet destinationa replication yapabilir.
+  - Ayri ayri en fazla 2 containerden baska storage'deki 2 containere yapabilir.
+  - Bir containere yalniz bir replication rule (destination veya source) tanimlanabilir.
+  - Storage accounta 1000 replication tanimlanabilirken, containere tek rule tanimlanabilir.
+
+l.UNC Path:
+  - Storage account name.file\shared name: contostorage.file.core.windows.net\data
+    * Storage account name: contostorage
+    * file: file.core.windows.net
+    * shared name: data
+
+m.Lifecycle Management Rule:
+  - General-purpose v1
+  - General-purpose v2
+  - BlockBlobStorage
+  - BlobStorage
+  - premium block blobs storage accounts
+  - Data Lake Storage Gen2 accounts ile calisir.
+  - Yalniz FileStorage ile calismaz.
+
+n.GRS, LRS, RA-GRS:
+  - LRS:
+    * Live migration'u destekler.
+  - GRS:
+    * Live migration'u destekler.
+  - RA-GRS:
+    * Live migration'u desteklemez.
+
+
+
+6.Storage Account Tipleri:
+a.LRS:
+  - Tek Zone'da 3 syncronously replica yapar. AZ cokerse data gider.
+
+b.ZRS:
+  - Regiondaki 3 AZ'de de syncronously replica yapar. Bir AZ cokse de data kaybi olmaz.
+  - StorageV2(General purpose v2)
+
+c.GRS:
+  - Cross-Regional Redundancy for regional outages. 
+  - Ayni regionda 3 syncronously replica yapar.
+  - Farkli regionda asyncronously replica yapar.
+  - Ikinci regiondakine read access icin Read Access Geo Redundant Storage (RA-GRS) enable edilir.
+
+d.GZRS:
+  - Geo Zone Redundant Storage high availibility ve max durability icindir.
+  - Ayni regionda 3 syncronously replica yapar.
+  - Farkli regionda asyncronously replica yapar.
+  - Ikinci regiondakine read access icin Read Access Geo Redundant Storage (RA-GZRS) enable edilir.
+
+
+!!!
+7.Azure Import/Export Service:
+a.Import:
+  - Yuksek verinin Azure'a fiziki transferi.
+  - Azure Blob Storage
+    * Container
+  - Azure File Storage
+    * Files
+  > Attach an external disk to on-prem Server and then run waimportexport.exe (datayi disk drive'a kopyalar.). (BitLocker ile disk drives encrypted edilir.)
+    > From the Azure portal, create an import job. (Gonderilecek storage'da import edilir.)
+    > Detach the external disks from Server and ship the disks to an Azure data centre.
+    > From the Azure portal, update the import job.
+
+b.Export:
+  - Azure Blob Storage 
+    * Container
+
+c.Import Hazirlik:
+  - Import oncesi the DATASET.CSV and the DRIVESET.CSV files are the two files that are needed when we want to import a file or a folder using the Azure Import/Export service.
+  - Kendi disk drives'lariniz veya Azure'un gonderebilecegi disk drives'lar ile transfer yapilabilir. USB 3.0 ve uzeri connection olmali.
+  - Herbir order ile max 5 adet SSD ile toplam 40TB transfer yapilabilir.
+
+d.Azure Data Box Disk: 
+  - Azure'un diskleri transfer icin talep edilecekse istenir.
+ 
+
+!!!
+8.Recovery Service Vault:
+a.Tanim:
+  - All the backups configured using azure native backup service are stored in Recovery service vaults.
+  - Backup'lar burada saklanir.
+  - Recovery point'leri store eder.
+  - Resource ile Vault ayni regionda olmali. RG ve Vnet onemli degil.
+  - Blob haric her turlu data source'unu depolayabilir: Share, VM, disk, SQL...
+
+b.Vault Baglama:
+  - Recovery service vaultu baska bir VM'e restore backup yapmak icin VM'ye Microsoft Azure Recovery Agent yuklenir.
+  - Storage account'taki containere de backup set up edilebilir. 
+  - Bir RSV'den baska RSV'ye backup aktarilacaksa once backup aktarilan mevcut RSV'den ayrilinir.
+
+c.Storage ile Baglama:
+  - Vault ile Storage ayni region'da olmali.
+  - Farkli RG'da olabilirler.
+  - Daha sonra Diagnostic settings for the AzureBackupReports log configure edilebilir.
+
+
+8.Backup:
+a.Backup policy:
+  - Azure backup uses a policy to define the frequency and the type of the backup for the virtual machines.
+  - VM'in kapali olmasi ve Windows/Linux olmasi backup'i etkilemez. Planli zamaninda backup alinir.
+
+b.Agentsiz olarak Windows VM'den olusan backup: 
+  - File recovery: Interneti olan herhangi Windows makineye restore pointi connect eden bir script download ederek yapilabilir.
+  - Restore backup: Backup'i alinan VM veya yeni bir VM'ye restore yapilabilir. 
+
+
+8.Recovery plan:
+  - It is used to define the parameters while performing the disaster recovery of your infrastructure.
+ 
+
+13.SAS:
+  - 
+
+
+14.SMB Protocol:
+  - "net use" uses SMB protocol which supports Account key only for authentication against storage accounts.
+  - SAS key ile girilemez.
+
+
+9.DNS:
+a.NS record:
+  - To delegate a subdomain named research.adatum.com to a different DNS server in Azure, adatum.com zone'da record isimli NS record olusturulur.
+  - NS record'lar, Domain register Records olarak modify edilmeli internete ulasmak icin.
+
+b.Private DNS Zone:
+  - Bir Vnet'e register edilir ve Vnet'in altindaki Subnetlerdeki VM'ler can register the hostname records in example.local zone.
+  - Private zone'a register edilmemis diger Vnetteki VM'ler local hostname'leri register edemez.
+  - Automatically register ozelligi varsa private zone'lar farkli region ve Vnetlerde kullanilabilir.
+  - Private zone'da "enable auto registration" ozelligi var. 
+
+
+10.Monitor:
+  - VM'lerin monite etmek icin Log Analytics workspace, source olarak kullanilir.
+  - Ayrica Microsoft Monitoring Agent, VM'e yuklenir.
+
+a.Azure Network Watcher:
+  - IP flow verify: 
+    * identify a security rule that prevents a network packet from reaching an Azure virtual machine icin kullanilabilir.
+    * Specify a source and destination IPv4 address, port, protocol (TCP or UDP), and traffic direction (inbound or outbound).
+    * IP flow verify then tests the communication and informs you if the connection succeeds or fails.
+    * If the connection fails, IP flow verify tells you which security rule allowed or denied the communication, so that you can resolve the problem.
+
+  - Connection troubleshoot:
+    * Validate outbound connectivity from an Azure virtual machine to an external host icin kullanilabilir.
+    * it enables you to test a connection between a VM and another VM, an FQDN, a URI, or an IPv4 address. 
+
+  - To record VM's successful and failed connection attempsts:
+    * Enable Azure Network Watcher flow logs,
+    * Enable Azure Network Watcher in the East US Azure region, and
+    * Register the Microsoft.Insights resource provider
+
+b.Azure Monitor: 
+  - Network In/Network Out: metrics'leri sadece VM'lerden gelen bytes sayisini verir. Inspect etmeye yaramaz.
+
+c.Performance Monitor:
+  - DCS (Data Collector Set): 
+    * Performance monitor belirli zaman araliklarindaki network performansini verir.
+    * It detects network issues like traffic blackholing, routing errors, and issues etc.
+    * It does NOT help to inspect network traffic between virtual machines (VMs).
+
+!!!
+d.Azure Network Watcher:
+  - Connection Monitor: 
+    * It enables the user to monitor the communication (network traffic) between two virtual machines within a virtual network
+    * We can inspect all the network traffic from VM1 to VM2 for a specified period .
+    * VMs arasindaki iletisimi izler ve Connection monitor metric'te tanimli alertleri gonderir.
+    * Communication problemlerini (VMs arasindaki) diagnose eder. 
+
+
+!!!
+17.NSG flow logs:
+  - It allow viewing information about ingress and egress IP traffic through a Network security group. 
+  - Through this the IP addresses that connect to the ILB can be monitored when the diagnostics are enabled on a Network Security Group.
+
+a.VM'nin connection log kayitlarinin alinmasi:
+  - NSG: ile inbound ve outbound trafik belirlenir. 
+  - NSG flow log: We can log network traffic that flows through an NSG with Network Watcher's NSG flow log capability.
+  - Azure Storage account: NSG flow log data is written to an Azure Storage account and therefore we need to create a Azure Storage account first.
+  - Azure Network Watcher: NSG flow log ile VM'nin log kayitlari alinirken VM ile ayni region'da enable the Azure Network Watcher edilir.
+  - Microsoft.Insights: Sonra “Microsoft.Insights” provider register edilir.
+  - NSG flow log: Enable a traffic flow log for an NSG, using Network Watcher's NSG flow log capability.
+
+
+!!!
+11.Site-To-Site Connection:
+  - Gateway kurulur her iki Vnete. Bu kapsamda bosta Vnetin IP addresi olmali.
+  - Vnet ile On-prem network IP address'ler cakismamali.
+  - Azure Virtual Network (VNET) Gateway: On-premde SMB share, Azure'da VNET ve webapp varsa baglanti icin kullanilir. VPN gateway kurulumu icin gereklidir.
+  - IPSec VPN connections encrypt data in transit.
+  - On-prem ile Vnet arasinda Site-to Site VPN: 
+    1. Create a gateway subnet: The gateway subnet is part of the virtual network (Kurulu degilse Vnet kur) IP address range that you specify when configuring your virtual network. It contains the IP addresses that the virtual network gateway resources and services use.
+    2. Create a VPN gateway: The virtual network (Vnet) gateway uses the gateway subnet.
+    3. Create a local network gateway: It represents your on-premises location (the site) for routing purposes. You give the site a name by which Azure can refer to it, then specify the IP address of the on-premises VPN device to which you will create a connection.
+    4. Create a VPN connection: Create the Site-to-Site VPN connection between your virtual network gateway and your on-premises VPN device.
+
+
+12.Point-To-Site Connection:
+  - Route-based virtual network gateway ile kurulur.
+  - Policy-based virtual network gateway varsa silinir.
+
+
+14.Basic SKU Load Balanser:
+  - VM'ler icin yalniz bir Availibility Set olusturulabilir. Tum VM'ler tek availibility sette olur.
+  - It can connect only with Dynamic IPs and Basic SKUs.
+  - Single availibility set ile calisir. Dogrudan VM'e balance yapmaz.
+
+
+15.Standard Load Balancer (internet facing):
+a.Backend Pool: 
+  - LB'nin Backend pool'una VM'i tanitmak icin LB'de static IP of Standard SKU attached olmali.
+  - Backend VM'lerin ya "no Public IP" veya "Standard Public IP" olmali.
+  - Backend VM'lerin "Basic SKU Public IP" olmamali.
+  - Backend poola VM baglarken acik, stop olmasi farketmez.
+
+b.NSG: 
+  - VM'yi LB'ye baglarken olusturmaliyiz.
+  - Static IP'ler olursa tek bir nsg ile tum Vnet'in nsg'si olusturulabilir.
+
+c.Health probe: (HTTP:80/Probe1.htm) VM'lerde yuklu ise saglikli gorur ve yuku 80 portundan VM'lere balance eder.
+
+d.Rule: Silinirse (frontend IP addresini, backend pool ve Health probu gosteren) LB calismaz.
+
+e.Frontend IP Address: VM'lere disardan ulasmak maksadiyla inbound NAT rule'lar tanimlanmadan once tanimlanmali.
+
+!!!
+f.Internal (Private) Lpoad Balancer:
+  - Frontends ve backend pool (VMs) ayni Vnet'te olmali. LB kurulu oldugu Vnet'in disinda calismaz peering olsa da.
+
+16.NIC:
+  - Vnet ile ayni region'da olusturulur.
+  - VM'nin kendi nic seviyesinde DNS (settings) tanimli degilse Vnet'in nic'ine tanimli DNS settings'i kullanir.
+
+
+17.Azure CLI:
+  - az aks Install-cli: kubectl clienti install eder.  This command requires AZ Cli pre-installed on the system to work.
+  - az storage account create -g RG1 -n storageaccount1 --kind StorageV2 --sku Standard_GRS
+    * StorageV2: Hot, Archive and Cold blob tiers'i support eder.
+    * Standard_GRS: Birden fazla regionda replica olusturarak disaster'a karsi fault tolerance saglar.
+  - azcopy copy D:\folder1 https://contosodata.blob.core.windows.net/public --recursive
+    * localdeki folderi contosodata isimli storage accounta blob'a kopyalar.
+  -"Set-AzMarketplaceTerms cmdlet" komutu PowerShell'de calistirilarak yeni User'a Marketplace'ten template deploy yetkisi verildi.
+  - az aks create: AKS olusturur.
+  - az acr build: Azure Container Registry (cluster ile entegre edilmis), AKS Cluster ve image varsa ilgili image'i build edip Cluster'a deploy eder.   
+  - Get-AzureRmRoleDefinition - Name “Reader” | ConvertTo-Json : Role create edilmeden once role define edilir.
+
+
+18.AKS:
+  - Pod CIDR: container'lerin IP address'leri bu atanir.
+  - az aks: ile cluster autoscaler ... ayarlanir.
+  - kubectl: ile cluster autoscaler ... ayarlanir.
+
+
+19.VM'de yapilabilecek degisikliklerin etkisi:
+  - Change the size to D8s v3:                     downtime yapar, VM'nin stop etmesi gerek.
+  - Add a 500-GB managed disk:                     downtime yapmaz.
+  - Add the Puppet Agent extension:                downtime yapmaz.
+  - Enable Desired State Configuration Management: downtime yapmaz.
+
+
+20.Azure Cost Management:
+a.Advisor Recommendations:
+  - Microsoft AI-based recommendation engine. 
+  - It gives recommendations based on different pillars like operational efficiency, performance, cost, security etc.
+  - Identify unattached disks that can be deleted.
+
+
+21.Azure Key Vault:
+a.Tanim:
+  - Password'leri sifreli olarak saklar.
+
+b.Sifreli ARM Template ile multiple VM acma: 
+  - Once template'e “access policy” tanimlanir. Boylece Vault'a ulasabilir. 
+  - ARM template would use the password that is stored in this vault to deploy the 100 VMs. 
+
+
+21.Azure Resource Manager library:
+  - Template'ler burada saklanir. 
+  - Calisan VM'nin template'i alinabilir.
+  - Template ile VM acilirken RG konfigure edilebilir. 
+  - Template ile VM acilirken OS, administrator user ve VM size konfigure edilemez.
+
+
+21.Templates:
+  - RG > Deployments: templates ile olusturulan resources'larin olusturulma date and time'ini gosterir.
+
+
+21.Deployment template:
+  - A deployment template can be used to deploy multiple Azure web apps.
+
+
+24.App Service Plan:
+  - App Service ile App Service Plan ayni regionda olmali.
+
+
+25.Web App Service:
+a.Premium tier: Region bazinda limit olmayip RG bazinda 100 App service plan deploy edilebilir.
+
+b.Free tier: Region bazinda 10 App service plan deploy edilebilir.
+
+c..Net Core 3.0: Windows/Linux'a deploy edilebilir. App Service Plan ayni regionda olmali.
+
+d.ASP.NET 4.7: Yalniz Windows ile calisir. App Service Plan ayni regionda olmali.
+
+
+22.One App service plan:
+  - A web app requires an app service plan where we define the configurational parameters of the compute and storage resources required for the web apps.
+  - Multiple web apps can share a common app service plan.
+
+
+23.Web App Move:
+  - RG1'den RG2'ye web app move edebilmek icin lock (read only vb) olmamali.
+  - Onceden kurulu web app olmamali.
+  - Farkli Subscriptionlar ve regionlar arasi da web app gonderilebilir.
+
+
+23.Resource Group:
+a.Silmek:
+  - Remove resource lock from Vnet (varsa)
+  - Vault'a backup varsa once durdurulur/deregister edilir. Daha sonra Vault'un icindeki backup data silinir.
+  - Protected ise resource kaldirilir.
+
+24.Budget:
+  - Sadece monite eder ve Action group'ta belirtilen sekilde bildirimde bulunur.
+  - Maximum limite ulasilinca VM veya web-app'i kapatmaz.
+
+
+25.Log Analytics workspace:
+  - Bunun icin install the Microsoft Monitoring Agent on VM.
+  - Create an alert in Azure Monitor.
+  - VM'den system event logs monite edilecekse Log Analytics workspace source olarak kullanilir.
+  - Log Analytics workspaces for Azure Backup reports of Vault: Subscription ve regiondan bagimsizdir. Vault baska log analytics workspace baska regionda olabilir.
+  - search in (Event) “error” : Workspace'te error events'leri Event isimli tablodan gormeyi saglar.
+  - search in (Event, SecurityEvent) “error” : Multiple table'da arama yapar.
+
+26.Linux Diagnostic Extension (LAD) 3.0:
+  - Monitor the metrics, health and the logs of linux VMs.
+  - Oncesinde VM'ye install edilir.
+
+
+!!!
+27.VMSS (VM Scale Set):
+  - Autoscaling VM'lere ayarlaniyor.
+  - Arm templates ile veya automation script ile icra edilebilir.
+  - VMSS farkli bir region'da VM'ler farkli farkli regionlarda olabilir.
+  - VM'ler sonradan olusturularak eklenebilir.
+a.Scale Set'teki VM'lerin belli image ve User_data ile Deploy Edilmis Olarak Olusturulmasi:
+  - Upload a configuration script.
+  - Modify the extensionProfile section of the Azure Resource Manager template.
+
+
+33.Proximity Placement Group:
+  - In a proximity placement group all the Azure resources are logically grouped. 
+  - VMSS ile ayni regionda olmali.
+  - Sadece bir RG ile assign edilir. Proximity placement group ve VMSS farkli RG'da olabilir ama iki farkli RG'deki VMSS ile baglanamaz.
+
+
+29.Automation State Configuration:
+> Upload a configuration to Azure Automation State Configuration.
+  (> Ilgili Automation account
+  > State configuration (DSC)
+  > Configurations
+  > Add
+  > Import Configuration 
+    - TestConfig.ps1 dosyasi cihaza indirilir.)
+  > Compile a configuration into a node configuration.
+  > Assign the node configuration.
+
+
+!!!
+33.Azure Availability Set:
+a.update domain:
+  - WebApp'in kurulu oldugu her bir VM ayri ayri planned maintenance'a uymasi gerektiginde kullanilir.
+  - Availibility setteki herbir VM, bir update domain ve fault domain'e atanir.
+  - 20 adet update domains olusturulabilir.
+  - Fiziksel olarak ayni anda baslatilabilirler. Bir grup VM'i ifade eder.
+
+b.fault domain:
+  - Availibility set, default olarak 3 fault domain'e bolunur.
+  - Ayni power source ve network switch'i kullanan VM grubunu ifade eder.
+
+
+28.Resource'larin Baska Subscription'a Transferi:
+a.Transfer edilebilir:
+  - storage account, 
+  - VM, 
+  - Vnet, 
+  - Managed Disk of VM, 
+  - Recovery services vault
+
+b.Transfer edilemez:
+  - Azure AD services,
+  - Azure Backup vaults,
+  - Azure App service gateways
+
+
+29.Microsoft System Center Service Manger:
+  - On-premise'e deployment yapar.
+  - alarm kurulabilir.
+
+a.IT Service Management Connector: 
+  - Azure ile on-premise arasi iki tarafli connection saglar. 
+  - On-prem'de threshold seviyesine cikilinca olusan alert, Service Manager tarafindan gonderilebilir.
+
+
+30.Firewalls:
+a.On-premise Disk > VM icin Storage account'a Transfer:
+  > Storage account > Firewalls and virtual networks > Networking > Selected networks > Add on-premises network uses a public IP namely “131.107.1.0/24 “
+    * On-prem'den Azure'a aktarilacak server/diskin IP adresi storage hesabina tanitilir.  
+
+
+
+37.App in Vnet1 > App in Vnet2:
+a.Vnet1'deki Applicationu'u Vnet2'ye en kolay aktarma:
+  > VM stop edilip, deallocate edilir.
+    > VM delete edilir ama Disk muhafaza edilir.
+    > Vnet2'de yeni VM acilir ve Disk baglanir.
+
+
+38.Custom Policy to Subscription:
+  - Subscription'a NSG'lerde 8080 portunun kapali olacagi custom policy olarak yazilirsa kurulan her NSG'yr otomatik etki eder.
+  - Policy'ler daha once olusturulan resource'lari etkilemez.
+  - Policy'lerde tanimli tag ... vb gecerlidir, isaret ettigi subs veya RG'un tagi degil.
+
+39.Azure Policy to RG:
+  - tag name: Label, tag value: Value1 olarak policy'de belirtip ayrica RG'a baska bir tag atarsan yeni resource Label/Value1 degerlerini alir.
+
+
+39.Resource Lock:
+  - Resource locks are used to lock a Subscription or an Azure resource.
+  - Other users will not accidentally modify them or delete them.
+
+
+40. Network Interface: 
+  - Hem public hem de private IP addresses'i ayni anda destekler. Tek VM'e tek network interface yeter.
+
+
+50.Availibility Zones:
+  - AZ'ler sadece "managed disk"leri support ediyor. Managed disk secmeden AZ secilemez.
+  - Availibility options: Buradan istenen AZ secilir.
+
+
+!!!
+51.Notifications, Alerts:
+a.Alert Rule:
+  - Rule tanimlanacak storage account vb secilir.
+  - Monite edip email notification alacak sekilde metric veya activity log secilir. 
+  - Daha sonra rule'lara notify edilecek user'lar eklenir.
+  - 1 saat'te maksimum 10 email gonderilebilir.
+  - SMS ve Voice: max 5 dk'da 1 adet gonderilebilir.
+
+b.Action Group:
+  - Alert Rule'larda customize edildiginde olusan herbir farkli grubun toplami. "user1 only", "user1 and user4", "user1, user2, user3 user4" tanimlandiysa 3 action group olusmustur.
+

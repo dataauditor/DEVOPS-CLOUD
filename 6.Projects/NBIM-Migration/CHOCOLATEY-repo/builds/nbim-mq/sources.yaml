@@ -1,0 +1,3 @@
+---
+- s3://nbim-s3-euwe1-software-packages-chocolatey/IBM/MQ/9.2.2.0-IBM-MQC-Win64.zip
+- s3://nbim-s3-euwe1-software-packages-chocolatey/IBM/MQ/Response9_2_2_0.ini

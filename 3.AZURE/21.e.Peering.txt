@@ -1,0 +1,72 @@
+1.Genel:
+- Virtual networklerin iletisimini saglar.
+- Farkli subscriptionlar arasi peering de kurulur.
+- Virtual networkler arasi baglanti kurulurken tek tarafli veya cift tarafli baglanti kurulabilir.
+- 2'den fazla vn arasi baglanti icin herbiri arasinda ayri ayri 3 tane peering yapilabilir veya chaining relationship yapilir. 
+- Peering (inbound/outbound data transfer), VPN gateway, Application gateway, public IP address'leri ucretlidir.
+- Bir Vnet'te Virtual network gateway baglantisi varsa buna da diger Vnet'te izin verebilirsiniz.
+- Peering ile 3 Vnet'e baglanilamaz iken Firewall veya NVA (network virtual appliance) ile tum Vnet'lere baglanti noktasi saglanilabilir. Bunlara kullanici tanimli routerlar da denir.
+- UDR (user defined rule): Firewall ortada bir Vnet'e kurulursa Vnet1'den once Vnet-FW sonra Vnet2'e gec seklinde kurallar yazilmali. 
+- Firewall: UDR'lerle Vnet'lerde trafige izin verirken ayni zamanda Firewall'da da Vnet1'den gelen trafigi Vnet2'e gitmesine izin veriyorum seklinde izin vermek gerekiyor.
+- Vnet'te IP address degisikligi, eklemesi yapmak icin once peering kaldirilir sonra yeniden kurulur.
+
+
+
+2.Peering:
+- Traffic to remote virtual network: VN'e karsi VN'den trafige izin verir.
+- Traffic forwarded from remote virtual network: 3. bir VN'un trafigini 2. VN uzerinden 1. VN'e aktarmaya izin verir.
+- Virtual network gateway or Route Server: Express route ile veya VPN ile gateway uzerinden transfere izin verir.
+- Ayni regionda peering:
+> fw-vn > peerings > + Add 
+  > This virtual network: Peering link name: peering1to2 
+    / Traffic to remote virtual network: Allow 
+    / Traffic forwarded from remote virtual network: Allow
+    / Virtual network gateway or Route Server: None 
+  > Remote virtual network: Peering link name: peering2to1
+    / Virtual network deployment model: Resource manager 
+    / Subscription: Free trial (baska subs da olabilir.) 
+    / Virtual network: fw-vn2 
+    / Traffic to remote virtual network: Allow 
+    / Traffic forwarded from remote virtual network: Allow
+    / Virtual network gateway or Route Server: None     
+  > add
+
+
+3.Global Peering:
+- Farkli regionda peering:
+- fw-vn3 ile fw-vn arasi peering kuruyoruz.
+> fw-vn3 > Peerings > + Add 
+  > This virtual network: Peering link name: peering3to1 
+    / Traffic to remote virtual network: Allow 
+    / Traffic forwarded from remote virtual network: Allow
+    / Virtual network gateway or Route Server: None 
+  > Remote virtual network: Peering link name: peering1to3
+    / Virtual network deployment model: Resource manager 
+    / Subscription: Free trial (baska subs da olabilir.) 
+    / Virtual network: fw-vn 
+    / Traffic to remote virtual network: Allow 
+    / Traffic forwarded from remote virtual network: Allow
+    / Virtual network gateway or Route Server: None     
+  > add
+
+
+
+4.VPN Gateway Peering'te Baglama:
+- Vnet'lerden birinde on-prem ile S2S VPN kurulu ve VPN gateway varsa Peering kurulurken:   
+  * VPNGW kurulu Vnet'te
+> fw-vn > peerings > + Add 
+  > This virtual network: Peering link name: peering1to2 
+    / Traffic to remote virtual network: Allow 
+    / Traffic forwarded from remote virtual network: Allow
+    / Virtual network gateway or Route Server: Use this virtual network's gateway
+  * Baglanilacak Vnet'te: 
+> fw-vn > peerings > + Add 
+  > This virtual network: Peering link name: peering1to2 
+    / Traffic to remote virtual network: Allow 
+    / Traffic forwarded from remote virtual network: Allow
+    / Virtual network gateway or Route Server: Use the remote virtual network's gateway secilir.
+
+
+
+4.fw-vn2 ile fw-vn2 arasi Transfer:
+- Ya yukardaki peeringlerde "Traffic forwarded from remote virtual network: Allow" secili oldugu icin zaten iletisim olacak.

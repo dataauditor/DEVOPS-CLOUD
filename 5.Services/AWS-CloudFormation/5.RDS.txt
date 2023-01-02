@@ -1,0 +1,299 @@
+# 1.Stack
+
+Description: Create IAM role for db 
+
+Parameters:
+  env: 
+    Type: String
+  envshort:
+    Type: String  
+  easyriskid:
+    Type: String 
+
+Resources: 
+  RDSPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement:  
+          - Action:
+              - s3:Get*
+              - s3:List*
+            Resource: 
+              - arn:aws:s3:::nbim-p-s3-mgmt-euwe1-files2
+              - arn:aws:s3:::nbim-p-s3-mgmt-euwe1-files2/*
+            Effect: Allow
+            Sid: GetSharedFiles
+
+          - Action: 
+              - ssm:DescribeAssociation
+              - ssm:GetDeployablePatchSnapshotForInstance
+              - ssm:GetDocument
+              - ssm:GetManifest
+              - ssm:ListAssociations
+              - ssm:ListInstanceAssociations
+              - ssm:PutInventory
+              - ssm:PutComplianceItems
+              - ssm:PutConfigurePackageResult
+              - ssm:UpdateAssociationStatus
+              - ssm:UpdateInstanceAssociationStatus
+              - ssm:UpdateInstanceInformation
+            Resource: "*"
+            Effect: Allow
+
+          - Action: 
+              - ec2messages:AcknowledgeMessage
+              - ec2messages:DeleteMessage
+              - ec2messages:FailMessage
+              - ec2messages:GetEndpoint
+              - ec2messages:GetMessages
+              - ec2messages:SendReply
+            Resource: 
+              - "*"
+            Effect: Allow
+
+          - Action: 
+              - cloudwatch:PutMetricData
+            Resource: "*"
+            Effect: Allow
+
+          - Action: 
+              - ec2:DescribeInstanceStatus
+              - ec2:DescribeTags
+              - ec2:DescribeInstances
+              - elasticloadbalancing:DescribeLoadBalancers
+              - elasticfilesystem:DescribeMountTargets
+              - elasticfilesystem:DescribeFileSystems
+              - autoscaling:DescribeAutoScalingInstances
+            Resource: 
+              - "*"
+            Effect: Allow
+
+
+  RdsDciqRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: rds-s3-access-migfiles
+      MaxSessionDuration: 14400
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: 
+                - "rds.amazonaws.com"
+      ManagedPolicyArns:
+        - !Ref RDSPolicy
+
+
+  RDSDNSPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement:  
+          - Action:
+              - ds:DescribeDirectories
+              - ds:AuthorizeApplication
+              - ds:UnauthorizeApplication
+              - ds:GetAuthorizedApplicationDetails
+            Effect: Allow
+            Resource: "*"
+
+
+  RdsDciqDNSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: rds-ds-access-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: 
+                - "rds.amazonaws.com"
+      ManagedPolicyArns:
+        - !Ref RDSDNSPolicy            
+
+
+------------------------------------------------------------------------------------------------------------/-----------------
+
+# 2.Stack
+
+Description: RDS belonging to dciq  at 2019041716442896236
+
+Parameters:
+  env: 
+    Type: String
+  envshort:
+    Type: String  
+  easyriskid:
+    Type: String 
+
+Resources:
+  MyDB1:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: "Delete"
+    Properties:
+      VPCSecurityGroups:
+      - Ref: MyDbSecurityByCIDRIPGroup1
+      AllocatedStorage: "100"
+      DBInstanceClass: "db.m4.large"
+      DBInstanceIdentifier: "p-db-eu-west-1-dciq"
+      Engine: "sqlserver-se"
+      EngineVersion: "13.00"
+      BackupRetentionPeriod: "1"
+      #DBParameterGroupName: !Ref myOptionGroupsqlserverstd2016dciq  #"sqlserver-std-2016"
+      OptionGroupName: !Ref myOptionGroupsqlserverstd2016dciq
+      PreferredBackupWindow: "04:51-05:51"
+      PreferredMaintenanceWindow: "sun:22:31-sun:23:30"
+      StorageType: "gp2"
+      AutoMinorVersionUpgrade: "True"
+      AllowMajorVersionUpgrade: "false"
+      MultiAZ: "False"
+      Port: "1433"
+      PubliclyAccessible: false
+      DBSnapshotIdentifier: !Sub arn:aws:rds:eu-west-1:982657707511:snapshot:dciq-son
+      Timezone: "W. Europe Standard Time"
+      Domain: "d-93676557bb"
+      DomainIAMRoleName: "rds-ds-access-role"
+      LicenseModel: "license-included"
+      MasterUsername: master
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref myDB1AdminPassSSMParam, ':SecretString:password}}' ]]  #!GetAtt myDB1AdminPassSSMParam.Secret
+      DBSubnetGroupName: !Ref myDBSubnetGroup1
+ #SQL Server Express doesn't support encryption at rest
+      StorageEncrypted: true
+      Tags:
+        - Key: Name
+          Value: !Sub "nbim-${env}-euwe1-dciqdb"
+        - Key: env 
+          Value: !Ref env 
+        - Key: easyriskid 
+          Value: !Ref easyriskid
+
+
+  MyDbSecurityByCIDRIPGroup1:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow AD join for RDS
+      VpcId: !Sub '{{resolve:ssm:/nbim-ssm-parameter/networking/private-vpc-1:1}}'    #"vpc-0bc0ff6a1ee5dbd68"    
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "1433"
+          ToPort: "1433"
+          CidrIp: 10.0.0.0/8
+          Description: Allow SQL traffic from webserver
+      Tags:
+        - Key: Name
+          Value: !Sub "nbim-${env}-euwe1-dciqdbsecgroup"
+        - Key: env 
+          Value: !Ref env 
+        - Key: easyriskid 
+          Value: !Ref easyriskid
+
+  myDBSubnetGroup1:
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties:
+      DBSubnetGroupDescription: "DBSubnet dciq eu-west-1"
+      SubnetIds:
+        - !Sub '{{resolve:ssm:/nbim-ssm-parameter/networking/private-vpc-1/subnet-1:1}}'
+        - !Sub '{{resolve:ssm:/nbim-ssm-parameter/networking/private-vpc-1/subnet-2:1}}'
+        - !Sub '{{resolve:ssm:/nbim-ssm-parameter/networking/private-vpc-1/subnet-3:1}}'
+#        - arn:aws:ssm:*:${AWS::AccountId}:parameter/nbim-ssm-parameter/networking/private-vpc-1/subnet-3
+#        -  !ImportValue p-stack-eu-west-1-mgmt-subards
+#        -  !ImportValue p-stack-eu-west-1-mgmt-subbrds
+#        -  !ImportValue p-stack-eu-west-1-mgmt-subcrds
+      Tags:
+        - Key: Name
+          Value: !Sub "nbim-${env}-euwe1-dciqsubgroup"
+        - Key: env 
+          Value: !Ref env 
+        - Key: easyriskid 
+          Value: !Ref easyriskid
+
+  myDB1HostnameSSMParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: "/dciq/dciq/db-dns"
+      Description: "DNS Hostname for the database \"p-db-eu-west-1-dciq\"."
+      Type: String
+      Value:
+        Fn::GetAtt:
+          - MyDB1
+          - Endpoint.Address
+
+  myDB1PortSSMParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: "/dciq/dciq/db-port"
+      Description: "TCP port for the database \"p-db-eu-west-1-dciq\"."
+      Type: String
+      Value:
+        Fn::GetAtt:
+          - MyDB1
+          - Endpoint.Port
+
+  myDB1AdminUserSSMParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: "/dciq/dciq/db-admin-user"
+      Description: "Admin username for the database \"p-db-eu-west-1-dciq\"."
+      Type: String
+      Value: "master"
+
+  # myDB1AdminPassSSMParam:
+  #   Type: Custom::mysecret
+  #   Properties:
+  #     Description: "Admin password for the RDS instance \"p-db-eu-west-1-dciq\"."
+  #     ServiceToken: !Sub arn:aws:lambda:eu-west-1:${AWS::AccountId}:function:lookup-secret
+  #     SecretName: "/dciq/dciq/db-admin-pass"
+
+
+  myOptionGroupsqlserverstd2016dciq:
+    Type: "AWS::RDS::OptionGroup"
+    Properties:
+      EngineName: "sqlserver-se"
+      MajorEngineVersion: "13.00"
+      OptionGroupDescription: "Option Group for sqlserver-std-2016-dciq"
+      OptionConfigurations:
+        - OptionName: "SQLSERVER_BACKUP_RESTORE"
+          OptionSettings:
+            - Name: IAM_ROLE_ARN
+              Value: !Sub arn:aws:iam::${AWS::AccountId}:role/rds-s3-access-migfiles
+
+
+#This is a Secret resource with a randomly generated password in its SecretString JSON.
+#Need to write same password
+  myDB1AdminPassSSMParam:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: /dciq/dciq/db-admin-pass
+      Description: "This secret has a dynamically generated secret password."
+      GenerateSecretString:
+        SecretStringTemplate: '{"password":"/dciq/dciq/db-admin-pass"}'
+        GenerateStringKey: "password"
+        PasswordLength: 30
+        ExcludeCharacters: '"@/\'
+      Tags:
+        - Key: AppName
+          Value: AppA
+        - Key: Name
+          Value: !Sub "nbim-${env}-euwe1-dciqsecret"
+        - Key: env 
+          Value: !Ref env 
+        - Key: easyriskid 
+          Value: !Ref easyriskid
+
+
+Outputs:
+  dbdciq:
+   Value: !GetAtt  MyDB1.Endpoint.Address
+  DNSdbdciq:
+    Value: !Join [ ":", [ "cname", "dciq-rds", !GetAtt  MyDB1.Endpoint.Address ] ]
+
+  myOptionGroupsqlserverstd2016dciq:
+    Value: !Ref myOptionGroupsqlserverstd2016dciq
+

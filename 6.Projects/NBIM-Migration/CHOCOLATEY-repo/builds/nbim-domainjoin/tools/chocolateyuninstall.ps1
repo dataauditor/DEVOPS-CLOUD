@@ -1,0 +1,1 @@
+﻿# Not supported as it shall not be allowed to uninstall this package.

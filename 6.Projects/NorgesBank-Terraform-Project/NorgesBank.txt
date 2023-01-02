@@ -1,0 +1,339 @@
+1.AWS Portal:
+a.Open VM:
+> EC2
+  > instances  
+  > Launch instances
+  > Name: nb 
+  > Application and OS Images: Ubuntu 
+  > Version: 20.04 LTS x86_64 VM
+  > Instance type: t2.small
+  > Key pair: velg gamle eller create new key pair 
+    - Det skal laste ned din key pair til denne maskin.
+  > Create security group
+  > Allow SSH traffic from | Anywhere 
+  > Launch instance
+
+
+
+2.VSC:
+a.Koble til VSC
+> New Window
+  > Grønn Window
+  > Open SSH Configuration file
+  > ...\.ssh\config
+-------------------------------------------------
+Host nb
+    HostName 100.25.158.67
+    User ubuntu
+    IdentityFile C:\Users\umitc\.ssh\nb.pem    
+    Port 22
+-------------------------------------------------
+    - Endre public IP address
+    - Endre pem key path og navn 
+  > Grønn window   
+  > Connect to host 
+  > nb 
+
+
+
+b.Clone Repo:
+git clone https://github.com/mit-dci/terraform-aws-opencbdc-tctl.git
+sudo apt install unzip
+
+
+
+c.tfenv / terraform Installation:
+git clone https://github.com/tfutils/tfenv.git ~/.tfenv
+echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> ~/.bash_profile
+  - Add ~/.tfenv/bin to your $PATH.
+sudo ln -s ~/.tfenv/bin/* /usr/local/bin
+  - sudo ln -s ~/.tfenv/bin/* /usr/local/bin.
+tfenv --version
+tfenv install 1.2.1
+tfenv use 1.2.1
+cd terraform-aws-opencbdc-tctl
+terraform --version
+
+
+
+d.Docker Installation:
+sudo apt install apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic test"
+sudo apt install docker-ce
+  - Create the docker group if it does not exist
+sudo usermod -aG docker $USER   
+  - Add your user to the docker group
+newgrp docker                   
+  - Run the following command or Logout and login again and run
+sudo docker version
+sudo apt update
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo systemctl status docker
+
+
+
+e.AWS CLI2 Installation:
+sudo apt-get update
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip 
+sudo ./aws/install
+aws --version
+
+
+
+f.Credentials Configuration:
+aws configure
+  - take credentials from AWS portal under IAM service
+  - us-east-1
+
+
+
+g.SSH Key Creation:
+ssh-keygen -t RSA -f /home/ubuntu/.ssh/id_rsa
+
+
+
+h.Terraform Public_Key Variable Configuration:
+> copy ~/.ssh/id_rsa.pub (copy code not the file)
+  > past code under ~/terraform-aws-opencbdc-tctl/variables.tf as public_key:
+
+variable "ec2_public_key" {
+  type        = string
+  description = "SSH public key to use in EC2 instances."
+  default     = "<id_rsa.pub>"
+}
+
+
+
+i.Terraform Public_Key Variable Configuration:
+> copy ~/.ssh/id_rsa.pub (copy code not the file)
+  > past code under ~/terraform-aws-opencbdc-tctl/modules/test-controller-agent/variables.tf as public_key:
+
+variable "ec2_public_key" {
+  type        = string
+  description = "SSH public key to use in EC2 instances."
+  default     = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDUG5RV4LitBWgkSYhHv2kSsfIbKp0wBum1KEXK7aN6d8FLonile38DBPk4Z6W/H4L5CRcpHd9H0LiN9S+Y609jc7h4kmRkbLVXceNrc5LaDb8c6tsJSphs8dIXI2uyxtW/drkUMIUuJHicHiTo5/uloUXI1+nGGP/jA+apwN5DHcpcKMiTqWhhiuGoQzztzMlQWy3fX1bgN3DWhNyDqObBRIj9Iy+6JVtOd304FO52z+rWCCIG9FWM+oDNWx511OSwaqVQRk0zXoXK/9rYyASIT5tIlChKQ5ojUDx86EX0oLjYssGyXFzjSZCNkCL0D82aRBcaTt2ZbyPBBPdF/S98CDGeiUrmflG2nHbUTEtP4WDnxoJ8YC7jt8OOkJi+2vScRPeQfKCER1kleFqdeWcZb4hLKUPZlu3dp0fwN4DIFO2U0Izmpkoz4L4npgxj9MR3PMd8D5GMkK2MeTT6B2VOdJEGkZPn8SA6CuI+4xWg0Ku+LxFHj0f/kYdD1l+XWGE= ubuntu@ip-172-31-63-164"
+}
+  
+
+
+j.Domainname Registration:
+> Route53
+  > Create hosted zone
+  > Domain name: norgesbank11.net
+  > Type: Public hosted zone
+  > Create hosted zone
+> Route53
+  > Dashboard
+  > Register domain
+  > Chose a domain name: norgesbank11.net 
+  > Check
+  > Add to chart
+  > Continue
+
+
+
+k.Establish S3 Bucket:
+> S3
+  > Create Bucket
+  > Bucket name: norgesbank12
+  > Region: us-east-1
+  > Create
+
+
+
+l.Establish Access Token and New Repos:
+> Github
+  > Profil
+  > Settings
+  > Developer settings
+  > Personal access tokens
+  > Generate new token
+  > Note: test | Select all
+  > Generate token 
+    - "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"
+  > Copy token
+> Github 
+  > New
+  > Repository name: opencbdc-tctl 
+  > Create repository
+> Github
+  > New
+  > Repository name: opencbdc-tx 
+  > Create repository
+
+
+
+m.Establish Local Repos: 
+git clone https://github.com/mit-dci/opencbdc-tctl.git
+cd opencbdc-tctl && sudo rm -R .git
+git init
+git add .
+git commit -m "initial"
+git branch trunk 
+git switch trunk
+git remote add origin https://github.com/dataauditor/opencbdc-tctl.git
+git push -fu origin trunk
+# git fetch
+git push --set-upstream origin trunk 
+git remote -v
+git remote set-url origin https://github.com/dataauditor/opencbdc-tctl.git
+git clone https://github.com/mit-dci/opencbdc-tx.git
+cd opencbdc-tx && sudo rm -R .git
+git init
+git branch main
+git branch trunk 
+git switch main 
+git add .
+git commit -m "initial"
+git remote add origin https://github.com/dataauditor/opencbdc-tx.git
+git push -fu origin main
+git switch trunk
+git fetch 
+git push -fu origin trunk
+
+
+
+n.Change variables.tf (Main) in Terraform:
+variable "test_controller_github_repo_owner" {
+  description = "The Github repo owner"
+  type        = string
+  default     = "dataauditor"
+}
+variable "test_controller_github_access_token" {
+  description = "Access token for cloning test controller repo"
+  type        = string
+  default 	  = "<token>"
+}
+variable "transaction_processor_repo_url" {
+  description = "Transaction repo cloned by the test controller for load generation logic"
+  type = string
+  default = "https://github.com/dataauditor/opencbdc-tx.git"
+}
+variable "transaction_processor_github_access_token" {
+  type = string
+  description = "Access token for the transaction repo if permissions are required"
+  default = "<token>"
+}
+variable "base_domain" {
+  type        = string
+  description = "Base domain to use for ACM Cert and Route53 record management."
+  default = "norgesbank11.net"
+}
+
+
+
+o.Change main.tf (modules/routes53_dns) in Terraform:
+- Hvis DNS virker ikke, kan vi bruke denne møte.
+# ACM
+resource "aws_acm_certificate" "domain_cert" {
+  domain_name               = var.dns_base_domain
+  subject_alternative_names = ["*.${var.dns_base_domain}"]
+#  validation_method         = "DNS"
+  validation_method = "EMAIL"
+}
+
+#resource "aws_acm_certificate_validation" "example" {
+#  certificate_arn = "arn:aws:acm:us-east-1:074683984750:certificate/e6737ea5-5726-41d6-a408-9437a2775f16"
+#}
+
+#  tags = merge(
+#    {
+#      Name = var.dns_base_domain
+#    },
+#    var.tags
+#  )
+#}
+
+#resource "aws_route53_record" "domain_cert_validation_dns" {
+#  name    = tolist(aws_acm_certificate.domain_cert.domain_validation_options)[0].resource_record_name
+#  type    = tolist(aws_acm_certificate.domain_cert.domain_validation_options)[0].resource_record_type
+#  zone_id = data.aws_route53_zone.base_domain.id
+#  records = [tolist(aws_acm_certificate.domain_cert.domain_validation_options)[0].resource_record_value]
+#  ttl     = 60
+#}
+
+#resource "aws_acm_certificate_validation" "domain_cert_validation" {
+#  certificate_arn         = aws_acm_certificate.domain_cert.arn
+#  validation_record_fqdns = [aws_route53_record.domain_cert_validation_dns.fqdn]
+#}
+
+
+
+p.Establish Cloud Environment:
+terraform init
+  - s3: norgesbank12
+  - state file: state
+  - region: us-east-1
+terraform plan
+  - tag: test
+  - email: kepteyn@gmail.com
+  - token til opencbdc-tctl.git (past token)
+  - token til opencbdc-tx.git (past token)
+terraform apply
+  - tag: test
+  - email: kepteyn@gmail.com
+  - token til opencbdc-tctl.git (past token)
+  - token til opencbdc-tx.git (past token)
+
+
+
+r.Repo opencbdc-tctl/Dockerfile.agent
+ARG GOLANG_BUILD_IMAGE=golang:1.16
+ARG APP_BASE_IMAGE=ubuntu:20.04
+
+FROM $GOLANG_BUILD_IMAGE as build-env
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y libpcap-dev
+RUN mkdir /src
+RUN mkdir /app
+COPY go.mod /src/go.mod
+COPY go.sum /src/go.sum
+COPY requirements.txt /app/requirements.txt 
+WORKDIR /src
+RUN go mod download
+COPY . /src
+#WORKDIR /app
+WORKDIR /src/cmd/agent
+ARG GIT_COMMIT=dev
+ARG GIT_DATE=00000000
+RUN go build -ldflags "-X main.GitCommit=$GIT_COMMIT -X main.BuildDate=$GIT_DATE" -o agent
+
+# final stage
+FROM $APP_BASE_IMAGE
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y libpcap-dev build-essential libsfml-dev iproute2 wget cmake python3-pip libgtest-dev lcov git libtool automake clang-tidy
+WORKDIR /app
+COPY requirements.txt /app/requirements.txt 
+COPY --from=build-env /src/cmd/agent/agent /app/
+CMD ./agent  
+
+
+
+s.Lambda:
+aws lambda invoke --region us-east-1 --function-name test-controller-certbot-lambda /dev/stdout
+
+
+
+t.Browser:
+http://test-controller.<domainname>/
+https://test-controller.<domainname>:8443/auth
+
+
+
+u.OpenSearch Permissions Configuration:
+Login to the OpenSearch dashboard. You can find the url under General information of your cluster
+From the navigation pane, choose Security.
+Choose Roles.
+Search for the all_access role.
+Choose the Mapped users tab.
+On the Mapped users dialog page, choose Manage mapping.
+Under Backend roles, enter the role ARN created for Amazon Kenisis Firehose.
+Choose Map. Your Amazon Kenisis Firehose should now be able to forward data to your OpenSearch Service domain.
+
+
+
+
+
+
+

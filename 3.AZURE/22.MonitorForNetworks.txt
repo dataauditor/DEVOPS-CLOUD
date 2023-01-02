@@ -1,0 +1,60 @@
+1.Azure Monitor For Networks:
+- Networklerin testini icra eder.
+- Source ile Destination belirlenerek iki konum arasinda istenen testler kosulur.
+> Home > Monitor > Networks > Connectivity > Create Connection Monitor
+  > Connection Monitor Name: con-mon / Region
+  > Test group name: test-group
+    > Add source
+    > Add Test configuration
+    > Add destination  
+
+
+
+2.Network Watcher:
+- Network'u monite eder ve diagnose eder. Regional service'tir.
+- Ilgili region acilir.
+
+
+a.IP flow verify:
+- VM'in ilgili portunun calisip calismadigini test eder:
+
+(1) Outbound Test:
+> Network watcher > + Add > West Europe (istenen region secilir) (yeni bir region da gorulur ekranda)
+  > IP flow verify (VM'ye/den packetin mevcut NSG ile gidip gitmedigini test eder)
+    > RG: nw-rg / Virtual machine: nw-vm / Network interface: nw-vm-nic
+    > Packet details > Protocol: TCP / Direction: Outbound (cikis)
+    > Local IP address: 10.0.5.34 (vm'nin private IP addresi) / Local Port: 60000
+    > Remote IP address: 13.107.21.200 / Remote port: 80
+  > check
+      - 10.0.5.34:60000 (vm)  >  13.107.21.200:80 networku calisiyor mu? 
+
+(2) Inbound Test:
+> Network watcher 
+  > IP flow verify (VM'ye/den packetin mevcut NSG ile gidip gitmedigini test eder)
+    > RG: nw-rg / Virtual machine: nw-vm / Network interface: nw-vm-nic
+    > Packet details > Protocol: TCP / Direction: Inbound (remote'den giris)
+    > Local IP address: 10.0.5.34 (vm'nin private IP addresi) / Local Port: 80 (443, 8080 vb denenebilir)
+    > Remote IP address: 13.107.21.200 / Remote port: 60000
+  > check
+      - 10.0.5.34:80 (vm)  <  13.107.21.200:60000 networku calisiyor mu? 
+      - 80 portunun calisip calismadigi test ediliyor aslinda. (success veya access denied verir.)
+
+
+b.Packet capture:
+> Network watcher > + Add 
+  > RG: nw-rg 
+  > Target virtual machine: nw-vm 
+  > Packet capture name: packet
+  > Capture configuration: Storage account
+  > Storage accounts: nw-st-account (yeni bir storage account olusturduk)
+  > Maximum bytes per packet: 
+  > Maximum bytes per session
+  > Time limit (seconds)
+  > + Add Filter:
+  > Protocol: Any
+  > Local IP address:
+  > Local port:
+  > Remote IP address: 99.3.24.244 (client IP address)
+  > Remote port: 
+
+

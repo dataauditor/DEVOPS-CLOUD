@@ -1,0 +1,257 @@
+1.Degiskenleri Tanimla:
+Azure CLI:
+REGION_NAME=eastus
+RESOURCE_GROUP=rg-akscostsaving
+AKS_CLUSTER_NAME=akscostsaving-$RANDOM
+echo $AKS_CLUSTER_NAME
+  - Inceleyebiliriz.
+
+
+
+2.Resource Group Olustur:
+az group create \
+    --name $RESOURCE_GROUP \
+    --location $REGION_NAME
+
+	
+	
+3.AKS Versiyonu Cek:
+VERSION=$(az aks get-versions \
+    --location $REGION_NAME \
+    --query 'orchestrators[?!isPreview] | [-1].orchestratorVersion' \
+    --output tsv)
+
+
+	
+4.AKS Olustur:
+- "--load-balancer-sku standard" belirtilir. Defaultu basic ve basic ile multiple node pools kurulamaz.
+- "--vm-set-type VirtualMachineScaleSets" ile scale set ve scale ozellikleri kullanilir.
+- Single nodepool olacak.
+az aks create \
+    --resource-group $RESOURCE_GROUP \
+    --name $AKS_CLUSTER_NAME \
+    --location $REGION_NAME \
+    --kubernetes-version $VERSION \
+    --node-count 2 \
+    --load-balancer-sku standard \
+    --vm-set-type VirtualMachineScaleSets \
+    --generate-ssh-keys
+
+
+
+5.Nodepool Listele:
+az aks nodepool list --resource-group $RESOURCE_GROUP --cluster-name $AKS_CLUSTER_NAME
+  - 2 node gosterir.
+  
+ 
+
+6.Nodepool Ekleme:
+az aks nodepool add \
+    --resource-group $RESOURCE_GROUP \
+    --cluster-name $AKS_CLUSTER_NAME \
+    --name batchprocpl \
+    --node-count 2
+    --node-vm-size Standard_NC6 \
+    --no-wait
+az aks nodepool list --resource-group $RESOURCE_GROUP --cluster-name $AKS_CLUSTER_NAME
+  - Iki pool var. Ikisi de VirtualMachineScaleSets. Ilki system ikincisi User mode. 
+  - 2'ser tane node'lari var.
+
+  
+
+7.Nodepool'daki Node'lari Kapatmak:
+az aks nodepool scale \
+    --resource-group $RESOURCE_GROUP \
+    --cluster-name $AKS_CLUSTER_NAME \
+    --name batchprocpl \
+    --node-count 0
+	
+	
+
+8.Kubectl'in Konfigure Edilmesi:
+az aks get-credentials \
+    --resource-group $RESOURCE_GROUP \
+    --name $AKS_CLUSTER_NAME
+kubectl get nodes 
+az aks nodepool list
+  - Ikisi de ayni.
+
+
+
+9.Spot Node Pools:
+a.Spot Instance Pool Konfigurasyonu:
+az extension add --name aks-preview
+  - AKS spot instance islemleri icin bu extension yuklenir.
+az extension show --name aks-preview --query [version]
+az extension update --name aks-preview
+  - Onceden extension yuklendi ise update yapilir.
+az feature register --namespace "Microsoft.ContainerService" --name "spotpoolpreview"
+  - Register ederiz.
+az feature list -o table --query "[?contains(name, 'Microsoft.ContainerService/spotpoolpreview')].{Name:name,State:properties.state}"
+  - check eder.
+az provider register --namespace Microsoft.ContainerService
+
+
+b.AKS'ye Spot Pool Ekleme:
+- Once Cluster olusturulur. 
+az aks nodepool add \
+    --resource-group resourceGroup \
+    --cluster-name aksCluster \
+    --name spotpool01 \
+    --enable-cluster-autoscaler \
+    --max-count 3 \
+    --min-count 1 \
+    --priority Spot \
+    --eviction-policy Delete \
+    --spot-max-price -1 \
+    --node-vm-size Standard_DS2_v2 \
+    --no-wait
+az aks nodepool show \
+    --resource-group $RESOURCE_GROUP \
+    --cluster-name $AKS_CLUSTER_NAME \
+    --name batchprocpl2
+
+
+c.Pode'larin Spot Node Pool'da Acilmasi:
+- Node'a label uygulayip deployment'ta da "tolerations" ve "affinity" ile bunlari belirtirsen pode ilgili node'da acilir.
+- "tolerations" ve "affinity" ile pode'larin spot user node'da acilacagi belirlenebilir. Ayrica taint de var.
+- Deploymentlara asagidaki gibi "tolerations" ve "affinity" bolumleri degistirilmeden eklenerek spot user node'da acilirlar.
+deployment.yaml
+--------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    env: test
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    imagePullPolicy: IfNotPresent
+  tolerations:
+  - key: "kubernetes.azure.com/scalesetpriority"
+    operator: "Equal"
+    value: "spot"
+    effect: "NoSchedule"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: "kubernetes.azure.com/scalesetpriority"
+            operator: In
+            values:
+            - "spot"
+---------------------------------------------
+
+
+
+10.NameSpace Uygulama:
+kubectl create namespace costsavings
+deployment.yaml
+----------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    env: test
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    imagePullPolicy: IfNotPresent
+  tolerations:
+  - key: "kubernetes.azure.com/scalesetpriority"
+    operator: "Equal"
+    value: "spot"
+    effect: "NoSchedule"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: "kubernetes.azure.com/scalesetpriority"
+            operator: In
+            values:
+            - "spot"
+-------------------------------------------------
+kubectl apply --namespace costsavings -f spot-node-deployment.yaml
+  - Ilgili pode spot instance'ta ve ilgili ns ile olusur.
+kubectl get pods --namespace costsavings -o wide
+  
+
+
+11.Policy:
+a.Pre-Configuration:
+az extension add --name aks-preview
+az extension show --name aks-preview --query [version]
+az extension update --name aks-preview
+az aks list
+  - 1.14 ve uzeri olmali.
+az provider register --namespace Microsoft.ContainerService
+  - Register the Azure Kubernetes Service provider.
+az provider register --namespace Microsoft.PolicyInsights
+  - Register the Azure Policy provider.
+az feature register --namespace Microsoft.ContainerService --name AKS-AzurePolicyAutoApprove
+  - Enable the installation of the add-on.
+az feature list -o table --query "[?contains(name, 'Microsoft.ContainerService/AKS-AzurePolicyAutoApprove')].   {Name:name,State:properties.state}"
+az provider register -n Microsoft.ContainerService
+az aks enable-addons \
+    --addons azure-policy \
+    --name $AKS_CLUSTER_NAME \
+    --resource-group $RESOURCE_GROUP
+kubectl get pods -n kube-system
+  - "azure-policy..." isimli iki pode yuklenmis.
+kubectl get pods -n gatekeeper-system
+  - "gatekeeper-controller-manager..." isimli pode yuklenmis.
+az aks show \
+ --resource-group $RESOURCE_GROUP\
+ --name $AKS_CLUSTER_NAME \
+ -o table --query "addonProfiles.azurepolicy"
+  
+
+b.Policy Ekleme:
+- Mevcut resourcelari etkilemez.
+Azure Portal:
+Policy
+  > Assignments
+  > Assign policy
+    > Scope: <subscription>
+	> Policy definition: Kubernetes cluster containers CPU and memory resource limits should not exceed the ...
+	> Assignment name: <name>
+	> Policy enforcement: Enabled
+	> Max allowed CPU units: 200m
+	> Max allowed memory bytes: 256Mi
+	> Save
+code test-policy.yaml	
+----------------------------------------------------------	
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    env: test
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 500m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 500Mi
+----------------------------------------------------------
+  - Ilgili policy'nin calisip calismadigini bu pod ile test edecegiz.
+kubectl apply --namespace costsavings -f test-policy.yaml
+  - Hata verir.
+code test-policy.yaml
+  - cpu ve ram degerlerini dusurup yeniden calistiririz.
+kubectl apply --namespace costsavings -f test-policy.yaml
+  - Calisti.  
+kubectl config delete-context akscostsaving-17835
+  

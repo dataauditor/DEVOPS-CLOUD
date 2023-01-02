@@ -1,0 +1,88 @@
+https://www.youtube.com/watch?v=F1-hvgZyw80
+
+Genel:
+> Once SSM'in calistirilacagi reource'lara role olusturulur. Ilgili resource'tan SSM'e giris policy'si secilir.
+  > Sonra ilgili resource'lar olusturulur ve ilgili role attach edilir.
+  > SSM acilir ve konfigure edilir.
+
+
+Hands-on:
+1.Role Olusturma:
+> IAM
+  > role
+  > Create role
+  > SSM policy ekle
+  > Save
+
+
+2.Resource Olusturma:
+> EC2
+  > Windows ve Linux VM olustur.
+  > Olustururken SSM rolunu attach et. 
+
+
+3.SSM Konfigure Etme:
+- Bolge, account... vb secerek ilgili ec2'larin guncelleme, cloudwatch vb takibini yapabiliriz.
+> SSM
+  > Get started with Quick Setup
+  > Host Management
+    > Update Systems Manager Agent every two weeks - check
+    > Collect inventory from instances every 30 minutes - check
+    > Scan instances for missing patches daily - check
+    > Install and configure Cloudwatch agent -check
+    > Update CW - check
+    > Target: Current account
+    > Current region
+    > Choose target instances: All instances
+  > Create
+
+
+4.SSM Inventory:
+> SSM
+  > Host Management
+  > Inventory
+    - Instances hakkinda bilgi verir.
+
+
+5.SSM Session Manager:
+- Terminalden herhangi bir port acmadan guvenli ulasim saglar.
+- CW, S3 logslari da bakilabilir.
+> SSM
+  > Host Management
+  > Session Manager
+  > Start session
+  > Windows VM - check
+  > Start session
+  > CMD'ye ulastik.
+ipconfig
+  - Private IP Address'ini aliriz.
+
+
+6.SSM Patch Manager - Patc Configuration:
+> SSM
+  > Host Management
+  > Patch Manager
+  > Configure patching
+  > How do you want to select instances: Enter instances tags
+  > Instance tags: Key: env | Value: prod
+  > Patching schedule: Select an existing Maintenance Window
+  > Scan and Install
+  > Configure patching
+
+
+7.SSM Patch Manager - Patc Configuration:
+- Ihtiyac duyulan patch varsa incelenip yuklenecek.
+> SSM
+  > Host Management
+  > Patch Manager
+  > Patch now
+  > Patching operation: Scan and install
+  > Reboot option: Reboot if needed
+  > Instances to path: All instances
+  > Patch now
+
+
+
+
+
+

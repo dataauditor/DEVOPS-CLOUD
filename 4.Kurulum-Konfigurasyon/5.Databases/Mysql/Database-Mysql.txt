@@ -1,0 +1,141 @@
+1.Client Islemleri: 
+sudo apt install mysql-client-core-8.0 
+  - mysql client yuklenir.
+mysql
+  - bu kod kullanilirsa dogrudan mysql icinde kodlar yazilir. Ben kullanmadim.
+mysql --host=localhost --user=eyvi --password=123
+mysql --ssl-ca=server-ca.pem --ssl-cert=client-cert.pem ssl-key=client-key.pem --host=11.234.0.9 --user=eyvi --ssl-mode=verify_ca --password=123
+  - Ilgili local ve remoot db'a baglanilir.
+
+
+2..my.cnf Konfigurasyonu:
+Asagidaki pathlerden birinde olmali:
+  - /etc/my.cnf
+  - /etc/mysql/my.cnf
+  - $MYSQL_HOME/my.cnf
+  - [datadir]/my.cnf
+  - ~/.my.cnf
+mkdir /home/ubuntu/.my.cnf
+--------------------------------------------
+[client]
+protocol=tcp
+host=localhost
+port=3306
+# database=eyvidb
+user=eyvi
+password=detregnermyesno
+
+
+[mysqldump]
+protocol=tcp
+host=localhost
+port=3306
+user=root
+password=lindaelizabethremimarkusadrianumit
+
+
+[mysql]
+database=eyvidb 
+protocol=tcp
+host=localhost
+port=3306
+user=root
+password=lindaelizabethremimarkusadrianumit
+--------------------------------------------
+  - database=eyvidb: [mysql] altinda olmali yoksa mysqldump hata veriyor. BAska konuma koyma.
+chmod 600 /home/ubuntu/.my.cnf
+sudo service mysql restart
+
+
+3..my.cnf ile Komut:
+echo 'show tables' | mysql
+echo "use eyvidb" | mysql
+echo "select * from facility" | echo
+mysqldump -u root -p eyvidb > eyvidb6.sql
+mysqldump eyvidb > eyvidb7.sql
+mysqldump eyvidb customers > customers.sql
+echo "alter table users add deneme varchar(10)" | mysql
+  - users tablosuna deneme isimli colon eklenir.
+
+
+4.Backup:
+mysqldump -u root -p eyvidb customers > customers.sql
+  -backup: table'in bacup'i alinir.
+mysqldump -u root -p eyvidb > deneme.sql
+  -backup: db'nin bacup'i alinir.
+echo "select * from user" | mysql 
+  - user tablosunun icerigi gorulur.
+stat customers.sql
+
+
+5.Restore:
+mysql [database_name] < [filename].sql
+mysql eyvidb < deneme.sql
+mysql --one-database database_name < all_databases.sql
+  - Tum database'ler backup alindiysa istenen db'nin ismi yazilarak restore edilebilir.
+
+
+5.Tablo Olusturma:
+mysql -u root -p 
+show databases;
+use experiment;
+CREATE TABLE Bspoke(
+      ID   INT              NOT NULL,
+      NAME VARCHAR (20)     NOT NULL,
+      AGE  INT              NOT NULL,
+      ADDRESS  CHAR (25) ,
+      SALARY   DECIMAL (18, 2),       
+      PRIMARY KEY (ID)
+ );
+
+
+
+6.Mevcut Tabloya Veri Girme:
+DESC CUSTOMERS;
+  - customers tablosunun ozelliklerini gosterir.
+insert into Bspoke (ID, NAME, AGE, ADDRESS, SALARY) VALUES (1, 'umit', 41, 'oslo', 11);
+select * from CUSTOMERS;
+
+
+
+7.Mevcut Tablolarda Degisiklik Yapma:
+docker exec -it eyvidb bash
+  - container'e girme.
+mysql -u root -p
+  - mysql'e girme.
+CREATE DATABASE test;
+USE test;
+CREATE TABLE employees ( id int NOT NULL, name varchar(255) );
+ALTER TABLE table1 RENAME table2;
+ALTER TABLE employees RENAME users;
+ALTER TABLE tablename ADD columnname datatype;
+ALTER TABLE users ADD COLUMN address varchar(10);
+ALTER TABLE users ADD INDEX (id);
+  - index ekler.
+ALTER TABLE users ADD date TIMESTAMP;
+  - date ekler.
+ALTER TABLE tablename DROP COLUMN columname;
+ALTER TABLE users ADD uid INT UNSIGNED NOT NULL AUTO_INCREMENT, ADD UNIQUE (uid);
+  - Birden fazla ekleme yapilabilir.
+ALTER TABLE tablename MODIFY COLUMN columnname datatype;
+  - modification yapar columnda.
+ALTER TABLE users MODIFY address VARCHAR(255);
+  - mevcut address column'unun uzunlugunu artirir.
+
+
+
+8.Container Olusturma:
+docker run --name eyvidb --restart unless-stopped -v /mnt/ebsvol/mysql:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=lindaelizabethremimarkusadrianumit -e MYSQL_USER=eyvi -e MYSQL_DATABASE=eyvidb -e MYSQL_PASSWORD=detregnermyesno -p 3306:3306 -d mysql:latest
+
+
+
+9.Cron Job:
+mkdir db_backups
+crontab -e
+---------------------------------------------------------------------------------------------------------
+0 3 * * * /usr/bin/mysqldump -u root eyvidb > /home/ubuntu/db_backups/eyvidb-$(date +\%Y\%m\%d).sql
+  # Hergun backup alir.
+find /path/to/backups -type f -name "*.sql" -mtime +30 -delete
+  # 30 gun sonra backup'lari siler.
+---------------------------------------------------------------------------------------------------------
+  - Calismadi

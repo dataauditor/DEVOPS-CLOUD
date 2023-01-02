@@ -1,0 +1,24 @@
+1.CDN:
+- Static serverlar icin static file'lari depolamada kullanilir.
+- CDN, Glocal resource'tur, herhangi bir bolge tanimlanmaz. Bununla birlikte profile icin bir region tanimlanir.
+- Baglandigi storage, website icindeki veri ile calisir.
+- Origin hostname'e bir kere ulasmasir. Veriyi cachler ve endpoint ile cikis yapar.
+- Storage'ta guncelleme yaparsaniz purge tusu ile CDN'i kaynaga yeniden anlik baglarsiniz ve CDN kendi verisini gunceller.
+
+a.Olusturma:
+> + Create a resource > 
+Front Door and CDN profiles > Azure Front Door > create
+  > Explore other offerings > Azure CDN Standard from Microsoft (classic)
+  > Subscription / RG / Name: azsj-cdn / Pricing tier: Microsoft CDN (4 farkli ucretlendirme var)
+  > Create a new CDN endpoint > CDN endpoint name: umit-cdn (yeni adres tanimlanir)
+  > Origin type: Storage (sectik) > Origin hostname: umitdeneme.blob.corewindows.net (sectik) > create
+
+b.Baglanma:
+> azsj-cdn > umit-cdn.azureedge.net (endpoint) 
+
+c.Caching rules:
+> azsj-cdn > umit-cdn.azureedge.net (endpoint) > Caching rules > 
+  > Ignore query strings vb 3 kural secebilirsin.
+
+c.Guncelleme / Purge:
+> azsj-cdn > purge > Endpoint: umit-cdn > Purge all > purge

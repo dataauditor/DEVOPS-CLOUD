@@ -1,0 +1,89 @@
+
+
+1.AWS Systems Manager'dan Pem Key Alinir:
+> AWS Systems Manager
+  > Parameter Store
+  > /ec2/keypair/key-0f7d3b192d7b1713b
+----------------------------------------------------------------------------------------
+-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEApmVXj6IMAt3XctIfmrm9Dfkv+Dpl1vE88E2fWjF9Jxr8ROKT
+9AhLlitdx/ve5zwgvKg64rB/ZeWce7+gdQtufYCnlDiRAKQQb3TIVCnJjJIMgBv5
+Pajiw3EnjOGObYmNI1RaEc0UN08VlHERH0kapzTJJ/s0kOxUSI+O9s+n9KkJcEHD
+WVbHj02Q77RtaehsqOwosY8tABGKTTUXUlL/hgb4Ndu/2tlhZl9jb7wDx4Sf0sL/
+QOwqWQxC0C4hpwQUbIN4LgMAScHMshaF7XNtw6PuG64xUc1ZiEf5JJg65b5ERI25
+8goUlRYMG9UB0xEGXNnVfKyi2Ql4hOC6UlR7UwIDAQABAoIBAGrqZw61cr5MyOjQ
+Ntp2ShG2caov68vmid9mIOQVNHNyFXI1nBeLVPYSu1mKbzlpGyfdeKi7+7//f0LM
+aE+MntwpVIQarKEayiyzfx0FFKosFbgjQUzrPXmTNXSCYb/kSDnRM2aIvVqkiBsv
+Y28Uy/lwI2h7MtWD5MwS4iuYVjUPcrrXz8XpOGW7YX6qkK1l1rfBqW/HaLxzCTUl
+rcfHXA9r99FLHRUUbeqwXfidP1TlDWVTdsUwpyxMRB5SFHvh8Q2jGTW68w2LF2jK
+NsRoZHegGqiDsI7z01wLIMw7cmaHC9ha48Mi130BYBkcCfTZMsCcINeWTIwdlGyE
+1ZRzvdECgYEA9qXE8TebP5o+56wWZ5SPVE45sLJ8j9LlP3KdfW789NDkdu7jSbuC
+ilY7TgqTFBPlKdYMo8bGsAPeDHtAf97trrhVGcfnnSRalHYcP01t0r5WrkikwIC9
+nviofaFyjZLeFHyQ30EFjyvXAFwD2NrZCqbbsn50G3vtAw26fnaFUhcCgYEArLSP
+8U7lVKE/yWlIy3XEEOpo7RNDV7cNpH+UVkPYKhvKOc0WNhgI6+iGwk8rcPvIM+P5
++IzvW4qSjg1+vYcfD4nFWXg10L2zi7dXZssFGgq1eKyjRv/MANa2JzhrMj33W9Xn
+ph4Nd1H4KqEXYb65xFRaglfAAvdB7bB7V/lGEiUCgYA0DItg9AEZDO3VaeVYems8
+uT1HYoMSvsiN+RvvCmrrJuHvjz37o0xK8SOWtniPNhuYFomYTixDnK1RKPlVgq/Z
+vSCITj08Vh2fUsVnPmm8nVohcUcDMKfTUloMGPPZmHKxFBBmbIxFyFSYyNIvAw/m
+RYv7QOAzpJVBnbYLVeuQhQKBgD/N5W/tCeSePgaXEwG33Fuzflg3yaVaR3wCdjb4
+kZ/c7HU2Q4JwlrsxCLg4r3/qRSiGjQ86YiObqlE4wx4aEWuYJoTLWHZp3y866Ntd
+HeFlG24duaS9VAzrRhhvS4sgQYZ4HEDO0YLHkbuOEClYYSEbWOTWrmVqG71Iegki
+WrTRAoGAIDMaRSoUawNNUlTb0+aQC7VNfpaSua0vErpEPr9ehDPGPKg6l827ahDr
+V5eF4NrtmkJolIrMEpCNJWMHj0d+8s3SSHSs2sWaH5T/zybCVcrDrpSiYfgAfALc
+Vnrjx6n46AbTUQkzaU4hesUTAsMsSbnQgLXrRlyaVqnlV0mF0OY=
+-----END RSA PRIVATE KEY-----
+----------------------------------------------------------------------------------------
+
+
+2.EC2'ya Pem Key Eklenir:
+> EC2
+  > i-0a9b8e180dc848825
+  > Connect
+  > RDP client
+  > Get password
+  > Private key contents
+----------------------------------------------------------------------------------------
+-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEApmVXj6IMAt3XctIfmrm9Dfkv+Dpl1vE88E2fWjF9Jxr8ROKT
+9AhLlitdx/ve5zwgvKg64rB/ZeWce7+gdQtufYCnlDiRAKQQb3TIVCnJjJIMgBv5
+Pajiw3EnjOGObYmNI1RaEc0UN08VlHERH0kapzTJJ/s0kOxUSI+O9s+n9KkJcEHD
+WVbHj02Q77RtaehsqOwosY8tABGKTTUXUlL/hgb4Ndu/2tlhZl9jb7wDx4Sf0sL/
+QOwqWQxC0C4hpwQUbIN4LgMAScHMshaF7XNtw6PuG64xUc1ZiEf5JJg65b5ERI25
+8goUlRYMG9UB0xEGXNnVfKyi2Ql4hOC6UlR7UwIDAQABAoIBAGrqZw61cr5MyOjQ
+Ntp2ShG2caov68vmid9mIOQVNHNyFXI1nBeLVPYSu1mKbzlpGyfdeKi7+7//f0LM
+aE+MntwpVIQarKEayiyzfx0FFKosFbgjQUzrPXmTNXSCYb/kSDnRM2aIvVqkiBsv
+Y28Uy/lwI2h7MtWD5MwS4iuYVjUPcrrXz8XpOGW7YX6qkK1l1rfBqW/HaLxzCTUl
+rcfHXA9r99FLHRUUbeqwXfidP1TlDWVTdsUwpyxMRB5SFHvh8Q2jGTW68w2LF2jK
+NsRoZHegGqiDsI7z01wLIMw7cmaHC9ha48Mi130BYBkcCfTZMsCcINeWTIwdlGyE
+1ZRzvdECgYEA9qXE8TebP5o+56wWZ5SPVE45sLJ8j9LlP3KdfW789NDkdu7jSbuC
+ilY7TgqTFBPlKdYMo8bGsAPeDHtAf97trrhVGcfnnSRalHYcP01t0r5WrkikwIC9
+nviofaFyjZLeFHyQ30EFjyvXAFwD2NrZCqbbsn50G3vtAw26fnaFUhcCgYEArLSP
+8U7lVKE/yWlIy3XEEOpo7RNDV7cNpH+UVkPYKhvKOc0WNhgI6+iGwk8rcPvIM+P5
++IzvW4qSjg1+vYcfD4nFWXg10L2zi7dXZssFGgq1eKyjRv/MANa2JzhrMj33W9Xn
+ph4Nd1H4KqEXYb65xFRaglfAAvdB7bB7V/lGEiUCgYA0DItg9AEZDO3VaeVYems8
+uT1HYoMSvsiN+RvvCmrrJuHvjz37o0xK8SOWtniPNhuYFomYTixDnK1RKPlVgq/Z
+vSCITj08Vh2fUsVnPmm8nVohcUcDMKfTUloMGPPZmHKxFBBmbIxFyFSYyNIvAw/m
+RYv7QOAzpJVBnbYLVeuQhQKBgD/N5W/tCeSePgaXEwG33Fuzflg3yaVaR3wCdjb4
+kZ/c7HU2Q4JwlrsxCLg4r3/qRSiGjQ86YiObqlE4wx4aEWuYJoTLWHZp3y866Ntd
+HeFlG24duaS9VAzrRhhvS4sgQYZ4HEDO0YLHkbuOEClYYSEbWOTWrmVqG71Iegki
+WrTRAoGAIDMaRSoUawNNUlTb0+aQC7VNfpaSua0vErpEPr9ehDPGPKg6l827ahDr
+V5eF4NrtmkJolIrMEpCNJWMHj0d+8s3SSHSs2sWaH5T/zybCVcrDrpSiYfgAfALc
+Vnrjx6n46AbTUQkzaU4hesUTAsMsSbnQgLXrRlyaVqnlV0mF0OY=
+-----END RSA PRIVATE KEY-----
+----------------------------------------------------------------------------------------
+    - Yapistirilir.
+  > User name: Administrator
+    - Bu user name ile baglanacagiz.
+  > Get password
+    - Bu password'u kullanacagiz.
+
+
+
+3.RDP ile Baska Bilgisayardan Baglanilir:
+mstsc
+> Computer: 10.147.24.28 
+    - Private IP
+  > Connect
+  > User Name: Administrator
+  > Password: <Yukardan aldik>
+  > Connect

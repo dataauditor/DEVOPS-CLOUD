@@ -1,0 +1,73 @@
+1.Network Security Groups:
+- Subnet'lerin icinde calisan VM'ler Network interfaceleri ile subnetle konusur.
+- Bir NSG'yi birden fazla VM veya Subnet'e attach edebiliriz.
+- Network Security Group; 
+  - Subnet'e attach edilebilir ve/veya VM'ye bagli Network Interface card'e attach edilebilir.
+- nsg'da default olarak:
+  - ilgili vnet icindeki cihazlara tum portlar allow
+  - ilgili vnet icindeki LB'a tum portlar allow
+  - diger baglantilar deny.
+> Vnet > Connected devices (vnetteki VM'leri Network interface ile hangi Subnete bagli oldugu dahil gosterir.)
+- Her yeni vm acildiginda otomatik olarak network interface card ve network security group olusur.
+- Best practice yeni acilan nic'i custon kurulan nsg'ye attach etmektir.
+
+
+2.Network Security Group (Subnet ile):
+> Once Network Security Group olusturulur
+  > Rulelar belirlenir.
+  > Ilgili Subnete attach edilir.
+
+a.Olusturma:
+> Network Security Group > create
+  > RG /
+  > Name: dns-nsg
+  > create
+  
+b.Rule Ekleme:
+> dns-nsg > inbound security rules
+  > + Add
+  > Source / Destination
+  > Service: Custom
+  > Destination port ranges: 8080
+  > Protocol: TCP
+  > Action: Allow
+  > Priority: 300
+  > Add
+
+c.Attachment:
+> dns-nsg > subnets > + Associate
+  > Virtual network: dns-zone-vn
+  > subnet: default
+ 
+d.VM Attachment:
+> dns-nsg > Network interfaces > Associate
+  > Network interface associations: testvm01321
+  > ok
+
+
+3.Network Security Group (Network interface card ile):
+> Vnet > Connected devices > vm-nic (vm'in network interface cardi) > Network security group: vm-nsg
+  > Inbound security rules > + Add
+    > Source: Any (IP addresses de secilebilir)
+    > Source port ranges: * (2.12.234.6 veya 2.12.234.0/24 vb yazilabilir)  
+    > Destination: Any
+    > Port: 3389
+    > Protocol: TCP
+    > Action: Allow
+    > Priority: 1000
+    > Name: RDP_traffic
+    > ok
+
+
+
+4.Network Security Group Degistirme:
+- Kurulu olan nsg'yi diger vm'lerin nsg'si olarak belirleme.
+
+a.Yeni VM nic'i mevcut nsg'ye tanimlama:
+> nsg-rg > vm2-nic (kendi otomatik olusmus vm2-nsg2'si var) > Network security group (soldaki) > Edit
+  > vm2-nsg2 yerine vm-nsg secilir. > save
+  > Effective security rules (gecerli ruleleri gosterir)
+
+b.Bosta kalan nsg'yi silme:
+> nsg-rg > vm2-nsg2 > Delete
+

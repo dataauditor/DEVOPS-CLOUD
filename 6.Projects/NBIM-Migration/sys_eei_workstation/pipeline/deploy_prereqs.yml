@@ -1,0 +1,33 @@
+# Don't trigger on pull requests
+trigger:
+  paths:
+    include:
+      - cloudformation/sg-s3-bucket.yml
+
+pr: none
+
+variables:
+  stack_name: 'eei-workstation-prereqs'
+  region: 'eu-west-1'
+  ${{ if in(variables['Build.SourceBranchName'], 'master', 'main') }}:
+    env: 'prod'
+    pool_name: '(AWS)_(nbim-eei-workstation-prod)'
+  ${{ if eq(variables['Build.SourceBranchName'], 'develop') }}:
+    env: 'dev'
+    pool_name: '(AWS)_(nbim-eei-workstation-dev)'
+  ${{ if notin(variables['Build.SourceBranchName'], 'master', 'main', 'test', 'develop', 'dev') }}:
+    env: 'dev'
+    pool_name: '(AWS)_(nbim-eei-workstation-dev)'
+
+pool:
+  name: $(pool_name)
+  demands:
+    - agent.os -equals Linux
+
+steps:
+  - script: |
+      aws --region ${{ variables.region }} cloudformation deploy \
+        --template-file cloudformation/sg-s3-bucket.yml \
+        --stack-name ${{ variables.stack_name }} \
+        --capabilities CAPABILITY_NAMED_IAM
+    displayName: "Deploying prereqs EEI workstation"

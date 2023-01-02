@@ -1,0 +1,43 @@
+1.Subscription:
+- Farkli ucret takibi saglar.
+
+
+
+2.Subscription Olusturma:
+> Subscriptions > + add > Pay-As-You-Go / Developer Support ... seklindeki onrilerden biri secilir 
+
+
+
+3.Resource'u Acarken Subscription Secme:
+- Resource olustururken istenilen subscription ve RG'ye baglanabilir.
+> Subscriptions > + Create resource > Virtual machine > create > Subscription: Azure sub 1 / Resource group: umit-rg / ... > create
+
+
+
+
+4.Management Groups:
+- Organizational structures.
+- Baska Management Group'lari veya Subscription'lari icerebilir.
+- En az bir tane Management Group (Root Group) olur.
+- Yeni MG olusturabilirsinin.
+- Subscription'lari baska MG'lere aktarabilirsin.
+- Business Group, IT Group vb. Different Permissions, assignments to MG level.
+> Management Groups > Ilgili Subscription > ... (3 nokta) > Move > ilgili Management Group > save
+
+
+
+
+5.Blueprints:
+- Sam saglar. Onceden hazirlanan Management Group vb'yi policies dahil sam olarak kullanmayi saglar.
+- Template'tir.
+
+
+
+
+
+
+
+
+
+
+

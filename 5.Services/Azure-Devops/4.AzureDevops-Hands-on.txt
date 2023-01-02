@@ -1,0 +1,84 @@
+1.Hands-on .Net Project:
+
+a.Azure Devops Ilk Konfiguration:
+> Create new Organization: 
+  > Name your Azure DevOps organization: kepteyn
+  > Project name: Birinci-projem
+  > Create project
+
+
+b.Parallel Durumunu Koordine Etme:
+- Cozemedim.
+> Organization Settings:
+  > Billing
+  > Set up billing
+  > 
+
+
+c.Pool ve Agent Ekleme:
+> Project Settings
+  > Agent pool
+  > Default
+  > Pool type: Self hosted
+  > Name: Azurunkendi
+  > Create
+
+> Project Settings
+  > Agent pool
+  > Azurunkendi
+  > New agent
+  > Linux
+  > x64
+
+
+d.Pipeline Olusturma:
+> Pipelines
+  > New pipeline
+  > Where is your code: Github
+  > dockerization-bookstore-api-python-mysql
+    - Ilgili repoyu sec ve izin ver
+  > Configure your pipeline: Starter Yaml
+-------------------------------------------------------------
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+- script: dotnet test
+  displayName: Run unit test
+
+- script: dotnet build --configuration $(buildConfiguration)
+  displayName: Build application
+
+- script: docker build -t my-image:v1.0 .
+  displayName: 
+
+- script: docker push my-image:v1.0 .
+  displayName: Push image
+-------------------------------------------------------------
+    - master tetikliyor.
+    - Sirasiyla; test, build-compile package, build image ve push umage yapiyor.
+    - Tek job calisiyor.
+  > Variables
+  > Save and run
+  > Commit message: Set up CI with Azure Pipelines
+  > Save and run
+
+
+
+
+steps:
+  - run tests
+  - package application, compile yaparak binary'i olusturma sureci.
+  - build docker image
+  - push docker image

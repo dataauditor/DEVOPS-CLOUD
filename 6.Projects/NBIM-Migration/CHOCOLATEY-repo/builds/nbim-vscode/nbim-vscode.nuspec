@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-vscode</id>
+    <version>1.54.3</version>
+    <description>Install and configure Visual Studio Code</description>
+    <authors>HakonB hby@nbim.no</authors>
+    <title>nbim-vscode</title>
+    <tags>vscode</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

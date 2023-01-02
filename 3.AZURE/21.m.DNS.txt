@@ -1,0 +1,173 @@
+1.Genel:
+- Private ve Public DNS Zone seklinde ikiye ayrilir.
+- DNS kaynagi:
+  - Azure provides DNS (default)
+  - You provide DNS (run your own DNS server)
+  - Azure Private DNS
+> Custom Domainname:
+  > Azure AD kurunca domainname otomatik alinir, domainname.onmicrosoft.com seklinde. 
+  > 3. sirketler marifetiyle alinan custom domainname, Azure domain name uzerine degistirilir, register edilir.
+  > Register ettikten sonra Public DNS'te bulunan domain kayitlari TXt ve MX kayitlarini domainname'i aldiginiz siteye kaydedersiniz.
+  > Verify edildikten sonra custom domainname'i kullanabilirsiniz.
+
+> Private DNS:
+  > Private DNS zone olusturulur 
+  > Virtual network olusturulur  
+  > Private DNS zone ile Virtual network konfigure edilir.
+  > Ayni regionda ayni vn ile 2 VM acilir.
+  > Private DNS Zone'da ilgili VM'lere Record (dns name) tanimlanir.
+  > VM'ler ip address disinda dns name ile de konusabilirler.
+
+
+
+2.Private DNS:
+
+a.Private DNS zones:
+> Private DNS zones > create 
+  > RG: priv-dns-zone-rg
+  > Name: devserver.bspoke (youtube.com yazabiliriz o halde gercek youtube'a cikis yapmaz.)
+  > RG loc: east us
+
+
+b.Virtual network:
+> Virtual networks > + create > 
+  > RG: priv-dns-zone-rg (Private DNS zone ile ayni RG secilir.)
+  > Name: priv-dns-zone-vn
+  > Region: east us
+
+
+c.Private DNS Zone ile Vnet Baglantisi Kurma:
+ virtual network links > + Add
+  > Link name: firstlink
+  > Virtual network: priv-dns-zone-vn
+  > Configuration: Enable auto registration (yeni serverlar da otomatik olarak dns zon'a dahil olur.)
+
+
+d.VM:
+- Ayni region ve vnette 2 adet VM acilir.
+> Windows Server 2016 Datacenter 
+  > VM Name: dns-vm
+  > Region: east us (Private DNS zone ile ayni RG secilir.)
+  > Virtual network: priv-dns-zone-vn
+  > create > create another VM
+    > VM Name: dns-vm2
+    > Region: east us
+    > Virtual network: priv-dns-zone-vn
+    > create
+
+
+e.Set Record (Private):
+- private dns zone uzerinden ilgili vm'lere record kurup, soz konusu makineleri ismi ile cagirabiliriz WAN'da.
+> devserver.bspoke (2 adet VM'e private DNS atandigini goruruz.) > dns-vm'in ve dns-vm2 private IP'leri (10.2.0.4, 10.2.0.7) copy edilir.
+  > + Record set 
+    > Name: web.devserver.bspoke (devserver.bspoke otomatik eklenir)
+    > Type: A
+    > IP address: 10.2.0.4
+    > ok
+  > + Record set
+    > Name: db.devserver.bspoke (devserver.bspoke otomatik eklenir)
+    > Type: A
+    > IP address: 10.2.0.7
+    > ok   
+
+
+f.RDP ile dns-vm'ye Baglanma:
+- Record'lar ile ip adresi yerine private dns name ile bulut icinde makinelere ulasma.
+- Ilgili VM'ye baglanip:
+ping db.devserver.bspoke
+  - ilgili makineye ulasip pingler.
+
+
+
+3.DNS (Public DNS):
+
+a.DNS Zone Olusturma:
+> DNS zones > + Create
+  > RG: dns-zone-rg
+  > Name: umitceylan.no
+  > RG location: east us
+
+b.Record (Kayit) Olusturma:
+> DNS zones
+  > umitceylan.no
+  > + Record set
+    > Name: www
+    > Type: A
+    > TTL: 1 hours
+    > IP Adress: 34.5.6.212 (Ilgili VM'in public IP adresi)
+    > OK
+
+c.Record'a Test Yapilmasi:
+> DNS zones
+  > umitceylan.no
+  > Name server 1: ns1-01.azure-dns.com. (copy)
+Command Prompt:
+- Herhangi bir bilgisayar.
+- Browserdan da www.umitceylan.no adresi test edilebilir.
+nslookup www.umitceylan.no ns1-01.azure-dns.com.
+  - Name: www.umitceylan.no
+  - Address: 34.5.6.212
+
+b.RDS ile VM'ye baglanma:
+- Emin degilim burada detayli anlamadim.
+> RDS ile baglan 
+  > Add roles and features > Web Server (IIS) > Add features > Install
+
+c.Network Security Group Olusturma:
+- RG bazinda ilgili port acilir.
+> Network security group > create
+  > RG: dns-zone-rg
+  > Name: dns-nsg
+  > Region: East US
+
+d.Network Security Group Konfigurasyonu:
+> dns-zone-rg > inbound security rules > + Add
+  > Source: Any
+  > Destination: Any
+  > Service : HTTP 
+  > Destination port ranges: 80 
+  > Action: Allow
+  > Priority: 310
+  > Name: port_80
+  > Add
+
+f.Browser:
+www.umitceylan.no
+
+
+
+
+4.Hands-on Private DNS:
+
+a.Storage Account Olusturma:
+- Private link ve Private DNS zone olan Storage account kuruyoruz.
+> Storage account
+  > Subs | RG: DC-RG | Region: North Europe | Name: testdco002
+  > Performance: Standard
+  > Redundancy: LRS
+  > Connectivity: Private endpoint
+  > + Add private endpoint
+    > Subs | RG | Location: North Europe | Name: StoragePL
+    > Storage sub-resource: blob
+    > Virtual network: DC-RG-vnet
+    > Subnet: DC-RG-vnet/default  (VM'in bulundugu Subnet)
+    > Integrate with private DNS zone: Yes (kendisi private DNS zone olusturur.)
+    > Private DNS Zone: privatelink.blob.core.windows.net
+    > OK
+  > Routing preferences: Microsoft network routing
+  > Encrypyion type: Microsoft managed keys
+  > Enable support for customer-managed keys: Blobs-files only
+  > create
+
+b.Storage Account'un IP Address'ini Alma:
+> testdco002
+  > Networking
+    > Private endpoint connections
+    > StoragePL
+      > DNS configuration
+        > IP addresses: 10.3.0.5  (private IP address)
+        > FQDN: rwsrdco002.blob.core.windows.net  (copy)
+
+c.Private Link'leri Inceleme:
+> Private DNS zones
+  > privatelink.blob.core.windows.net  (olusmus gorebiliriz.)

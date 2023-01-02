@@ -1,0 +1,46 @@
+1.Genel:
+- Peering ile 3 Vnet'e baglanilamaz iken Firewall veya NVA (network virtual appliance) ile tum Vnet'lere baglanti noktasi saglanilabilir. Bunlara kullanici tanimli routerlar da denir.
+- UDR (user defined rule): Firewall ortada bir Vnet'e kurulursa Vnet1'den once Vnet-FW sonra Vnet2'e gec seklinde kurallar yazilmali. 
+- UDR, herbir Vnet'e tanimlanir.
+- NPA: Bir Vnet'te bulunur ve kendisine Vnet1'den gelen trafigi Vnet2'ye yonlendirir. Atlama noktasi gibi calisir.
+- Firewall: UDR'lerle Vnet'lerde trafige izin verirken ayni zamanda Firewall'da da Vnet1'den gelen trafigi Vnet2'e gitmesine izin veriyorum seklinde izin vermek gerekiyor.
+- Vnet'te IP address degisikligi, eklemesi yapmak icin once peering kaldirilir sonra yeniden kurulur.
+- Hub Vnet kurulur. On-prem, VPN clients ve diger Vnet'leri birlestirir.
+
+
+
+2.Kurulum:
+- Once herbir Vnet'te router olusturulur.
+- Daha sonra bu router'a UDR tanimlanir. Atlama noktasi gosterilir.
+- Sonra ilgili router bir subnete baglanir.
+
+a.Router Olusturma:
+> Route table
+  > create
+  > Subs | RG: Test-RG-01 | Region: North Europe | Name: udr-prod-01
+
+b.Routes Olusturma:
+> udr-prod-01
+  > Routes
+  > + Add
+    > Route name: internet
+    > Address prefix destination: IP Addresses
+    > Destination IP addresses/CIDR ranges: 0.0.0.0/0  (nereye gidersen git)
+    > Next hop type: Virtual appliance (Firewall da icerdigi icin tercih edilir.)
+    > Next hop address: 30.1.0.10  (Atlama noktasinin adresi)
+    > Add
+
+c.Associate Route with Subnet:
+- Bu subnetteki tum serverlar on
+> udr-prod-01
+  > Subnets
+  > + Associate
+    > Virtual network: vnet-prod-ne-01
+    > Subnet: FE-App-subnet
+    > ok
+
+
+
+
+
+

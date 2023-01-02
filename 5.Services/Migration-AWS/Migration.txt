@@ -1,0 +1,12 @@
+1.Data Migration:
+> Discovery 
+    - Undersyand data.
+  > Planning 
+      - Set goals and make assumptions.
+    > PoC, tooling, and optimization 
+        - Validate assumptions, apply corrections based on learning.
+      > Implementation 
+          - Run orchestrated scripts and tools.
+        > Verification
+            - Validate data.
+       

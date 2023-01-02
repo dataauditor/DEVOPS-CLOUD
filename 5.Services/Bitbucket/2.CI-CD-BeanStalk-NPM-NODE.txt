@@ -1,0 +1,38 @@
+image: atlassian/default-image:2
+
+pipelines:
+  default:
+    - step:
+        name: "Install"
+        image: node:12.13.0
+        caches:
+          - node
+        script:
+          - npm install
+    - parallel:
+        - step:
+            name: "Test"
+            image: node:12.13.0
+            caches:
+              - node
+            script:
+              - npm test
+        - step:
+            name: "Build zip"
+            script:
+              - apt-get update && apt-get install -y zip
+              - zip -r application.zip . -x "node_modules/**"
+            artifacts:
+              - application.zip
+    - step:
+        name: "Deployment to Production"
+        deployment: production
+        script:
+          - pipe: atlassian/aws-elasticbeanstalk-deploy:1.0.2
+            variables:
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              AWS_DEFAULT_REGION: $AWS_REGION
+              APPLICATION_NAME: $APPLICATION_NAME
+              ENVIRONMENT_NAME: $ENVIRONMENT_NAME
+              ZIP_FILE: "application.zip"

@@ -1,0 +1,135 @@
+1.Cluster Autoscaling (CA):
+- Scheduling ile ihtiyaci karsilayacak sekilde yeni node'lar acilir.
+
+
+
+2.Helm:
+helm list -n prom
+
+
+
+3.
+vim deployment.yaml
+--------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-vote-back
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mvcapp
+  template:
+    metadata:
+      labels:
+        app: mvcapp
+    spec: 
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: agentpool
+                operator: In
+                values:
+                - mainnp
+      containers:
+      - name: mvcapp
+        image: seanmckdemo.azurecr.io/mvc-hpa:0.3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m" 
+        ports:
+        - name: http  
+          containerPort: 80
+        - name: metrics
+          containerPort: 9000
+--------------------------------------------------------------------
+
+vim servicemonitor.yaml
+--------------------------------------------------------------------
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata
+  name: mvc-monitor
+  namespace: prom
+  labels: 
+    app: mvc-monitor
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: mvcapp
+  endpoints:
+  - interval: 15s
+    path: /metrics
+    port: metrics
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+  namespaceSelector:
+    matchNames:
+    - mvc
+--------------------------------------------------------------------
+
+vim prometheus-adapter.yaml
+--------------------------------------------------------------------
+prometheus:
+  url: http://prometheus-prometheus-oper-prometheus.prom.svc.cluster.local
+  port: 9090
+rules:
+  custom:
+  - seriesQuery: 'request_count{namespace!="", pod!""}'
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+    name:
+      as: "requests_per_second"
+    matricsQuery: 'round(avg(irate(<<.Series>>{<<.LabelMAtchers>>}[1m])) by (<<.GroupBy>>)
+--------------------------------------------------------------------
+  - Tum node'lardan ilgili app'in verilerini alir.
+
+vim hpa.yaml
+--------------------------------------------------------------------
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mvcapp
+  namespace: mvc
+spec:
+  maxReplicas: 100
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mvcapp
+  metrics:
+  - type: Pods
+    pods:
+      metric:
+        name: requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "25"
+--------------------------------------------------------------------
+  - "targetCPUUtilizationPercentage: 20" kullanilarak cpu kullanimi ile tetiklenebilirdi "scaleTargetRef:" altinda tanimlanarak.
+
+
+kubectl scale --replicas=200 rs/kubia-rs
+  - replica'yi scale ettik. Deployment da edilebilir.
+  - podlari artirir ve yeni node acilir.
+
+
+
+
+
+
+
+
+
+

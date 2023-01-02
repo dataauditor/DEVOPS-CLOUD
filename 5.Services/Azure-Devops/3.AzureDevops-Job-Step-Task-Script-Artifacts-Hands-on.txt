@@ -1,0 +1,483 @@
+https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/v2-linux?view=azure-devops-2019
+https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/v2-windows?view=azure-devops
+https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/docker?view=azure-devops
+
+
+
+1.Pipeline:
+> Once CI: test ve build islemi yapilarak artifact uretilir.
+  > Sonra CD: artifact'i deploy ederiz veya image'i repository'e gondeririz.
+
+
+
+
+2.Yaml Files:
+- Template olusturabilirsiniz (genellikle deploymentlarda kullanilir.)
+  - Ilgili pipeline'da template'i reference gosterip kullanabilirsiniz.
+- test.yml, build.yml, deploy.yml seklinde pipeline'i farkli file'larda tutabilirsiniz.
+  - Farkli app'ler icin my-app-A, my-app-B icin test.yml, build.yml, deploy.yml file'larini referance gosterebilirsiniz.
+- Ayrica template, bir job, stage veya step'ten olusabilir.
+
+
+
+
+3.Self Hosted Agents:
+- Pool altinda tanimlanirlar.
+- Microsoft hosted agents: Azure kendi makinelerini kullanir.
+- Configure own agents and connect to Azure.
+- On-prem, baska cloud service'ler, cluster vb hepsi agent olarak tanimlanabilir.
+- Download islemi ile configuration file agent'a indirilir.
+
+3.a.Windows Server Agent Olarak Kurulup Azure Devops'a Baglanilir:
+> Ilk olarak agent olarak kullanilacak Windows Server kurulup baglanilir.
+
+3.b.Configuration File Agent'a Download Edilir:
+> Organization Settings
+  > Agent pools
+  > Add pool
+    > Pool to link: New
+    > Pool type: Self hosted
+    > Name: LocalPoolum
+    > Pipeline permissions: Grant permission tol all pipelines, Auto-provision this agent pool in all projects
+    > Create
+  > LocalPoolum
+  > Agents
+  > New agent
+    > Windows | x64 | 
+    > Download
+
+3.c.Agent'ta Token Olusturulur:
+- Agent olarak kullanilacak VM uzerinden Azure Devops'a baglanabiliriz.
+> Azure Devops
+  > User settings
+  > Personal access tokens
+  > + New Token
+    > Name: PATToken
+    > Organization: byildiz2019
+    > Expiration: 30 days
+    > Scopes: Full access
+    > Create
+  > Copy token
+
+3.d.Agent'in Konfigurasyonu:
+- Extract islemi agent isimli bir dosya olusturularak icine yapilir.
+> /Downloads/vsts-agent-win-x64-2.204.0.zip - copy
+  > /Desktop/agent - past
+  > vsts-agent-win-x64-2.204.0.zip > RC > Extract Here
+  > config.cmd - cift tikla
+      - PowerShell admin olarak acilip ".\config.cmd" seklinde yazilarak da calistirilabilir.
+    > Enter server URL: https://dev.azure.com.byildiz2019/
+      - Azure Devops'ta browserdaki adresin.
+    > Enter authentication type (press enter for PAT)
+    > Enter personal access token: <token yapistirilir> 
+    > Enter agent pool: LocalPoolum
+    > Enter agent name: WindowsAgent 
+      - ister isim yazariz istersek kendisi atar.
+    > Enter run agent as service: - Enter
+      - No dedik.
+    > Enter configure autologon and run agent on startup: - Enter
+      - No dedik.
+
+3.e.Agent'in Calistirilmasi/Online Yapilmasi:
+> Desktop/Agents
+  > run.cmd - cift tikla
+    - PowerShell admin olarak acilip ".\run.cmd" seklinde yazilarak da calistirilabilir.
+
+3.f.Agent'in Durumu:
+> Azure Devops
+  > Organization settings
+  > Agent pools
+  > LocalPoolum
+  > Agents
+  > Refresh
+  > WindowsAgent
+    - run.cmd calistirilmazsa "Offline" gozukur.
+
+3.g.Agent'in Mevcut Pipeline'a Tanimlanmasi:
+> Pipelines
+  > Ilgili pipeline 
+  > ... (3 nokta) 
+  > Edit
+    > Pipeline 
+    > Agent pool: LocalPoolum
+
+3.h.Self Hosted Agent Pipeline'de Kullanma:
+- Pipeline'de agent gosterilmez yalnizca pool secilir.
+---------------------------------------------------------------------------------
+trigger:
+- master
+
+pool:
+  LocalPoolum
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '10.x'
+  displayName: 'Install Node.js'
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: 'npm install'
+---------------------------------------------------------------------------------
+
+
+
+
+4.Connections:
+- Proje bazinda source repo ve image repository connectionlari yapilir.
+- Connect and authenticate the platforms:
+  * External Code Repository which hosts the source code: GitHub, GitLab... 
+  * Image repository connections.
+  * Deploy to remote server: AWS, Microsoft Azure, Cluster, On-prem...
+- Credentials, access tokens, username, passwords ...
+> Ilgili Project
+  > Project settings
+  > Service connections
+  > Create service connection
+    > Github 
+      > Authentication method: Grant authorization
+      > Oauth Configuration: AzurePipelines
+      > Authorize
+        > Kendi Github hesabin'a baglanip sifre girerek izin verilmis olur.
+      > Save
+  > New service connection
+    > Docker Registry
+      > Docker ID: umitceylan
+      > Docker Password: Mustafa11,d
+      > Service connection name: dockerhub
+      > Save
+
+
+
+
+5.Environments:
+- development, testing ve production seklinde 3 farkli environment olusturabiliriz.
+!!!
+- Her stage testing, build vb altinda job kurup farkli OS'ler icin calistirabiliriz.
+- Ilgili job, stage..te soz konusu environment'i secip buradaki degiskenleri kullanabiliriz.
+- Environment bazinda deployment history'sini izleyebiliriz.
+> Pipelines
+  > Environments
+  > Create environment
+    > Name: development
+    > Resource: None
+    > Create
+------------------------------------------------------------------
+stages:
+- stage: Build
+  jobs:
+  - job: Test and Build 
+    steps:
+    - task: DotNetCoreCLI@2
+      ...
+
+- stage: Deploy
+  jobs:
+  - deployment: Deploy to development 
+    environment: development
+    steps:
+    - task: AzureWebApp@1
+      ...
+------------------------------------------------------------------
+  
+
+
+
+6.Azure Artifacts:
+- Build islemi sonrasinda artifactler Azure Devops Artifacts bolumunde tutulur.
+- Maven, NuGet ve npm package'lerini destekler.
+  - Nuget: dotnet, NuGet.exe, Visual Studio
+  - npm: npm
+  - Maven: Maven, Gradle
+
+
+
+
+7.Docker Image:
+- Artifact yerine docker image olusturulur gunumuzde.
+- Ilgili image Azure Artifact'e gonderilmez tag'lanarak registry'e push edilir.
+- Registry ile tanimlama yapilir:
+  * Azure Container Registry
+  * ECR
+  * Docker Hub
+
+
+
+
+8.Deployment (CD):
+- CI, image veya artifact islemi sonrasi icra edilir.
+- Dev, Testing ve production env'larina gonderilir.
+
+
+
+
+9.Stages:
+- Islemleri stage stage ayirabiliriz. 
+- Stage'leri Build ve test ile Deploy olarak ayirabiliriz.
+- Sonra ornegin Test ve build islem stage'i altinda Linux ve Windows OS icin jobs acip farkli job'lar tanimlayabiliriz.
+
+
+
+
+10.Jobs:
+- Ayri OS'lerin pool olarak kullanilacagi durumlarda kullanilir.
+- Agent'lar pool'da tutulur. Bu yuzden "pool:" ifadesi yazilir. Pool'dan cekiyoruz.
+- 'deployment': seklinde de tanimlanabilir bir job. job yerine deployment yazilabilir.
+
+
+
+
+11.Steps:
+- Herbir job altinda job yoksa dogrudan tanimlanir.
+- Altinda script veya tasklar tanimlanir.
+
+
+
+
+12.Script:
+- Linux kodlari ile test, build ve deploy islemleri.
+
+
+
+
+13.Task:
+- Azure Devops'un kendi CLI uzerinden yaptigi ve bizim konfigure ettigimiz test, build ve deploy islemleri.
+
+
+
+
+14.Parallel Steps:
+- Multiple steps runs at the same time.
+
+
+
+
+15.Test Plans:
+- Fuctional tests. Integration tests, Load tests, Exploratory tests, User Acceptance tests vb planlanabilir.
+- Automated ve MAnual Tests planlanabilir.
+- Manual olursa tester'lar buraya step step yazar kendileri takip ederler.
+- Automated test'ler pipeline ile CI'da icra edilir.
+Automated ve Manual test'lerin sonuclari Test Plans altinda gorulebilir.
+
+a.Manual Tests: 
+  * Specifying the test steps
+  * Expected outcomes
+> Test Plans
+  > New Test Plan
+  > Name: Sprint 1
+-----------------------------------------------------------------
+Steps: 
+Actions:										Expected result:
+1. Open the home page for the web site.					Home page is displayed.
+2. Click Settings icon								Settings page is displayed.
+3. Change the default template to Modern and select Submit.		The home page is displayed with the Modern See screenshot.
+  ... Add a step
+-----------------------------------------------------------------
+
+b.Automated Tests:
+- By running tests within Azure Pipelines.
+- Test reports can be viewed in Azure Test Plans.
+
+
+
+
+16.Hands on:
+> Pipelines
+  > New pipeline
+  > Where is your code: Github
+    - Azure Devops da secilebilir.
+  > dockerization-bookstore-api-python-mysql
+    - Ilgili repoyu sec ve izin ver
+  > Configure your pipeline: Starter Yaml
+--------------------------------------------------------------------
+trigger:
+- master
+
+variables:
+  buildConfiguration: 'Release'
+
+jobs:
+- job: Run on Windows
+  pool:
+    vmImage: 'windows-latest'
+  steps:
+  - script: dotnet test
+    displayName: Run unit tests
+
+- job: Run on Linux
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - script: dotnet test
+    displayName: Run unit tests
+-----------------------------------------------------------------------
+  - Farkli OS'lerde calisma durumunda pool'lari ayri ayri job'lara atariz.
+
+
+
+
+17.Hands on:
+> Pipelines
+  > New pipeline
+  > Where is your code: Github
+    - Azure Devops da secilebilir.
+  > dockerization-bookstore-api-python-mysql
+    - Ilgili repoyu sec ve izin ver
+  > Configure your pipeline: Starter Yaml
+--------------------------------------------------------------------
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-22.04'
+
+variables:
+  buildConfiguration: 'Release'
+
+jobs:
+- job: Test and Build
+  steps:
+  - script: dotnet test
+    displayName: Run unit test
+
+  - script: dotnet build --configuration $(buildConfiguration)
+    displayName: Build application
+
+  - script: docker build -t my-image:v1.0 .
+    displayName: Build image
+
+  - script: docker push my-image:v1.0 .
+    displayName: Push image
+----------------------------------------------------------------------
+
+
+
+
+18.CI/CD with tasks with jobs:
+-----------------------------------------------------------------------
+trigger:
+- master
+
+variables:
+  buildConfiguration: 'Release'
+
+jobs:
+- job: Test and Build
+  steps:
+  - task: DotNetCoreCLI@2
+      inputs:
+        command: 'test'
+  - task: DotNetCoreCLI@2
+      inputs:
+        command: 'build'
+        arguments: '--configuration $(buildConfiguration)'
+  -  task: Docker@2
+      inputs:
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'age:v1.0 .
+      displayName: Push image
+
+- job: Deploy to dev
+  steps:
+    - task: AzureWebApp@1
+      Inputs:
+        appNAme: myapp
+        package: '$(System.DefaultWorkingDirectory)/**/*.zip'
+-----------------------------------------------------------------------
+
+
+
+
+19.Multiple stages:
+-----------------------------------------------------------------------
+stages:
+- stage: Build
+  jobs: 
+  - job: Test and Build 
+    steps:
+    - task: DotNetCoreCLI@2
+      ...
+    - task: DotNetCoreCLI@2
+      ...
+    - task: DotNetCoreCLI@2
+      ...
+- stage: Deploy
+  jobs:
+  - job: Deploy to Windows
+    steps:
+    - task: AzureWebApp@1
+      ...
+-----------------------------------------------------------------------
+
+
+
+
+20.Different Environments:
+-----------------------------------------------------------------------
+stages:
+- stage: Deploy Dev
+  jobs: Test and Build
+  - job: Deploy to development
+    steps:
+    - task:  AzureWebApp@1
+      ...
+    
+- stage: Deploy Test
+  jobs:
+  - job: Deploy to Test
+    steps:
+    - task: AzureWebApp@1
+      ...
+
+- stage: Deploy Prod
+  jobs:
+  - job: Deploy to production
+    steps:
+    - task: AzureWebApp@1
+      ...
+-----------------------------------------------------------------------
+  - Herbirinin altina ilgili environment secilerek kullanilir.
+
+
+
+
+21.Template Kullanma:
+- Deploy islemi icin bir template olusturup test, dev ve prod env'lar icin cekip kullanabiliriz.
+
+vim deploy.yml
+-----------------------------------------------------------------------
+parameters:
+  env: Dev
+
+jobs:
+- job: Deploy
+  environment: ${{ parameters.env }}
+  steps:
+  - task: AzureWebApp@1
+    inputs:
+      appName: myapp
+      package: '$(System.DefaultWorkingDirectory)/**/*.zip'
+-----------------------------------------------------------------------
+  - Bu template'i istedigimiz yerde kullanabiliriz.
+
+- Asagidaki pipeline'de yukardaki template'i kullanacagiz.
+-----------------------------------------------------------------------
+- stage: Deploy Dev
+  jobs:
+  - template: /Deploy/Jobs/deploy.yml
+    parameters:
+      env: Dev
+
+- stage: Deploy Test
+  jobs:
+  - template: /Deploy/Jobs/deploy.yml
+    parameters:
+      env: Test
+
+- stage: Deploy Prod
+  jobs:
+  - template: /Deploy/Jobs/deploy.yml
+    parameters:
+      env: Prod
+-----------------------------------------------------------------------

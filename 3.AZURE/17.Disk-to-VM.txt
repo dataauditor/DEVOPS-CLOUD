@@ -1,0 +1,109 @@
+1.Genel:
+- Her vm'in OS icin mevcut bir diski var.
+- OS diskine application file'lar yuklenilmemeli. Makine giderse dosyalar kaybolur.
+- AWS-EBS
+- Disk'te kapasite (size) degisikligi icin once detach edilir.
+- VM modellerine gore eklenebilecek maksimum disk adedi farklidir.
+
+
+2.Disk Olusturma:
+- Ilgili vm acilarak olusturulur.
+> my-vm > Disks > + create and attach a new disk (attach existing disk de var) 
+  > LUN: 0 / Disk name: newdatadisk / Storage type / Size / IOPS / Platform Managed Key / Host Caching 
+  > save
+
+
+3.Detach Disk:
+- Ilgili diski silmez sadece vm'den ayirir.
+> my-vm > Disks > newdatadisk > X 
+
+
+4.Resize:
+- Detach olmali.
+> Disks > newdatadisk > size and performance 
+
+
+5.VM Modeli Bazinda Eklenebilecek Disk Adedi:
+- Model bazinda disk adedini gosterir.
+> my-vm > Size 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,151 @@
+Genel:
+- Lambda ve Amazon Aurora Serverles RDS kullanilacak. 
+- Hersey serverless olacak.
+- Endpoint yerine Data API kullanilir baglanmak icin.
+
+
+1.Serverless Database Olusturma:
+- Buradaki Serverless db olsa da Query Editor ile baglanilamiyor.
+> RDS
+  > Create database
+  > Standard create
+  > Amazon Aurora
+    - Sadece bunda serverless engine var.
+  > Edition: Amazon Aurora MySQL-Compatible Edition
+  > Engine version: Show filters
+    > Show versions that support Serverless v2 - check
+  > Templates: Dev/Test
+  > DB cluster identifier: auroraserverlessdemo
+  > Master username: admin
+  > Master password: 123
+  > DB instance class: Serverless: Serverless v2
+  > Capacity range: Minimum ACUs: 2, Maximum ACUs: 8
+  > Don’t connect to an EC2 compute resource - check
+  > Network type: IPv4
+  > Virtual private cloud (VPC): Default VPC
+  > DB Subnet group: default
+  > Public access: No
+  > VPC security group (firewall): default
+  > Availability Zone: No preference
+  > Database authentication options: Password authentication
+  > Initial database name: serverlessdemo
+  > Gerisi - Default
+  > Create database
+
+  
+
+
+2.Secrets Manager:
+- Credentials'lari koyacagiz.
+
+a.Secrets Olusturma:
+> Secrets Manager
+  > Store a new secret
+  > Credentials for other database - check
+  > User name: admin
+  > Password: 123
+  > Database: Mysql
+  > Server address: auroraserverlessdemo.cluster-c9mvnnwhwlma.us-east-1.rds.amazonaws.com
+    - RDS cluster'in endpointi
+  > Database name: 
+  > Next
+  > Automatic rotation - uncheck
+    - Sifrenin degistirilmesi icin kurulabilir.
+  > Next
+  > Store
+
+b.Inceleme ve Edit Etme:
+> Secrets Manager
+  > Secrets
+  > rds-serverless
+  > Retrive secret value
+    - Ilgili secret'lari gorebiliriz.
+  > Secret value: Edit
+    > Add row
+      - Yeni secret'lar tanimlayabiliriz.
+
+
+
+
+3.IAM Role Tanimlama:
+- Lambda'ya RDS ile konusabilmesi icin role tanimlanacak.
+> IAM
+  > Roles
+  > Create role
+    > AWS service -check
+    > Use case: Lambda - check
+    > Next
+    > Add permissions:
+      > AWSLambdaBasicExecutionRole - check
+      > AmazonRDSDataFullAccess - check
+        - Serverless RDS ve Secret Manager'a izin verir.
+    > Next
+    > Role name: AuroraLambdaSecretsManagerRole
+    > Create
+
+
+
+4.Lambda Olusturma:
+- RDS ile ayni VPC/Region'de kurmaliyiz eger data api kullanilmiyorsa.
+
+a.Function Olusturma:
+> Lambda
+  > Create function
+    > Author from scratch
+    > Function name: AuroraLambdaServerlessDemo
+    > Runtime: Python 3.7
+    > Change default execution role
+    > Create function
+
+b.Lambda'ya Role Tanimlanmasi:
+> Lambda
+  > Functions
+  > AuroraLambdaServerlessDemo
+  > Configuration
+  > Permissions
+  > Execution role: Edit
+      - Default olarak calisan rolu degistiriyotuz.
+    > Existing role: AuroraLambdaSecretsManagerRole
+      - Icinde "AWSLambdaBasicExecutionRole" olmasa idi burada gorulmezdi.
+    > Timeout: 10 sec
+  > Save
+
+c.lambda_function.py
+---------------------------------------------------------------------
+import json
+import boto3
+
+rds_client = boto3.client('rds-data')
+
+database_name = 'serverlessdemo'
+db_cluster_arn = 'arn:aws:rds:us-east-1:145012395309:cluster:auroraserverlessdemo'
+db_credentials_secrets_store_arn = 'arn:aws:secretsmanager:us-east-1:145012395309:secret:rds-serverless-6PgQx2'
+
+
+def lambda_handler(event, context):
+    response = execute_statement('SHOW databases');
+    return response['records'];
+
+def execute_statement(sql):
+    response = rds_client.execute_statement(
+        database=database_name,
+        resourceArn=db_cluster_arn,
+        secretArn=db_credentials_secrets_store_arn,
+        sql=sql
+    )
+    return response;
+---------------------------------------------------------------------
+  - database_name: RDS/auroraserverlessdemo-instance-1 (writer instance)/Configuration/DB name
+  - db_cluster_arn: RDS/auroraserverlessdemo (Regional cluster)/Configuration/Amazon Resource Name (ARN) (cluster altinda da bulunur.)
+
+d.Test:
+> Lambda
+  > Functions
+  > AuroraLambdaServerlessDemo
+  > Code
+  > Test
+    > Create new test event - check
+    > Event name: foobar
+    > Save
+  > Deploy
+    - "errorMessage": "An error occurred (AccessDeniedException): Izinler verilmemis.

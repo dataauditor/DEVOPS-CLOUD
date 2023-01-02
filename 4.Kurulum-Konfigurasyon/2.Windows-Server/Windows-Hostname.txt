@@ -1,0 +1,14 @@
+HostName.exe
+
+#Get Computer system information
+Get-WMIObject Win32_ComputerSystem
+
+#Get Computer name from available System information
+Get-WMIObject Win32_ComputerSystem| Select-Object -ExpandProperty Name
+
+#Get Domain name from available System Information
+Get-WMIObject Win32_ComputerSystem| Select-Object -ExpandProperty Domain
+Get-ComputerInfo | select Csdomain
+
+
+Rename-Computer -ComputerName EC2AMAZ-QDBUD4E -NewName nbuce1

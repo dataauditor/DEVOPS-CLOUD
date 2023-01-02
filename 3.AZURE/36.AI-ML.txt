@@ -1,0 +1,24 @@
+1.Azure Machine Learning:
+- Makine ogrenimi modelleri gelistirmek, egitmek ve dagitmak icin bulut tabanli servis.
+- Tahminleri yapip, web API uc noktasi ile gercek zamanli olarak dagitabiliyor kullanabiliyorsunuz.
+- Gercek data oncesi ML ogrenme platformu olarak kullanabiliyoruz.
+
+
+2.Cognitive Services:
+- Uygulamalarin bir kullanicinin ihtiyaclarini gormesi, duymasi, konusmasi, anlamasi ve yorumlamasi icin hizla etkilesebilen bulut tabanli servis.
+- Bilissel servislerdir. Onceden olusturulmus ML servisleridir. 
+
+
+3.Azure Bot Service:
+- Akilli, kurumsal duzeyde bulut tabanli bot servisleri.
+- Siri, Alexa vb sorunlari anlayip yanitlayan servicetir.
+- Tek bir servise yonelik calisir.
+
+
+
+
+
+
+
+
+

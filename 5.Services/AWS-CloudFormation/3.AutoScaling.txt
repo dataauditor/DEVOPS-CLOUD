@@ -1,0 +1,112 @@
+aws kms create-grant --region eu-west-1 --key-id arn:aws:kms:eu-west-1:066615927333:key/7c5ee778-0ce8-494e-8a9e-a8815586573c --grantee-principal arn:aws:iam::404203432699:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling --operations "Encrypt" "Decrypt" "ReEncryptFrom" "ReEncryptTo" "GenerateDataKey" "GenerateDataKeyWithoutPlaintext" "DescribeKey" "CreateGrant"
+--------------------------------------------------
+aws kms create-grant \
+  --region eu-west-1 \
+  --key-id <AMI Build KMS ARN> \
+  --grantee-principal arn:aws:iam::{your_AccountID}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling \
+  --operations "Encrypt" "Decrypt" "ReEncryptFrom" "ReEncryptTo" "GenerateDataKey" "GenerateDataKeyWithoutPlaintext" "DescribeKey" "CreateGrant"
+---------------------------------------------------
+  - Yukarki komutu autoscaling'in rolune veririz encrypted ebs durumunda. 
+  - key-id: ebs'de encrypt icin kullanilan KMS key'in.
+
+
+
+
+
+
+Description: Role, Profile vb isimlerini fegistir.
+
+Parameters:
+  AMI:
+    Type: AWS::EC2::Image::Id
+    Default: ami-078f56ae34ace6c8e
+  # SG:
+  #   Type: AWS::EC2::SecurityGroup::Id
+  #   Default: sg-0602a2814dbd48749
+
+Resources:
+  LTYOLO:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: LTYOLO
+      LaunchTemplateData:
+        ImageId: !Ref AMI
+        InstanceType: t1.micro
+        IamInstanceProfile:
+          Arn: !ImportValue msciProfile
+#          Name: !Ref IPYOLO
+        SecurityGroupIds:
+          - !ImportValue msciSg7006
+          - !ImportValue msciSgCommon          
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpTokens: required
+
+#  EC2Test:
+#    Type: AWS::EC2::Instance
+#    Properties:
+#      LaunchTemplate:
+#        LaunchTemplateId: !Ref LTYOLO
+#        Version: !GetAtt LTYOLO.LatestVersionNumber
+#      SubnetId: '{{resolve:ssm:/nbim-ssm-parameter/networking/private-vpc-1/subnet-1}}'
+
+  ASGYOLO:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: ASGYOLO
+      VPCZoneIdentifier:
+        - '{{resolve:ssm:/nbim-ssm-parameter/networking/private-vpc-1/subnet-1}}'
+        - '{{resolve:ssm:/nbim-ssm-parameter/networking/private-vpc-1/subnet-2}}'
+        - '{{resolve:ssm:/nbim-ssm-parameter/networking/private-vpc-1/subnet-3}}'
+      LaunchTemplate:
+        LaunchTemplateId:
+          Ref: LTYOLO
+        Version: !GetAtt LTYOLO.LatestVersionNumber
+      MinSize: 1
+      MaxSize: 1
+      DesiredCapacity: 1
+      HealthCheckGracePeriod: 600
+      HealthCheckType: EC2
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+
+  # RoleYOLO:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     RoleName: yolo-role-testing
+  #     MaxSessionDuration: 14400
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Action: sts:AssumeRole
+  #           Principal:
+  #             Service: ec2.amazonaws.com
+  #     ManagedPolicyArns:
+  #       - !Ref  msciloaderaccessPolicy
+
+  # IPYOLO:
+  #   Type: AWS::IAM::InstanceProfile
+  #   Properties:
+  #     Path: /
+  #     InstanceProfileName: yolo-instance-profile-testing
+  #     Roles:
+  #       - !Ref RoleYOLO
+
+  # msciloaderaccessPolicy:
+  #   Type: AWS::IAM::ManagedPolicy
+  #   Properties:
+  #     PolicyDocument:
+  #         # This file has been renamed please use pol-app-specific-access.yml instead
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Sid: LimitedSSMAccess
+  #           Effect: Allow
+  #           Action:
+  #             - ssm:GetParameters
+  #             - ssm:GetParameter
+  #             - ssm:GetParameterHistory
+  #             - ssm:GetParametersByPath
+  #           Resource:
+  #             - !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/msci_loader/*'

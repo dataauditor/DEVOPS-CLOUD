@@ -1,0 +1,347 @@
+https://aws.amazon.com/premiumsupport/knowledge-center/s3-troubleshoot-replication/
+
+
+GENEL:
+- Bu projede sso kullanildigi icin IAM user ile cozemedik. Bu yuzden role olusturup role'e s3 service icin izin verdik source bucketta.
+- Destination bucket policy'sine source'da olusturulan role yetkilendirilir.
+- Mevcut source bucket'a source account'ta hazirlanan role ile ulasilir.
+- Destination icin bir bucket hazirlanip KMS key eklenir.
+- Destinationda olusturulan KMS key'e source hesabindan ulasim izni verilir. 
+
+
+A.
+1.Create Role at Source:
+- IAM uzerinde tanimlanip Replication isleminde secilecek role.
+> IAM
+  > Role
+  > Create role
+  > AWS service | s3 | s3 Batch Operations
+  > Add permissions
+  > Create inline policy
+    - Inline policy olmali.
+  > Visual editor
+  > Choose a service
+    > s3
+    > All S3 actions (s3:*) - check
+    > Resources
+      > Spesific - check
+      > bucket: Add ARN
+      > Specify ARN for bucket: arn:aws:s3:::nbim-p-eu-west-1-s3-archprodsource
+      > Add ARN
+      > Specify ARN for bucket: arn:aws:s3:::nbim-p-eu-west-1-s3-archprodsource/*
+      > Add ARN
+      > Specify ARN for bucket: arn:aws:s3:::nbim-pr-s3-prod-euwe2-archdb/*
+--------------------------------------------------------------------------------------------
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-p-eu-west-1-s3-archprodsource"
+        },
+        {
+            "Sid": "VisualEditor2",
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-p-eu-west-1-s3-archprodsource/*"
+        },
+        {
+            "Sid": "VisualEditor3",
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-pr-s3-prod-euwe2-archdb/*"
+        },
+        {
+            "Sid": "AllowAccessToUseDestKMS",
+            "Effect": "Allow",
+            "Action": "kms:Encrypt",
+            "Resource": "arn:aws:kms:eu-west-1:507440838537:key/243c75e8-6509-424a-9c48-c361780d0fbf"
+        }
+    ]
+}
+--------------------------------------------------------------------------------------------
+  - Uzerindeki tek tek verilen yetkileri sildim cunki asagidakilerde "s3:*" ile hepsi var.
+  - Principal, role'de tanimlaniyor.
+  - Name: umit-batch-policy
+
+> Role
+  > Create role
+  > umit-batch-policy - check
+  > Role name: umit-s3-Replication-Role
+  > Select trusted entities:
+---------------------------------------------------------------------------------------------
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Principal": {
+				"Service": [
+                    "batchoperations.s3.amazonaws.com",
+                    "s3.amazonaws.com"
+                ]
+			},
+			"Action": "sts:AssumeRole"
+		}
+	]
+}
+--------------------------------------------------------------------------------------------
+
+
+
+
+2.Destination Bucket Policy:
+- Bucket'in uzerindeki policy.
+> S3
+  > nbim-pr-s3-prod-euwe2-archdb
+  > Permissions
+  > Block public access - hepsine check 
+    - Public'e tamamen kapali.
+  > Bucket policy
+  > Statement
+  > + Add Statement
+  > 
+--------------------------------------------------------------------------------------------
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Statement1",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::495195341034:role/Umit-s3-Replication-Role"
+            },
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::nbim-pr-s3-prod-euwe2-archdb/*"
+        }
+    ]
+}
+--------------------------------------------------------------------------------------------
+  - "Sid": Definition yazilir.
+  - "Effect": Izin veya yasak belirtilir.
+  - "Principal": "AWS": source ve destination bucketlerine ulasim yetkisi olan ve source bucketta tanimli role'un arn'i.
+  - "Action": Izin verilen islemler: get, put, * ... vb tanimlanir.
+  - "Resource": Izin verilen islemlerin nerede yapilacagi (destination bucket) tanimlanir.
+  - AROAXGS7RIDVB33VN44P7   
+
+
+
+
+3.KMS Key Destinationda Hazirlanir.
+- AWS-Key degistirilemedigi icin KMS key olusturacagiz.
+> Key Management Service (KMS)
+  > Create KEy
+  > Symmetric | Encrypt and decrypt
+  > Advanced options
+  > Regionality: Multi-Region
+  > Alias: replication-umit
+  > Other AWS accounts: arn:aws:iam::495195341034:root
+    - Source accountun ID'si yazilir.
+    - Boylece Source acc da dest KMS key'i kullanabilir.
+  > Finish
+
+
+
+
+4.Destination s3 Bucket Olusturma:
+> s3
+  > Create bucket
+  > name: nbim-pr-s3-prod-euwe2-archdb
+  > Properties
+  > Default encryption 
+    > Encryption key type: AWS Key Management Service key (SSE-KMS)
+    > AWS KMS key: Choose from your AWS KMS keys
+    > arn:aws:kms:eu-west-1:623608658945:key/mrk-9949792f55d1460a92b8c7fb3ba109fd
+      - Yukarda olusturdugum KMS-Key'i eklerim.
+  > Versioning
+  > Save
+
+
+
+
+5.Replication Tanimlanir Source Bucketta:
+> s3
+  > nbim-p-eu-west-1-s3-archprodsource
+  > Management
+  > Create replication rule
+    > Replication rule name: umit-replica-rule
+    > Status: Enabled
+    > Choose a rule scope: Apply to all objects in the bucket
+    > Destination: Specify a bucket in another account
+      > Account ID: 623608658945 
+      > Bucket name: nbim-pr-s3-prod-euwe2-archdb
+    > IAM Role: umit-s3-batch-role
+    > Encryption: Replicate objects encrypted with AWS KMS
+    > AWS KMS key for encrypting destination objects: Enter AWS KMS key ARN: <Destination Key ARN yapistirilir.>
+  > Save 
+    > Yes, Replicate existing objects
+    > Automatically run the job when it's ready - check
+    > Generate completion report - check
+    > Path to completion report destination: Browse s3: nbim-p-eu-west-1-s3-archprodsource
+    > Choose from existing IAM roles: Umit-s3-Replication-Role
+      - Source'ta hazirlanan 
+  > Save
+
+
+
+
+6.Replication Configuration on Source Bucket:
+> S3
+  > nbim-p-eu-west-1-s3-archprodsource
+  > Management
+  > Create replication rule
+    > Replication rule name: repl1
+    > Choose a rule scope: Apply to all objects in the bucket
+    > Destination: Specify a bucket in another account
+      - Baska accounttaki bucket secilebilir.
+      > Account ID: 623608658945 
+      > Bucket name: nbim-pr-s3-prod-euwe2-archdb
+    > IAM role: Choose from existing IAM roles: umit-s3-Replication-Role
+    > Encryption: Replicate objects encrypted with AWS KMS
+    > AWS KMS key for encrypting destination objects: Enter AWS KMS key ARN: arn:aws:kms:eu-west-1:623608658945:key/mrk-9949792f55d1460a92b8c7fb3ba109fd
+  > Save
+  > Yes, replicate existing objects.
+  > Generate completion report: All tasks: Browse S3: nbim-p-eu-west-1-s3-archprodsource
+  > Permissions: Choose from existing IAM roles: umit-s3-Replication-Role
+  > Save
+
+
+
+-------------//////////////////////////////////////////////////////-----------------------------------------------------------------
+B.HANDS-ON:
+1.Destination Bucket Yaml:
+----------------------------------------------------------
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  SourceBucketName:
+    Description: Name of the source bucket to replicate
+    Type: String
+    Default: nbim-p-s3-prod-euwe1-archdb
+
+  DestinationBucketName:
+    Description: Name of the destiantion bucket to hold the replicated items
+    Type: String
+    Default: nbim-p-arch-euwe1
+
+  DestinationKMSArn:
+    Description: Arn of the KMS key in the destination bucket used for encrypting the files in the destiantion s3 bucket
+    Type: String
+    Default: "arn:aws:kms:eu-west-1:495195341034:key/mrk-379b6e77f67943b68ec1a66da7cd4540"
+
+  ReplicationRoleName:
+    Description: Name role that will do the replication. NB. rolename must already have permissions in destination account
+    Type: String
+    Default: s3-archprod-replication-role
+
+Resources:
+  # Role for replication
+  ReplicationRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Ref ReplicationRoleName
+      Description: Role used by S3 batch operations to perform replication
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - s3.amazonaws.com
+                - batchoperations.s3.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: s3repl-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowAccessSourceBucket
+                Effect: Allow
+                Action: "s3:*"
+                Resource: !Sub "arn:aws:s3:::${SourceBucketName}"
+              - Sid: AllowAccessSourceBucketObjects
+                Effect: Allow
+                Action: "s3:*"
+                Resource: !Sub "arn:aws:s3:::${SourceBucketName}/*"
+              - Sid: AllowAccessDestinationBucketObjects
+                Effect: Allow
+                Action: "s3:*"
+                Resource: !Sub "arn:aws:s3:::${DestinationBucketName}/*"
+              - Sid: AllowUsageDestinationKMS
+                Effect: Allow
+                Action: "kms:Encrypt"
+                Resource: !Ref DestinationKMSArn
+----------------------------------------------------------
+
+
+2.Source Bucket Yaml:
+----------------------------------------------------------
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  SourceBucketName:
+    Description: Name of the source bucket to replicate
+    Type: String
+    Default: nbim-p-s3-prod-euwe1-archdb
+
+  DestinationBucketName:
+    Description: Name of the destiantion bucket to hold the replicated items
+    Type: String
+    Default: nbim-p-arch-euwe1
+
+  DestinationKMSArn:
+    Description: Arn of the KMS key in the destination bucket used for encrypting the files in the destiantion s3 bucket
+    Type: String
+    Default: "arn:aws:kms:eu-west-1:495195341034:key/mrk-379b6e77f67943b68ec1a66da7cd4540"
+
+  ReplicationRoleName:
+    Description: Name role that will do the replication. NB. rolename must already have permissions in destination account
+    Type: String
+    Default: s3-archprod-replication-role
+
+Resources:
+  # Role for replication
+  ReplicationRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Ref ReplicationRoleName
+      Description: Role used by S3 batch operations to perform replication
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - s3.amazonaws.com
+                - batchoperations.s3.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: s3repl-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowAccessSourceBucket
+                Effect: Allow
+                Action: "s3:*"
+                Resource: !Sub "arn:aws:s3:::${SourceBucketName}"
+              - Sid: AllowAccessSourceBucketObjects
+                Effect: Allow
+                Action: "s3:*"
+                Resource: !Sub "arn:aws:s3:::${SourceBucketName}/*"
+              - Sid: AllowAccessDestinationBucketObjects
+                Effect: Allow
+                Action: "s3:*"
+                Resource: !Sub "arn:aws:s3:::${DestinationBucketName}/*"
+              - Sid: AllowUsageDestinationKMS
+                Effect: Allow
+                Action: "kms:Encrypt"
+                Resource: !Ref DestinationKMSArn
+
+
+

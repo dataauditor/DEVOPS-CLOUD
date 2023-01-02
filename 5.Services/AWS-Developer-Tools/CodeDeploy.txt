@@ -1,0 +1,236 @@
+1.Steps to make CodeDeploy work:
+https://anrei0000.github.io/blog/2019/08/14/ci_cd_with_laravel_bitbucket_aws
+
+a.Ilgili EC2'lar veya local server'a CodeDeploy agent yuklenmeli.
+b.The agent is going to continiously polling AWS CodeDeploy for work to do.
+c.CodeDeploy sends appspec.yml file to instances.
+d.Application is pulled from GitHub or S3.
+e.EC2 will run the deployment instructions.
+f.CodeDeploy Agent will report of success / failure of deployment on the instance.
+
+> Source code + appspec.yml > push > GitHub / AWS S3 > Trigger deployment to instances  
+
+
+2.CodeDeploy:
+- Instances can be grouped by deployment group (dev / test / prod).
+- Code Deploy can be chained into CodePipeline and use artifacts form there.
+- CodeDeploy can reuse existing setup tools, works with any application, auto scaling integration.
+- Note: Blie/Green only works with EC2 instances (not on-premises).
+- Support for AWS Lambda deployments, EC2.
+- CodeDeploy dose not provision resources. It only deploys source coude to resources.
+
+
+3.Bitbucket > S3
+https://developerck.com/auto-deployment-using-bitbucket-and-aws-code-deploy/
+- bit-bucket account http://bitbucket.org/
+- Aws account
+- there is a repository in bitbucket account, bitbucket pipeline is enabled
+- AWS account has
+  - one s3 bucket,
+  - one IAM user, having aws codedeploy access, and s3 access
+  - AWS code deploy group
+  - instance added under that group for deployment
+------------------------------------------------------------
+image: atlassian/default-image:2
+pipelines:
+  custom:
+    project-1:
+      - step:
+          name: Preparing the package
+          script:
+            - mkdir <projectname>
+            - rsync -a -v src/* <projectname>/
+            - cd <projectname>
+            - zip -r ../<projectname>.zip *
+          artifacts:
+            - <projectname>.zip
+
+      - step:
+          name: Upload to S3 Bucket
+          services:
+            - docker
+          script:
+          
+            - pipe: atlassian/aws-code-deploy:0.2.10
+              variables:
+                AWS_ACCESS_KEY_ID: $S3_ACCESS_KEY
+                AWS_SECRET_ACCESS_KEY: $S3_SECRET_KEY
+                AWS_DEFAULT_REGION: eu-west-1
+                COMMAND: 'upload'
+                APPLICATION_NAME: <<project1>>
+                ZIP_FILE: '<projectname>.zip'
+                S3_BUCKET: $S3_BUCKET
+
+      - step:
+          name: Deploy Project 
+          deployment: project-1
+          services:
+          - docker
+          script:
+          - pipe: atlassian/aws-code-deploy:0.2.10
+            variables:
+              AWS_ACCESS_KEY_ID: $S3_ACCESS_KEY
+              AWS_SECRET_ACCESS_KEY: $S3_SECRET_KEY
+              AWS_DEFAULT_REGION: eu-west-1
+              COMMAND: 'deploy'
+              APPLICATION_NAME: <<project1>>
+              DEPLOYMENT_GROUP: <aws deployment group name>
+              IGNORE_APPLICATION_STOP_FAILURES: 'true'
+              FILE_EXISTS_BEHAVIOR: 'OVERWRITE'
+              S3_BUCKET: $S3_BUCKET
+              WAIT: 'true'
+-----------------------------------------------------------------------------
+
+
+4.Hands on:
+> ec2 acilir. 
+  - (amazon linux 2 ami)
+  - s3ReadOnlyAccess IAM role tanimlanir. 
+  - tags: Key: Name Value: webserver, Key: Environment Value: Development
+  - 22, 80 port
+
+VSC:
+sudo yum update -y
+sudo yum install -y ruby wget
+wget https://aws-codedeploy-eu-west-1.s3.eu-west-1.amazonaws.com/latest/install
+  - agent'in installeri
+chmod +x ./install
+sudo ./install auto
+  - agenti yukluyoruz.
+sudo service codedeploy-agent status
+
+aws configure --profile aws-devops
+aws s3 mb s3://aws-devops-course-stephane11 --region eu-west-1 --profile aws-devops
+  - s3 bucket olusturuldu.
+aws s3api put-bucket-versioning --bucket aws-devops-course-stephane11 --versioning-configuration Status=Enabled --region eu-west-1 --profile aws-devops
+  - ilgili bucketa versioning tanimlandi.
+aws deploy push --application-name CodeDeployDemo --s3-location s3://aws-devops-course-stephane/codedeploy-demo/app.zip --ignore-hidden-files --region eu-west-1 --profile aws-devops
+
+IAM:
+- CodeDeploy rolu olusturulur.
+> Roles > Create a role > AWS service > CodeDeploy > CodeDeploy 
+  > Role name: CodeDeployRole > create role
+
+CodeDeploy:
+- Application ve deployment group olusturulur.
+> Deploy > Getting started > Create application 
+  > Application name: CodeDeployDemo > Compute Platform: EC2/OnPremises (Lambda ve ECS de var)
+  > Create application
+
+CodeDeploy:
+- Deployment group represents a set of EC2 instances.
+- Development env'da calisan bilgisayarlar deployment grubu olusturacak.
+- Ilgili ec2, deployment group olacak burada.
+> Deploy > Applications > CodeDeployDemo > Create deployment group 
+  > Deployment group name: mydevelopmentinstances > Enter a service role: CodeDeployRole 
+  > In-place > Environment configuration: Amazon EC2 instances (Auto Scaling Group, On-premises de secilebilirdi) 
+  > Key: Environment > Value: Development (cakisan ec2 sayisini gosterir)
+  > Install AWS CodeDeploy Agent: Now and Schedule updates
+  > Deployment Settings: CodeDeployDefault.AllAtOnce > Disable load balancer > create
+
+VSC:
+- Localde appspec.yml dosyasinin bulundugu konumda calistirilir.
+cd ~/Desktop/MY-WORKSPACE/Gunce/CodeDeploy/code/cicd-demo
+aws deploy push --application-name CodeDeployDemo --s3-location s3://aws-devops-course-stephane11/codedeploy-demo/app.zip --ignore-hidden-files --region eu-west-1 --profile aws-devops
+  - "--application-name" CodeDeploy'da tanimlanan application name verilmeli.
+  - zipleyerek applicationu S3'e gonderir.
+
+CodeDeploy:
+- Application ve deployment group'tan sonra deployment olusturulur.
+- Versioning'i acik bir s3 bucket kullanilacak.
+> Deploy > Applications > CodeDeployDemo > mydevelopmentinstances 
+  > create deployment > Deployment group: mydevelopmentinstances > 
+  > Revision type: My application is stored in Amazon S3 
+  > Revision location: s3://aws-devops-course-stephane11/codedeploy-demo/app.zip (S3 URI kopyaladim bucket zip dosyasindan)
+  > Revision file type: .zip
+  > create deployment
+
+Browser:
+<instance ip address:80>
+
+
+5.Deployment Group'a Instance Ekleme:
+- webserver'i template olarak kullanarak yeni instancelar olusturuyoruz.
+- Olusunca taglarini ikisinin prod, 2'sinin test, 2'sini ise development yapiyoruz.
+> Ilgili instance > Actions > Image and templates > Launch more like this > IAM role: s3fullaccessrole
+  > Summary > Number of instances: 5 > User data:
+------------------------------------------------------------------
+#!bin/bash
+sudo yum update -y
+sudo yum install -y ruby wget
+wget https://aws-codedeploy-eu-west-1.s3.eu-west-1.amazonaws.com/latest/install
+chmod +x ./install
+sudo ./install auto
+sudo service codedeploy-agent status
+------------------------------------------------------------------
+
+
+6.Yeni Deployment Grouplar Olusturma:
+- Production deployment group olusturma.
+> CodeDeploy > Applications > CodeDeployDemo > Create deployment Group
+  > Deployment Group Name: myproductioninstances 
+  > Enter a service role: CodeDeployRole 
+  > In-place 
+  > Environment configuration: Amazon EC2 instances (Auto Scaling Group, On-premises de secilebilirdi) 
+  > Key: Environment > Value: Production (cakisan ec2 sayisini gosterir)
+  > Install AWS CodeDeploy Agent: Now and Schedule updates
+  > Deployment Settings: CodeDeployDefault.AllAtOnce 
+  > Disable load balancer 
+  > create
+
+
+7.Deployment Group'a Deploy Application:
+- 
+
+
+4.Hata Arama:
+tail -f /var/log/aws/codedeploy-agent/codedeploy-agent.log
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

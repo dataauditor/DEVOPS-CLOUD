@@ -1,0 +1,45 @@
+1.Genel:
+- Basitce Web Server, LB, DB kurulabiliyor.
+
+
+
+2.Olusturma:
+> Amazon Lightsail
+  > Create an instance
+  > Select a Region: Stockholm
+  > Select an Availability Zone: Zone A
+  > Select a platform: Linux/Unix
+  > Select a blueprint: Apps + OS
+    > Nginx
+  > Launch script
+------------------------------------------------------------------------------
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html> 
+------------------------------------------------------------------------------
+    - index.html dosyasinin icini buraya kopyaladik.
+  > Change SSH key pair
+  > Create new default key - check
+  > Choose your instance plan: 1GB - 2 vCPUs
+  > Identify your instance: Nginx-1  x 1
+  > Create instance

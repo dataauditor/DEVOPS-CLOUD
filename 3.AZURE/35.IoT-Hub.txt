@@ -1,0 +1,53 @@
+1.Genel:
+  - IoT cihazlarini istenilen cihaza baglar.
+  - Cihazdan Azure ve Azurden cihaza veri gonderimi yapar.
+  - Cihaza komut gonderimi yapar.
+  
+
+2.Azure IoT Central: 
+  - Cihazlari baglayip, izlemeyi ve yonetmeyi kolaylastiran kuresel IoT SaaS cozumudur.
+  - IoT Hub'in SaaS cozumudur.
+
+
+3.Azure Sphere:
+  - Internete bagli cihazlariniza (daha cok IoT cihazlar) yerlesik iletisim ve guvenlik ozelliklerine sahip guvenli, ust duzey bir uygulama platformudur.
+
+
+4.Hands on:
+a.Olusturma:
+> IoT Hub > create
+  > Iot hub name: rana ...
+  > public access
+  > Pricing and scale tier: basic (mesaj adedi, guvenlik...)
+  > RBAC and SAS
+  > create
+
+b.Kullanim:
+> rana
+  > Devices: (bagli cihazlari gosterir. Herhangi cihaz yok.)
+    > + Add device 
+      > Device ID: ranaRasperryPi
+      > Authentication type: Symmetric key
+      > Auto-generate keys: Enabled
+      > Save  (Cihaz ekledik)
+    > ranaRasperryPi  (Olusan cihaza giriyoruz.)
+      > "Primary Connection String" kopyalanir.
+
+c.IoT Cihazi ranaRasperryPi ile Eslestirme:
+> Ilgili IoT cihazi nette acilir
+  > connectionString = '<Primary Connection String>' yapistirilir.
+  > Run
+    - Cihaz, IoT hub'a mesaj gondermeye baslar. 
+
+
+
+
+
+
+
+
+
+
+
+
+

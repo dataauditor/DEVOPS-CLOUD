@@ -1,0 +1,148 @@
+1.Genel:
+- VMware environment'lari yine VMware environment'e migrate etmek icin kullanilir.
+- Migration icin kullanilir.
+- Baremetal cozum icin Azure Migrate yerine bu kullanilir.
+
+
+
+2.Hands-on:
+- Azure VMware Kurulumu.
+- Microsoft Enterprise Agreement veya Cloud Solution Provider Azure Plan ile kullanilabilir. Pay-as-you-go ile acilamaz.
+- Technical issue dersek Basic plan yetersiz kaliyor. Billing veya baska bir konu ile talep denenebilir. 
+- Ilgili node'lar yuksek kapasite oldugu icin oncesinde konfigurasyon dahil islemler icin talepte bulunulur.
+
+a.VMware Kurulum Talebi:
+- 5 gune kadar cevap geliyor.
+> Help + support > + Create a support request
+    > Summary: Need capacity
+    > Issue type: Technical
+    > Subs: Azure subscription 1
+    > Service: All services
+    > Service type:  Azure VMware Solution
+    > Problem type: Capacity Management Issue
+    > Problem subtype: Customer Request for Additional Host Quota/Capacity
+  > next > next
+  > Support plans
+    > Developer: Upgrade
+  > next
+    > Description: Production, West US, 3 hosts
+    > Share diagnostic information: Yes
+    > Preferred contact method: Email
+  > Create
+
+b.VMware Register Edilir:
+> Subscriptions
+  > Azure subscription 1
+    > Resource providers
+      > Microsoft.AVS
+      > Register
+
+c.VMware Olusturulur:
+- Birkac saat suruyor. Private cloud olarak sistemde gorulur.
+> Azure Vmware Solution > Create
+  > Subs | RG | Resource name: Prod-AVS-01-PC | Loc | Size of host: AV36 Node | Number of hosts: 3  
+  > Address block for private cloud: 192.168.92.0/22
+      - Management icin '/22'li bir CIDR gerekli.
+  > Create
+
+d.Azure VMware'e Vnet/Subnet Kurulumu:
+- Gateway ve Bastion icin ayri Subnet'ler kurmak gerekiyor.
+> Prod-AVS-01-PC
+  > Connectivity
+    > Virtual network 
+      > Create new: 
+        > Name: Prod-AVS-01-PC-vnet
+        > Address range: 192.168.96.0/24
+        > Subnet name: GatewaySubnet | Address range: 192.168.96.0/27
+        > Subnet name: AzureBastionSubnet | Address range: 192.168.96.32/27
+        > Subnet name: Management | Address range: 192.168.96.64/27
+      > OK
+    > Address block for private cloud: 192.168.92.0/22
+    > Save
+
+e.Bastion Olusturma:
+- Ya VMware'e Public IP atanir veya private IP atanirsa Bastion veya LB ve NAT yapisiyla VMware'e baglanilir.
+- Bastion ile Jumpbox'a baglanilacak. 
+> Bastion 
+  > Create
+    > Subs | RG: Prod-AVS-01-RG | Name: Prod-AVS-01-Bastion | Region: West US | Tier: Basic  
+    | Virtual network: Prod-AVS-01-vnet | Subnet: AzureBAstionSubnet
+    > Create
+
+f.Jumpbox VM Olusturma:
+- Azure portal ile VMware'in iletisimini saglar. Azure'da calisir.
+- VMware'in portallarina ulasmayi saglar.
+- Internete erismeyen Bulut ortamlari icin kullanilan yonetim makinesi gibi dusunulebilir.
+> Microsoft Windows 10 
+  > Create
+    > Subs | RG: Prod-AVS-01-RG | Virtual machine name: Prod-AVS-01-Jumpbox 
+    | Region: | Availibility options: No | Image: Windows 10 Pro, Version 2004 - Gen 1
+    > Size: Standard_D2_v2 - 2 vcpus, 7 GIB memory
+    > Username: avsadmin
+    > Password: 123
+    > Public inbound ports: None
+      - Public'e kapali.
+    > Licensing: I confirm i have an eligible Windows 10 license with multi-tenant hosting rights. - check
+  > Networking
+    > Virtual network: Prod-AVS-01-vnet
+    > Subnet: Management
+    > Public IP: None
+      - Bastion ile baglanilacagi icin gerek yok.
+    > NIC network security group: Basic
+    > Public inbound ports: None
+  > Create
+
+g.Jumpbox'a Baglanma:
+> Prod-AVS-01-Jumpbox
+  > Connect
+  > Bastion
+  > Use Bastion
+    > Username: avsadmin | Password: 123
+    > Connect
+
+h.VMware'e Bastion > Jumpbox Uzerinden Baglanma:
+> Prod-AVS-01-PC
+  > Identity
+    > Web client URL: https://192.168.92.2/ - copy
+      - VMware'e baglanmak icin username ve password dahil buradan alinir.
+    > Admin username: cloudadmin@vsphere.local - copy
+    > Admin password - copy
+Browser: 
+https://192.168.92.2/
+    - Web client URL yapistir.
+  > Advanced
+  > Continue to 192.168.92.2
+  > Launch VSPHERE CLINT (HTML5)
+  > Advanced
+  > Continue to vo7687.westus.avs.azure.com
+  > VMware vSphere:  
+    > Username: cloudadmin@vsphere.local
+    > Password: past 
+    > Login
+
+h.ExpressRoute Baglantisi ile Connectivity:
+- Yukarida Baglanti saglandi. Bu alyernatif baglantidir. Gerekirse kullanilir.
+- ExpressRoute varsa yapilir.
+- On-prem, AVS ve Azure uzerindeki workloadlar birbiri ile baglanabilir.
+> Prod-AVS-01-PC
+  > Connectivity
+    > ExpressRoute Global Reach
+    > + Add
+      > If you have a circuit ID, copy/paste below: /subscriptions/69d.../resourceGroups/Prod-AVS-01-...
+      > Authorization key: 99lk-8oij98-iu90jiu-i90i
+    > Create
+   
+i.VMware'e Bastion Uzerinden Baglanma:
+- ExpressRoute kuruldugu icin Jumpbox'a baglanilmadan dogrudan VMware'e baglanilir.
+Browser:
+https://192.168.92.2/
+    - Web client URL yapistir.
+  > Advanced
+  > Continue to 192.168.92.2
+  > Launch VSPHERE CLINT (HTML5)
+  > Advanced
+  > Continue to vo7687.westus.avs.azure.com
+  > VMware vSphere:  
+    > Username: cloudadmin@vsphere.local
+    > Password: past 
+    > Login

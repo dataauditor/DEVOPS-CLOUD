@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-rootca</id>
+    <version>1.0.0</version>
+    <description>Add NBIM Root CA to the cert Store</description>
+    <authors>Naveen</authors>
+    <title>nbim-rootca</title>
+    <tags>rootca</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

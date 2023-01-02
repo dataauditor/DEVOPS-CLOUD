@@ -1,0 +1,76 @@
+Encrypted EC-2'nun Image'inin Baska Account ile Paylasilmasi:
+Destination ID	: 982657707511
+Source ID	: 538217567914
+Dest KMS arn	: arn:aws:kms:eu-west-1:982657707511:key/6db5049c-632e-49aa-87a5-72496009e6b8
+
+
+1.Destination KMS-Key (Customer Side) Olustur ve Policy'sine Source Account'u Ekle: 
+> KMS
+  > Ilgili Customer Managed Key
+  > Policy - Edit
+------------------------------------------------------------------------
+{
+    "Version": "2012-10-17",
+    "Id": "key-default-1",
+    "Statement": [
+        {
+            "Sid": "Enable IAM User Permissions",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::982657707511:root",
+                    "arn:aws:iam::538217567914:root"
+                ]
+            },
+            "Action": "kms:*",
+            "Resource": "*"
+        }
+    ]
+}
+------------------------------------------------------------------------
+    - Source account id'si eklendi.
+  > ARN - copy
+
+
+
+2.Take a Snapshot in Source Account:
+> Ec2
+  > Actions
+  > Image and templates
+  > Create image
+  > Name: Image1
+
+
+
+3.Image'in Kopyasini Olustur:
+- Ilgili image encrypted oldugu icin once kopyalanir.
+> AMIs
+  > image1
+  > Actions
+  > Copy AMI
+  > Name: image2
+  > Encrypt EBS snapshots of AMI copy - check
+  > KMS KEy: arn:aws:kms:eu-west-1:982657707511:key/6db5049c-632e-49aa-87a5-72496009e6b8
+    - Destination'daki KMS Key'in arn'i.
+  > Copy AMI
+
+
+
+4.Image'in Baska Hesap ile Share Edilmesi:
+> AMIs
+  > image2
+  > Permissions
+  > Shared accounts: Ad account ID: 982657707511 
+    - Destination hesabin id'si yazilir.
+  > Share AMI
+
+
+
+5.Destination'da AMI:
+> AMIs
+  > Private images
+  > image2
+
+arn:aws:kms:eu-west-1:982657707511:alias/s3-dciq-kms
+
+arn:aws:kms:eu-west-1:982657707511:key/6db5049c-632e-49aa-87a5-72496009e6b8

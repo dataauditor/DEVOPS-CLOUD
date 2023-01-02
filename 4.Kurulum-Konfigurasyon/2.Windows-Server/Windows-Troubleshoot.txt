@@ -1,0 +1,22 @@
+1.Mevcut Surecteki Hatalari Inceleme:
+PS>eventvwr
+> Event Viever
+  > Windows Logs
+  > Applications
+
+
+
+2.Loglari Inceleme:
+- Userdata'nin calismamasi uzerine ornegin acilan VM'in log kayitlari incelenebilir.
+> C:\ProgramData\Amazon\EC2Launch\log
+  > agent
+    - Tum loglari tutar.
+    - err: error mesajlarini tutar.
+    > Error file is created at: C:\Windows\system32\config\systemprofile\AppData\Local\Temp\EC2Launch062620634\UserScript.ps1
+      - Ifadesi uzerine ilgili adrese gideriz.
+      - Bunun yanisira diger ifadeleri de okuruz tabiki.  
+    > Hatali oldugunu goruruz.
+
+
+
+3.

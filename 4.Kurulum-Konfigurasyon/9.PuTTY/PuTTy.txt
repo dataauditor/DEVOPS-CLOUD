@@ -1,0 +1,23 @@
+1.PuTTY Installation:
+Putty install
+64x86 versiyonu download ve install edilir.
+
+
+2.Key Olusturma:
+- Mevcut pem keylerden birini burada secip convert edip save ederiz.
+> PuTTYgen (PuTTY Key Generator)
+  > 
+
+
+3.Baglanti Konfigurasyonu:
+> PuTTY Configuration
+  > Host Name: <IP address>
+  > Port: 22
+  > Connection type: SSH
+  > Saved Sessions: Deneme
+    > Connection/SSH
+    > Auth
+    > Browse: eyvi-stockholm.ppk
+    > Open
+  > Save
+  > Open

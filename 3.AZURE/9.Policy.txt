@@ -1,0 +1,75 @@
+1.Policy Ilkeleri:
+- Kisitlamalar uygulayabilir ve izlemeler kurabiliriz.
+- Directory (tenant), subscription, Resource group bazinda yapabiliriz.
+- Kendimiz json formatinda olusturabilir, mevcut built-in politikalari kullanabilir veya Github'tan aktarabiliriz.
+- Initiative definition: Birden fazla policy'nin gruplandirilarak atanmasi. Onceden hazirladigimiz policy'leri burada secip bir grup olustururuz.
+- Politikanin calismasi 30 dk kadar surebiliyor. Onceden kurulu resource'lari etkilememekle birlikte uyumsuz diye ikaz veriyor.
+> Policy definition: Once definition tanimlanir.
+  > Name: ...
+  > Description: ...
+  > Category: Create new (sec)
+  > Policy Rule: Import sample policy definition from Github
+
+
+
+
+2.Policy on Subscription:
+- Kisitlama uygular:
+- Subscription ve Resource group bazinda uygulanabilir.
+- Policy arama ve uygulama.
+- Built-in Policy:
+> Policy > Definitions (built-in policy'lere ulasilir.) > search: virtual machine (yazarak arama yapilabilir)
+  > Allowed virtual machine size SKUs (izin verilen VM'ler) (Duplicate definition: json kodunda degisiklikler yapilabilir.)
+  > Istenen VM'ler edit edilir 
+  > Assign 
+  > Scope: yalniz subscription veya subscription ve ilgili resource group secilebilir. RG secilmezse tum Subscription'u etkiler.
+  > select 
+  > Exclusions: istisna yapacagin resource group veya resource'lari belirtebilirsin.
+  > Policy enforcement: Enable  (hemen calissin.)
+  > Parameters > Allowed Size SKUs: Basic_A0, ... (secilir) 
+  > Non compliance messages: ikaz mesaji yazilabilir > create
+    - Ilgili cihazlar disinda VM olusturulamaz.
+
+- Custom Policy:
+> Policy
+  > Definitions > + Policy Definition
+    > Definition location: ... (3 nokta) > Subscription: dev > select
+    > Name: ...  
+    > Category: Use existing
+    > Import sample policy definition from Github
+    > save
+
+
+
+3.Policy on Resource Groups:
+- Ilgili Resource Group'tan Resource group level policy olusturulur.
+> Resource Groups > umit-rg > Policies > Definitions > Audit VMs that do not use managed disks
+  > Assign > Scope > Subscription: Azure subscription 1 > Resource Group: umit-rg
+  > select > create
+
+> Resource Groups > umit-rg > Policies
+    - Ilgili policy asagida gozukuyor ama aktif degil (Comliance state: Not started).
+
+> Cloud Shell:
+Start-AzPolicyComplianceScan -ResouceGroupName 'umit-rg' 
+  - Policy calistirilir.
+
+
+
+
+4.Powershell ile Policy Tanimlama:
+> Policy > Definitions > Audit missing tags on resources > 
+> Cloud shell:
+Get-AzPolicyDefinition | Where-Object { $_.Properties.DisplayName -eq "Audit missing tags on resources" } 
+  - verilerini gosterir ilgili policy'nin.
+$definition = Get-AzPolicyDefinition | Where-Object { $_.Properties.DisplayName -eq "Audit missing tags on resources" } 
+  - ilgili verileri kaydederiz.
+New-AzResourceGroup -Name "mynewrg" -Location "East US"
+  - Yeni bir RG olusturduk.
+$rg = Get-AzResourceGroup -Name "mynewrg" -Location "East US"
+$rg.ResourceGroupName
+  - bir once komut ile ekrana gelen "ResourceGroupName" veriyi yazdik.
+New-AzPolicyAssignment - Name "CheckingRules" -DisplayName "Checking the rules" -Scope $rg.ResourceId -PolicyDefinition $definition
+  - Yeni bir policy olusturduk. Ilgili policy suan calisiyor ilgili RG'de.
+  - tagName: billingcode
+ 

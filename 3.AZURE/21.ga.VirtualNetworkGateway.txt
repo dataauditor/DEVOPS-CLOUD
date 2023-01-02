@@ -1,0 +1,68 @@
+1.Genel:
+!!! VPN'de file'inda daha guzel anlatildi.
+- Peering gibi vnetler arasinda baglanti saglar. 
+- Iki nokta arasinda SiteToSite VPN kurulumu saglar.
+- Normalde officedeki cihaz ile Azure arasi VPN baglantisi icin kullanilir.
+- Virtual Network Gateway pahalidir ama inbound traffic ucretsizdir.
+- Burada Gateway'i 2 Vnet arasi sitetosite connection icin kullaniyoruz.
+> Virtual network'te Gateway subnet olusturulur. (Her iki regiondaki vnet'te)
+  > Gateway subnetin bulundugu ayni regionda VNG olusturulur ve GS'nin olusturuldugu Vnet secilir. (Her iki regiondaki vnet'te)
+  > Public IP eklenir. (Her iki regiondaki vnet'te)
+  > VNG'ler konfigure edilerek birbirleri ile Vnet to Vnet iletisim saglanir.
+
+
+
+2.Gateway Subnet:
+- Her iki regionda birer adet olusturulur:
+> fw-vn > subnets > + Gateway subnet
+  > Name: fw-gw / default > save
+
+> fw-vn2 > subnets > + Gateway subnet
+  > Name: fw-gw2 / default > save
+
+
+3.Virtual Network Gateways:
+- Her iki regionda birer adet olusturulur:
+
+a.Olusturma:
+> Virtual Network Gateways > + create 
+  > Name: vnet-gw / Region: East US (baglanti kurulmak istenilen VN ile ayni region secilir)
+    / Gateway type: VPN
+    / VPN type: Route-based
+    / SKU: default / Generation: default 
+    / Virtual network: fw-vn (gateway subnet bu vn'de)
+    / Public IP address: Create new 
+    / Public IP address name: vnet-ip
+    / Enable active-active mode: default / Configure BGP: default
+  > create
+ 
+> Virtual Network Gateways > + create 
+  > Name: vnet-gw2 / Region: Japan (baglanti kurulmak istenilen VN ile ayni region secilir)
+    / Gateway type: VPN
+    / VPN type: Route-based
+    / SKU: default / Generation: default 
+    / Virtual network: fw-vn2 (gateway subnet bu vn'de)
+    / Public IP address: Create new 
+    / Public IP address name: vnet-ip
+    / Enable active-active mode: default / Configure BGP: default
+  > create
+
+b.Connected devices:
+> fw-vn > Connected devices
+  - Virtual network gateway ile gateway subnet baglantisi gorulur.
+
+c.Virtual Network Gateway Configuration:
+> vnet-gw > Connections (herhangi baglanti yok.) > + Add 
+  > Name: vnet-to-japan 
+  > Connection type: Vnet to Vnet (SiteToSite, ExpressRoute'de secilebilir.)
+  > First virtual network gateway: vnet-gw
+  > Second virtual network gateway: vnet-gw2
+  > Shared Key: Mustafa11,vng
+  > subs / reg > ok
+
+> vnet-gw > Connections (vnet-to-japan baglantisi gorulur.)
+  > ilgili baglanti detaylarini vng'leri gosterir.
+  > Activity log (mevcut loglari gosterir)
+
+
+

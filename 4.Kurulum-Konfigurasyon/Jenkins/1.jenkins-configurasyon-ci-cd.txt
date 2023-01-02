@@ -1,0 +1,874 @@
+1.CLI:
+> Manage jenkins > Configure Global Security > Authentication (Disable olmamali) > save
+localhost:8080/cli
+  - cli komutlari var kullanilabilir.
+  > jenkins-cli.jar'a tiklanip indirilir ve asagidaki komutlar ayni konumda calistirilir.
+java -jar jenkins-cli.jar -s http://localhost:8080/ --username admin --password 123
+  - permission hatasi verirse jenkins username ve password tanimlanir yukardaki gibi.
+java -jar jenkins-cli.jar -s http://localhost:8080/ build Proje1
+ 
+
+
+
+2.Installation:
+a.Linux OS:
+sudo yum update -y
+yum install java -y
+wget http://mirrors.jenkins.io/war-stable/latest/jenkins.war
+java -jar jenkins.war --httpPort=8080
+  - Yuklemeyi yapar ve sonunda admin sifresi verir. Alternatifi diger Jenkins.txt'de.
+
+b.Container:
+docker run -d -p 8080:8080 jenkins/jenkins
+  - jenkins yuklenir containere ve bize admin sifresi verir.
+docker ps
+  - containerin id'si alinir.
+docker logs <containerid>
+  - loglari gorebilirsin sifreyi almak icin.
+docker exec -it <containerid> bash
+  - sifreyi alabilirsin.
+cat /var/jenkins_home/secrets/initialAdminPassword
+
+c.Maven/Jave/Git Yuklemesi:
+sudo yum update -y
+sudo amazon-linux-extras install java-openjdk11 -y
+sudo yum install java-devel 
+  - java yukledik.
+sudo su
+cd /opt
+rm -rf maven
+wget https://ftp.itu.edu.tr/Mirror/Apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
+tar -zxvf $(ls | grep apache-maven-*-bin.tar.gz)
+rm -rf $(ls | grep apache-maven-*-bin.tar.gz)
+sudo ln -s $(ls | grep apache-maven*) maven
+echo 'export M2_HOME=/opt/maven' > /etc/profile.d/maven.sh
+echo 'export PATH=${M2_HOME}/bin:${PATH}' >> /etc/profile.d/maven.sh
+exit
+source /etc/profile.d/maven.sh
+  - Maven yukledik.
+sudo yum install git -y
+git config --global user.name dataauditor
+git config --global user.email byildiz2019@gmail.com
+
+> Manage Jenkins > Configure System > Environment variables > Add 
+  > Name: PATH+EXTRA / Value: /opt/maven/bin > Save
+  - Maven Path'ini default user icin tanimladik.
+> Manage Jenkins > Global Tool Configuration > Maven > Maven Installation 
+  > Install automatically > Name: maven-3.6.3 > Version: 3.6.3 > Save
+
+
+
+
+3.Variable Atama/Degistirme: 
+a.Windows'a Environment Variable Tanitma:
+- Windows'ta jenkins_home adresinin enviromente tanitilarak degistirilmesi:
+> The Pc > RC > Properties > Advanced system settings > Environment variables 
+  > System variables > New (JENKINS_HOME varsa sadece adresi degistirilir) 
+  > Variable name: JENKINS_HOME / Variable value: D:\Tools\JenkinsHome\ > ok
+
+b."jenkins.xml"::
+- Windows'ta olusan jenkins.xml dosyasi uzerinden degisiklik yapilabilir.
+> Program files > ... > jenkins.xml > JENKINS_HOME=D:\Tools\JenkinsHome\ > save
+
+c.".bash_profile": 
+- Ana klasorde bulunur ve buradaki komutlar sistemde calisir.
+> .bash_profile > export JENKINS_HOME=D:\Tools\JenkinsHome\ > save
+
+d."export" Komutu:
+- Yalnizca bu bash'te gecerli olur.
+export JENKINS_HOME=D:\Tools\JenkinsHome\ 
+
+
+
+
+4.Jenmkins Configuration:
+a.Credentials Tanimlama:
+- Private repolar icin gerekli.
+> Manage Jenkins > Manage Credentials > Jenkins > Global credentials > 
+  > Add credentials > Username: dataauditor / Password: Mustafa11, 
+  (repomuzun isim ve sifresi girilir) / ID: MyGithub (ozel isim tanimlanir)
+
+b.Custom Workspace:
+- Item bazinda farkli bir adrese tanimlanabilir.
+> Bir item > General > Advanced > Use custom workspace > 
+  > Directory: D:\Tools\JenkinsHome\ > save  
+
+c.Herkese Izin Verme:
+> Manage jenkins > Configure Global Security > Authorization > Anyone can do anything > save
+
+d.User olusturma:
+> Manage jenkins > Manage Users > Create user > username: user2 / password:123 > create user
+
+e.Role Based Authorization Strategy:
+> Manage jenkins > Manage Plugins > Avaikable > Role-based Authorization Strategy > install without restart
+> Manage jenkins > Configure Global Security > Authorization > Role-Based Strategy > Save
+> Manage jenkins > Manage and Assign Roles > Manage Roles > Role to add: employee > add
+  > Global roles > employe: overall: read / job: read 
+  > Item roles > Role to add: Tester > Pattern: Test.* (Item'larin ismi Test ile baslarsa yetkisi burada tanimlanir.) > add
+    > Tester: Credentials: create, delete / Job: Configure ... vb tanimlanir.
+  > Item roles > Role to add: Developer > Pattern: Dev.* (Item'larin ismi Dev ile baslarsa yetkisi burada tanimlanir.) > add
+    > Developer: Credentials: create, delete / Job: Configure ... vb tanimlanir. > Save
+> Manage jenkins > Manage and Assign Roles > Assign Roles 
+  > Global roles 
+    > user1 > add > employee
+    > user2 > add > employee
+  > Items roles
+    > User1 > add > Developer
+    > User2 > add > Tester > apply / save
+
+
+
+
+5.Chain Jobs:
+- Itemlari artarda birlestirme/tetikleme:
+- BuildJob, DevJob, DemoJob ve TestJob seklinde 4 Item olustururuz.
+- 3 Item'i pipeline yapariz. Birinin sonucu digerini tetikler.
+- Tetikledigi Item'da Upstream Projects, Tetiklendigi Item'da Downstream Projects olarak gorulur.
+- Post-build'ten build other actions veya Build Triggers'ten build after other projects built ile yapilabilir.
+- BuildJob --> DevJob --> TestJob / DemoJob
+> BuildJob > Configure > Post-build Actions > Build other projects 
+  > projects to build: DevJob > Trigger only if build is stable > save
+> DevJob > Configure > Post-build Actions > Build other projects 
+  > projects to build: TestJob > Trigger only if build is stable > save
+> DemoJob > Configure > Build Trigers > DevJob > save
+  
+
+
+
+6.Pipeline Gosterimi:
+- Bagimli job'lari grafiksel gosterir.
+> Manage Jenkins > Manage Plugins > Plugin manager > Build Pipeline > install without restart
+  - Diger pipelinelarda yuklenebilir (Docker vb)
+> Dashboard > + (Yeni view) > View name: BuildPipeline > Build Pipeline View (pipeline plugini ile ortaya cikar) > ok
+  > Pipeline Flow > Select Initial Job: BuildJob > No Of Displayed Builds: 5 > Apply/Save
+ 
+
+
+
+
+7.Artifact:
+> Source Code Management: Git > Repo URL: https://github.com/JBCodeWorld/java-tomcat-sample.git > main  
+> Build > Invoke top-level Maven targets > Maven version: maven-3.6.3 > Goals: clean package > Advanced > POM: pom.xml
+  - Maven onceden yuklenip configure edilir. Yukarda anlatiliyor.
+> Post-build Actions > Archive the artifacts > Files to archive: **/*.war
+
+
+
+
+8.Jenkinsfile:
+> Manage Jenkins > Manage Plugins > Installed: Pipeline (yuklu degilse yukle) > install without restart
+> New item > name: Pipeline1 / Pipeline > Ok
+  > Definition: Pipeline script (repodan da cekilebilir) > try sample Pipeline 
+  > Hello World (ornek verir) > Pipline Syntax > Sample step: build: Build a job 
+  > Project to Build: DevJob > Quiet periot: 5 > Generate Pipeline Script > 
+  > build quietPeriod: 5, job: 'DevJob' (olusan script kopyalanarak Pipeline'a yapistirilir.)
+---------------------------------------------------------
+pipeline {
+  agent any
+  stages {
+    stage('Hello') {
+      steps {
+        echo 'Hello world'
+      }
+    }
+    stage('Build') {
+      steps {
+        echo 'Building'
+        build quietPeriod: 5, job: 'DevJob'
+      }
+    }
+    stage('Deploy') {
+      steps {
+        echo 'Deploying'
+      }
+    }
+    stage('Test') {
+      steps {
+        echo 'Testing'
+      }
+    }
+    stage('Release') {
+      steps {
+        echo 'Releasing'
+      }
+    }
+  }
+}
+---------------------------------------------------------
+  > save 
+ 
+
+
+---------------------------------------------------------
+---------------------------------------------------------
+---------------------------------------------------------
+
+
+                             PROJE:
+
+
+9.Deployment:
+- Github'ta maven yuklu ve kurulu pom.xml dahil, microservice seklindeki proje:
+
+a.Dockerfile:
+- Once herbir microservice icinde Dockerfile'lari olustur.
+vim /spring-petclinic-api-gateway/Dockerfile
+----------------------------------------------------------------
+FROM openjdk:11-jre
+ARG DOCKERIZE_VERSION=v0.6.1
+ARG EXPOSED_PORT=8080
+ENV SPRING_PROFILES_ACTIVE docker,mysql
+ADD https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-alpine-linux-amd64-${DOCKERIZE_VERSION}.tar.gz dockerize.tar.gz
+RUN tar -xzf dockerize.tar.gz
+RUN chmod +x dockerize
+ADD ./target/*.jar /app.jar
+EXPOSE ${EXPOSED_PORT}
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+----------------------------------------------------------------
+vim /spring-petclinic-config-server/Dockerfile
+----------------------------------------------------------------
+FROM openjdk:11-jre
+ARG DOCKERIZE_VERSION=v0.6.1
+ARG EXPOSED_PORT=8888
+ENV SPRING_PROFILES_ACTIVE docker,mysql
+ADD https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-alpine-linux-amd64-${DOCKERIZE_VERSION}.tar.gz dockerize.tar.gz
+RUN tar -xzf dockerize.tar.gz
+RUN chmod +x dockerize
+ADD ./target/*.jar /app.jar
+EXPOSE ${EXPOSED_PORT}
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+----------------------------------------------------------------
+
+
+b.Images:
+vim build-dev-docker-images.sh
+-------------------------------------------------------
+./mvnw clean package
+docker build --force-rm -t "petclinic-admin-server:dev" ./spring-petclinic-admin-server
+docker build --force-rm -t "petclinic-api-gateway:dev" ./spring-petclinic-api-gateway
+docker build --force-rm -t "petclinic-config-server:dev" ./spring-petclinic-config-server
+docker build --force-rm -t "petclinic-grafana-server:dev" ./docker/grafana
+docker build --force-rm -t "petclinic-prometheus-server:dev" ./docker/prometheus
+-------------------------------------------------------
+  - script ana klasorde olustu.
+chmod +x build-dev-docker-images.sh
+./build-dev-docker-images.sh
+docker images
+  - bilgisayarda olusur imageler. Repo'da gorulmez.
+
+
+c.docker-compose.yml:
+vim docker-compose-local.yml
+-------------------------------------------------------
+version: '2'
+services: 
+  config-server:
+    image: petclinic-config-server:dev
+    container_name: config-server
+    mem_limit: 512M
+    ports: 
+      - 8888:8888
+
+admin-server:
+    image: petclinic-admin-server:dev
+    container_name: admin-server
+    mem_limit: 512M
+    ports:
+     - 9090:9090
+    depends_on: 
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize", "-wait=tcp://discovery-server:8761", "-timeout=160s", "--", "java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar" ]
+
+tracing-server:
+    image: openzipkin/zipkin
+    container_name: tracing-server
+    mem_limit: 512M
+    environment:
+    - JAVA_OPTS=-XX:+UnlockExperimentalVMOptions -Djava.security.egd=file:/dev/./urandom
+    ports:
+     - 9411:9411 
+  
+  grafana-server:
+    image: petclinic-grafana-server:dev
+    container_name: grafana-server
+    mem_limit: 256M
+    ports:
+    - 3000:3000
+
+  prometheus-server:
+    image: petclinic-prometheus-server:dev
+    container_name: prometheus-server
+    mem_limit: 256M
+    ports:
+    - 9091:9090
+
+  mysql-server:
+    image: mysql:5.7.8
+    container_name: mysql-server
+    environment: 
+      MYSQL_ROOT_PASSWORD: petclinic
+      MYSQL_DATABASE: petclinic
+    mem_limit: 256M
+    ports:
+    - 3306:3306
+-------------------------------------------------------
+docker-compose -f docker-compose-local.yml up
+vim test-local-deployment.sh
+-------------------------------------------------------
+docker-compose -f docker-compose-local.yml up
+-------------------------------------------------------
+
+
+
+
+
+10.Docker Agent Kurulumu:
+- Islemleri containerde yapar isi bitince de kapatir.
+
+VSC:
+#! /bin/bash
+yum update -y
+yum install git -y
+yum install java-11-amazon-corretto -y
+wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
+rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+amazon-linux-extras install epel
+yum install jenkins -y
+systemctl daemon-reload
+systemctl start jenkins
+systemctl enable jenkins
+amazon-linux-extras install docker -y
+systemctl start docker
+systemctl enable docker
+usermod -a -G docker ec2-user
+usermod -a -G docker jenkins
+cp /lib/systemd/system/docker.service /lib/systemd/system/docker.service.bak
+sed -i 's/^ExecStart=.*/ExecStart=\/usr\/bin\/dockerd -H tcp:\/\/127.0.0.1:2375 -H unix:\/\/\/var\/run\/docker.sock/g' /lib/systemd/system/docker.service
+systemctl daemon-reload
+systemctl restart docker
+systemctl restart jenkins
+curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" \
+-o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+rm -rf /bin/aws
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+./aws/install
+yum install python3 -y
+pip3 install ansible
+pip3 install boto3
+
+Jenkins:
+> Manage Jenkins > Manage plugins > Available > jacoco / Docker Pipeline / GitHub Integration / Docker > install without restart
+> Manage Jenkins > Manage Nodes and Clouds > Configure clouds > Docker sec (plugini yukledigimiz icin cikar. Cloud olarak Docker calisir.) 
+  > Docker Cloud details > Docker Host URI: tcp://localhost:2375 > save  
+  - tcp://localhost:2375 'ten Jenkins talimat verecek Docker'a. Docker da container calistiracak. Docker, Jenkins icin bir agent.
+  - Buradan cloud ve Node tanitilabilir.
+
+
+
+
+11.Unit Test/Artifact.
+- Artifact agent docker ile artifactlarin maven ile olusturulup "-v" ile jenkins bilgisayara aktarilmasi.
+- Microservice veya macro mimaride gecerlidir.
+> Build > Execute shell:
+----------------------------------------------------------------------------------------------------
+docker run --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/app -w /app maven:3.6-openjdk-11 mvn clean test
+----------------------------------------------------------------------------------------------------
+  - microservice klasorlerinde olusan binaryleri containerden jenkins'e ceker (tum klasorleri cekerken).
+> Post-build Actions > Archive the artifacts > **/*.jar
+  - Jenkins'e cekilen dosyalardan binary'leri ceker.
+  - Herbir microservice'in binary'sini saklar. Kendi micro service dosya sisteminde saklar. 
+
+
+
+
+12.ECR Repo Olusturma:
+> Onceden Jenkins bilgisayarina EC2ContainerRegistryFullAccess tanimlanmis olmali.
+> New item > create-ecr-docker-registry-for-dev > freestyle project 
+  > Build > Execute shell:
+--------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_REPO_NAME="umitceylan-repo/petclinic-app-dev"
+AWS_REGION="us-east-1"
+
+aws ecr create-repository \
+  --repository-name ${APP_REPO_NAME} \
+  --image-scanning-configuration scanOnPush=false \
+  --image-tag-mutability MUTABLE \
+  --region ${AWS_REGION}
+---------------------------------------------------------------------------
+  - mutable: ayni isimde yeni image yazilirsa uzerine yazmaya izin verir.
+
+
+
+
+
+13.Key Olusturma:
+> New item > Key-olusturma > freestyle project 
+  > Build > Execute shell:
+---------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+AWS_REGION="us-east-1"
+aws ec2 create-key-pair --region ${AWS_REGION} --key-name ${CFN_KEYPAIR} --query "KeyMaterial" --output text > ${CFN_KEYPAIR}
+chmod 400 ${CFN_KEYPAIR}
+echo ${CFN_KEYPAIR}
+---------------------------------------------------------------------------
+  - pem file, key pair dosyasi olusturur. 
+  - Pem dosyasi hem AWS'de hem de '> ${CFN_KEYPAIR}' komutu ile /var/lib/jenkins/workspace/test-creating-qa-automation-infrastructure da olusur.
+  - '--query "KeyMaterial" --output text': olusan key degeri text file olarak olusturur.
+
+
+
+
+
+14.Template ile Cluster olusturma:
+> New item > Cluster-olusturma > freestyle project 
+  > Build > Execute shell:
+---------------------------------------------------------------------------
+APP_NAME="Petclinic"
+APP_STACK_NAME="call-$APP_NAME-App-${BUILD_NUMBER}"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+CFN_TEMPLATE="./infrastructure/dev-docker-swarm-infrastructure-cfn-template.yml"
+AWS_REGION="us-east-1"
+aws cloudformation create-stack --region ${AWS_REGION} --stack-name ${APP_STACK_NAME} --capabilities CAPABILITY_IAM --template-body file://${CFN_TEMPLATE} --parameters ParameterKey=KeyPairName,ParameterValue=${CFN_KEYPAIR}
+
+CFN_KEYPAIR="call-ansible-test-dev.key"
+ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${WORKSPACE}/${CFN_KEYPAIR} ec2-user@172.31.91.243 hostname
+---------------------------------------------------------------------------
+  - yukarda olusan key kullanacak sekilde cfn template ile docker swarm cluster olusuyor. (proje 502'de cfn dosyasi var.)
+  - Gunluk olarak gece yapilacak unit testler icin cfn ile 5 node'luk cluster kuruluyor.
+  - Role ile AmazonEC2ContainerRegistryFullAccess yetkisi veriliyor manager'a image'lari ceksin diye.
+  - Docker swarm'da iletisim icin ilgili port'lar acildi.
+  - Dynamic inventory'de kullanmak uzere tag'ler verildi manager ve workerlara.
+  - ${BUILD_NUMBER}: kendimiz Cloudformation'daki son stack numarasini gireriz.
+  - 'ParameterKey=KeyPairName': KeyPair name'ler secilir.
+  - 'ParameterValue=${CFN_KEYPAIR}': "call-ansible-test-dev.key" ismini ceker. Kod hic gelmez buraya.
+  - '--template-body file://' template'i ceker.
+  - '--capabilities CAPABILITY_IAM': Stack'de normalde IAM role kabul ediyonmu sorusuna evet demektir.
+  - Daha once olusturulan "call-ansible-test-dev.key" keypair'i cekiyor. 
+  - /var/liv/jenkins/workspace/test-creating-qa-automation-infrastructure klasorunde 'call-ansible-test-dev.key' keyini olusturdu.
+      - 'ssh -i ${WORKSPACE}/${CFN_KEYPAIR} ec2-user@172.31.91.243': standart ssh baglanma kodu.
+    - 'hostname': baglanilan instance'in hostname'ini gosterir. 'pwd': deseydik baglanilan mevcut konumu gosterirdi.
+    - Jenkinsten bir node'a baglanildi.
+    - Docker Swarm'da kullanilan herhangi bir (5 node'dan birinin) node'un private ip'si girildi.
+    - 'UserKnownHostsFile=': /var/lib/jenkins/workspace/.ssh/authorized_keys dosyasi yerine key'leri boşluğa gönder. key'ler buraya gonderilir normalde.
+    - /dev/null : bosluga yaz. Keyi 'authorized_keys' file'a kaydetme demek. Hergun yeni key girecegimiz icin key'leri kaydetmeyiz, sisme olmasin diye.
+    - 'StrictHostKeyChecking=no': soru sorma otomatik devam et. Cevap veremeyecegimiz icin otomatik yapariz.
+    - instance'ye baglanip ip adresini alir.
+    - 'CFN_KEYPAIR="call-ansible-test-dev.key"': CFN_KEYPAIR, onceden tanimli ismiyle cekildi.
+    - ${WORKSPACE}: /var/lib/jenkins/workspace/test-creating-qa-automation-infrastructure
+    - Bu komuttan maksat bir node'a baglanabiliyoruz mu gormekti. 
+
+
+
+
+
+                        
+
+15.Ansible ile Configurasyonlar:
+
+a.Ansible Static Inventory:
+VSC:
+mkdir ansible && cd ansible && mkdir inventory && cd inventory
+vim hosts.ini
+------------------------------------------------------------------------
+172.31.91.243   ansible_user=ec2-user  
+172.31.87.143   ansible_user=ec2-user
+172.31.90.30    ansible_user=ec2-user
+172.31.92.190   ansible_user=ec2-user
+172.31.88.8     ansible_user=ec2-user
+------------------------------------------------------------------------
+    - node'larin privat ip'leri girilerek static inventory olusturulur.
+    - Bir onceki kod ile baglanilabildigini test ettik. Artik static inventory'i baglayabiliriz.
+
+Jenkins:
+> test-creating-qa-automation-infrastructure > configure
+  > Build > Execute shell:
+------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+export ANSIBLE_INVENTORY="${WORKSPACE}/ansible/inventory/hosts.ini"
+export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${CFN_KEYPAIR}"
+export ANSIBLE_HOST_KEY_CHECKING=False
+ansible all -m ping
+------------------------------------------------------------------------
+    - ansible ile islem yapabilmek icin inventory dosyasini, key dosyasini ve key kontrolunu shell degiskeni olarak atiyoruz ki ansible calissin.
+    - PATH'e ise ansible binary'nin konumu tanitilir. 
+    - ansible env'a kaydedilen inventory ve keypair adresi ile otomatik olarak calisir.
+
+
+
+
+
+b.Ansible Dynamic Inventory:
+- Taglar ile genel, worker bazli, manager bazli dynamic inventories olusturulabilir.
+VSC:
+mkdir ansible && cd ansible && mkdir inventory && cd inventory
+vim dev_stack_dynamic_inventory_aws_ec2.yaml
+------------------------------------------------------------------------
+plugin: aws_ec2
+regions:
+  - "us-east-1"
+filters:
+  tag:app-stack-name: APP_STACK_NAME
+  tag:environment: dev
+keyed_groups:
+  - key: tags['app-stack-name']
+    prefix: 'app_stack_'
+    separator: ''
+  - key: tags['swarm-role']
+    prefix: 'role_'
+    separator: ''
+  - key: tags['environment']
+    prefix: 'env_'
+    separator: ''
+  - key: tags['server']
+    separator: ''
+hostnames:
+  - "private-ip-address"
+compose:
+  ansible_user: "'ec2-user'"
+------------------------------------------------------------------------
+  - dynamic inventory olusturuluyor.
+  - Asagisa sed komutu ile 'APP_STACK_NAME' yerine asil isim yaziliyor.
+  - 'key: tags['app-stack-name']': key deherine gore filtreliyor. Value'yi dikkate almiyor. Sonra basina da 'app_stack_' ekliyor.
+  - 'hostnames': private ip'yi verir.
+  !!!
+  - 'compose': degisken tanimliyoruz/ekliyoruz.
+  - Proje boyunca asil surekli kullanilacak dynamic inventory bu. 
+  - Alttaki 3 tane dynamic inventory kullanilmayacak sadece gosterim maksatlilar. Asagidaki 3 file ile yapilan islemi burada tek file ile icra ederiz.
+  - Tag'ler cfn ile verilmisti.
+vim dev_stack_swarm_managers_aws_ec2.yaml
+------------------------------------------------------------------------
+plugin: aws_ec2
+regions:
+  - "us-east-1"
+filters:
+  tag:app-stack-name: APP_STACK_NAME
+  tag:environment: dev
+  tag:swarm-role: manager
+hostnames:
+  - "private-ip-address"
+compose:
+  ansible_user: "'ec2-user'"
+------------------------------------------------------------------------
+  - dynamic inventory olusturuluyor.
+  - Grand master'da bir manager oldugu icin o da alir.
+vim dev_stack_swarm_workers_aws_ec2.yaml
+------------------------------------------------------------------------
+plugin: aws_ec2
+regions:
+  - "us-east-1"
+filters:
+  tag:app-stack-name: APP_STACK_NAME
+  tag:environment: dev
+  tag:swarm-role: worker
+hostnames:
+  - "private-ip-address"
+compose:
+  ansible_user: "'ec2-user'"
+------------------------------------------------------------------------
+  - dynamic inventory olusturuluyor.
+
+
+
+
+
+
+c.Dynamic Inventory'nin Kontrolu:
+> test-creating-qa-automation-infrastructure > configure 
+  > Build > Execute shell:
+------------------------------------------------------------------------
+APP_NAME="Petclinic"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+PATH="$PATH:/usr/local/bin"
+export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${CFN_KEYPAIR}"
+export ANSIBLE_HOST_KEY_CHECKING=False
+export APP_STACK_NAME="Call-$APP_NAME-App-${BUILD_NUMBER}"
+# Dev Stack
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml
+cat ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml
+ansible-inventory -v -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml --graph
+# Dev Stack Grand Master
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_swarm_grand_master_aws_ec2.yaml
+cat ./ansible/inventory/dev_stack_swarm_grand_master_aws_ec2.yaml
+ansible-inventory -v -i ./ansible/inventory/dev_stack_swarm_grand_master_aws_ec2.yaml --graph
+# Dev Stack Managers
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_swarm_managers_aws_ec2.yaml
+cat ./ansible/inventory/dev_stack_swarm_managers_aws_ec2.yaml
+ansible-inventory -v -i ./ansible/inventory/dev_stack_swarm_managers_aws_ec2.yaml --graph
+# Dev Stack Workers
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_swarm_workers_aws_ec2.yaml
+cat ./ansible/inventory/dev_stack_swarm_workers_aws_ec2.yaml
+ansible-inventory -v -i ./ansible/inventory/dev_stack_swarm_workers_aws_ec2.yaml --graph
+------------------------------------------------------------------------
+  - 'sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_swarm_workers_aws_ec2.yaml'
+      * sed degistirir. -i kaydeder.
+
+
+
+
+d.Dynamic Inventory ile Ping:
+> test-creating-qa-automation-infrastructure > configure 
+  > Build > Execute shell:
+------------------------------------------------------------------------
+APP_NAME="Petclinic"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+PATH="$PATH:/usr/local/bin"
+export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${CFN_KEYPAIR}"
+export ANSIBLE_HOST_KEY_CHECKING=False
+export APP_STACK_NAME="Call-$APP_NAME-App-${BUILD_NUMBER}"
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml
+ansible -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml all -m ping
+------------------------------------------------------------------------
+
+
+
+
+
+e.Playbook ile Cluster Konfigurasyonu:
+- Docker, Docker-Compose, AWS CLI V2 yuklenecek.
+VSC:
+mkdir /ansible/playbooks && cd /ansible/playbooks
+vim pb_setup_for_all_docker_swarm_instances.yaml
+------------------------------------------------------------------------
+- hosts: all
+  tasks:
+  - name: update os
+    yum:
+      name: '*'
+      state: present
+  - name: install docker
+    command: amazon-linux-extras install docker=latest -y
+  - name: start docker
+    service:
+      name: docker
+      state: started
+      enabled: yes
+  - name: add ec2-user to docker group
+    shell: "usermod -a -G docker ec2-user"
+  - name: install docker compose.
+    get_url:
+      url: https://github.com/docker/compose/releases/download/1.26.2/docker-compose-Linux-x86_64
+      dest: /usr/local/bin/docker-compose
+      mode: 0755
+  - name: uninstall aws cli v1
+    file:
+      path: /bin/aws
+      state: absent
+  - name: download awscliv2 installer
+    unarchive:
+      src: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+      dest: /tmp
+      remote_src: yes
+      creates: /tmp/aws
+      mode: 0755
+  - name: run the installer
+    command:
+    args:
+      cmd: "/tmp/aws/install"
+      creates: /usr/local/bin/aws
+------------------------------------------------------------------------
+  - ansible yum, command, file, ... module seklinde browserde arat. Aciklama ve ornekler var.
+  - unarchive komutunda: dest: /tmp e indirilir, remote_src: yes ile acilir, creates: /tmp/aws ile unzipli hali kaydedilir.
+  - command komutu ile cmd: "/tmp/aws/install" calistirilir. Muhtemelen creates: /usr/local/bin/aws ile PATH'e binary gonderilir.
+  - command ile shell module farki:
+    * command, shell'de calismaz. Bu yuzden shell degiskenlerini $HOME vb goremez.
+  - '0755': 0 sistem geregi konur.
+
+
+
+
+
+f.Docker Swarm'i GrandMaster'da Baslatiyoruz.
+VSC:
+vim pb_initialize_docker_swarm.yaml
+------------------------------------------------------------------------
+- hosts: role_grand_master
+  tasks:
+  - name: initialize docker swarm
+    shell: docker swarm init
+  - name: install git
+    yum:
+      name: git
+      state: present
+  - name: run the visualizer app for docker swarm
+    shell: |
+      docker service create \
+        --name=viz \
+        --publish=8088:8080/tcp \
+        --constraint=node.role==manager \
+        --mount=type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
+        dockersamples/visualizer
+------------------------------------------------------------------------
+   - 'docker service': Swarm'a has komut.
+
+
+
+
+
+g.Manager'lari GrandMaster'a Baglama:
+VSC:
+------------------------------------------------------------------------
+- hosts: role_grand_master
+  tasks:
+  - name: Get swarm join-token for managers
+    shell: docker swarm join-token manager | grep -i 'docker'
+    register: join_command_for_managers
+
+  - debug: msg='{{ join_command_for_managers.stdout.strip() }}'
+  
+  - name: register grand_master with variable
+    add_host:
+      name: "grand_master"
+      manager_join: "{{ join_command_for_managers.stdout.strip() }}"
+
+- hosts: role_manager
+  tasks:
+  - name: Join managers to swarm
+    shell: "{{ hostvars['grand_master']['manager_join'] }}"
+    register: result_of_joining
+
+  - debug: msg='{{ result_of_joining.stdout }}'
+------------------------------------------------------------------------
+  - 'register: join_command_for_managers': yukarki komutun ciktisini rama kaydeder. Ayni zamanda ilgili komutun back_up file, changed, diff, msg, rc, stdout, ... vb bircok verisini verir.
+    - 'join_command_for_managers.stdout.strip()' ile verinin stdout yani ciktisini aliriz ve strip ile on ve arkadaki bosluklari sileriz.
+  - token cekme.
+  - debug: kirpma, temizleme
+  - kodu managerlara vererek swarm'a katma.
+  - 'hostvars': buyulu degisken   
+
+
+
+
+
+h.Worker'lari GrandMaster'a Baglama:
+VSC:
+------------------------------------------------------------------------
+- hosts: role_grand_master
+  tasks:
+  - name: Get swarm join-token for workers
+    shell: docker swarm join-token worker | grep -i 'docker'
+    register: join_command_for_workers
+
+  - debug: msg='{{ join_command_for_workers.stdout.strip() }}'
+  
+  - name: register grand_master with variable
+    add_host:
+      name: "grand_master"
+      worker_join: "{{ join_command_for_workers.stdout.strip() }}"
+
+- hosts: role_worker
+  tasks:
+  - name: Join workers to swarm
+    shell: "{{ hostvars['grand_master']['worker_join'] }}"
+    register: result_of_joining
+
+  - debug: msg='{{ result_of_joining.stdout }}'
+------------------------------------------------------------------------
+
+
+
+
+
+
+i.Playbook'larla Docker Swarm Olusturmanin Testi:
+- Mevcut cfn ile playbook'un calismasi kontrol edilir.
+> test-creating-qa-automation-infrastructure > configure 
+  > Build > Execute shell:
+------------------------------------------------------------------------
+APP_NAME="Petclinic"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+PATH="$PATH:/usr/local/bin"
+export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${CFN_KEYPAIR}"
+export ANSIBLE_HOST_KEY_CHECKING=False
+export APP_STACK_NAME="Call-$APP_NAME-App-${BUILD_NUMBER}"
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml
+# Swarm Setup for all nodes (instances)
+ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_setup_for_all_docker_swarm_instances.yaml
+# Swarm Setup for Grand Master node
+ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_initialize_docker_swarm.yaml
+# Swarm Setup for Other Managers nodes
+ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_join_docker_swarm_managers.yaml
+# Swarm Setup for Workers nodes
+ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_join_docker_swarm_workers.yaml
+------------------------------------------------------------------------
+  - '-b': root yetkisi
+
+
+
+
+
+
+16.Delete Cluster:
+> test-creating-qa-automation-infrastructure > configure 
+  > Build > Execute shell:
+------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_NAME="Petclinic"
+AWS_STACK_NAME="Call-$APP_NAME-App-${BUILD_NUMBER}"
+AWS_REGION="us-east-1"
+aws cloudformation delete-stack --region ${AWS_REGION} --stack-name ${AWS_STACK_NAME}
+------------------------------------------------------------------------
+
+
+
+
+
+
+17.Delete Key-pair:
+> test-creating-qa-automation-infrastructure > configure 
+  > Build > Execute shell:
+------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+AWS_REGION="us-east-1"
+aws ec2 delete-key-pair --region ${AWS_REGION} --key-name ${CFN_KEYPAIR}
+rm -rf ${CFN_KEYPAIR}
+------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

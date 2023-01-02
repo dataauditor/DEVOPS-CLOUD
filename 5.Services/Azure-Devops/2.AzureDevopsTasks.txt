@@ -1,0 +1,89 @@
+1.Genel:
+- Script yazmak yerine repodaki codu secerek test, build, deploy vb islemleri basitce ekleyebiliriz.
+
+
+2.Pipeline Olusturma:
+> Pipelines
+  > New pipeline
+  > Where is your code: Github
+  > dockerization-bookstore-api-python-mysql
+    - Ilgili repoyu sec ve izin ver
+  > Configure your pipeline: Starter Yaml
+-------------------------------------------------------------
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+- script: dotnet test
+  displayName: Run unit test
+
+- script: dotnet build --configuration $(buildConfiguration)
+  displayName: Build application
+
+- script: docker build -t my-image:v1.0 .
+  displayName: Build image
+
+- script: docker push my-image:v1.0 .
+  displayName: Push image
+-------------------------------------------------------------
+
+
+a.Artifact'leri zipleme task'i:
+> Show assistant
+  > Archive files
+  > Add
+
+
+b.".Net" Tasklari:
+> Script'teki "dotnet test" satirlari silinir ve mevcut konumda iken Show assistant'tan "add" tusu ile task eklenir.
+
+> Show assistant:
+  > Search task: .NET
+    > .NET Core
+      > Command: test (build, publish, run, restore... tasklari da secilebilir.)
+      > Add
+
+- Bu sekilde "build" taski da eklenebilir build scripti yerine.
+
+
+c.Docker Tasklari:
+> Script'teki "docker build ve docker push" satirlari silinir ve mevcut konumda iken Show assistant'tan asagidaki task "add" tusu ile eklenir.
+
+> Show assistant:
+  > Search task: docker
+    > Docker
+      > Command: buildAndPush
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

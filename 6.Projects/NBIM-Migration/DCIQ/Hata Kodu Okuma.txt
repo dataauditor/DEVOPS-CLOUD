@@ -1,0 +1,4 @@
+aws sts decode-authorization-message --encoded-message $MESSAGE | jq '.DecodedMessage | fromjson'
+  - Hata kodunu AWS'den aliriz.
+  - Sonra degiskene atariz.
+  - Yukardaki kodu calistiririz.

@@ -1,0 +1,109 @@
+
+
+trigger:
+  branches:
+    exclude:
+      - backup*
+  paths:
+    include:
+      - cloudformation/*
+      - workflows/azure-pipelines-deploy-techila.yaml
+
+pr: none
+
+parameters:
+  - name: PrefixListId
+    default: 'pl-01a97e56cd80f0fcc'
+    displayName: 'Prefix list ID for end user access'
+  - name: EBSSnapshotId
+    default: ' '
+    displayName: 'Enter Snapshot-ID (or leave blank to create new disk)'
+  - name: EBSDiskSize 
+    default: 50
+    displayName: 'Initial size of EBS volume in GB (if Snapshot-ID is left blank)'
+  - name: Region
+    default: 'eu-west-1'
+    values:
+      - eu-west-1
+    displayName: 'What Region to create Server and EBS Volume'
+  - name: AZShort
+    default: 'b'
+    values:
+      - a
+      - b
+      - c
+    displayName: 'The short version of AZ. Must be same as Server and EBS Volume'
+  - name: DNSNameProd
+    default: '$(env).techila.a.nb.im'
+    displayName: 'Route53 hosted zone name for PROD'
+  - name: DNSNameNonProd
+    default: '$(env).techiladev.a.nb.im'
+    displayName: 'Route53 hosted zone name for Non-PROD'
+
+variables:
+  easyriskid: 4515
+  marketplaceaccount: 679593333241
+  AvailabilityZone: "${{ parameters.Region }}${{ parameters.AZShort }}"
+
+  ${{ if in(variables['Build.SourceBranchName'], 'master','main') }}:
+    env: 'prod'
+    envshort: 'p'
+    pool_name: "(AWS)_(nbim-techila-prod)"
+    serverdnsname: "prod.techila.a.nb.im"
+  ${{ if in(variables['Build.SourceBranchName'], 'test') }}:
+    env: 'test'
+    envshort: 't'
+    pool_name: "(AWS)_(nbim-techila-dev)"
+    serverdnsname: "test.techiladev.a.nb.im"
+  ${{ if in(variables['Build.SourceBranchName'], 'develop', 'dev') }}:
+    env: 'dev'
+    envshort: 'd'
+    pool_name: "(AWS)_(nbim-techila-dev)"
+    serverdnsname: "dev.techiladev.a.nb.im"
+  ${{ if notin(variables['Build.SourceBranchName'], 'master', 'main', 'test', 'develop', 'dev') }}:
+    env: 'lab'
+    envshort: 'l'
+    pool_name: "(AWS)_(nbim-techila-dev)"
+    serverdnsname: "lab.techiladev.a.nb.im"
+    
+pool:
+  name: $(pool_name)
+
+steps:
+  - script: | 
+      echo "ENV:              ${{ variables.env }}"
+      echo "EasyriskID:       ${{ variables.easyriskid }}"
+      echo "PrefixListId:     ${{ parameters.PrefixListId }}"
+      echo "ServerDnsName:    ${{ variables.serverdnsname }}"
+    displayName: "Printing running parameters"
+  - script: |
+      aws --region ${{ parameters.Region }} cloudformation deploy \
+        --template-file cloudformation/techila-core.yaml \
+        --stack-name techila-core-${{ variables.env }} \
+        --capabilities CAPABILITY_IAM \
+        --parameter-overrides ServerDnsName=${{ variables.serverdnsname }} PrefixListId='${{ parameters.PrefixListId }}' env=${{ variables.env }} --tags easyrisk_id=${{ variables.easyriskid }} env=${{ variables.env }}
+    displayName: "Deploying Core Stack"
+  - script: |
+      aws --region ${{ parameters.Region }} cloudformation deploy \
+        --template-file cloudformation/techila-database.yaml \
+        --stack-name techila-database-${{ variables.env }} \
+        --parameter-overrides CoreStackName=techila-core-${{ variables.env }} env=${{ variables.env }} --tags easyrisk_id=${{ variables.easyriskid }} env=${{ variables.env }}
+    displayName: "Deploying Database Stack"
+  - script: |
+      aws --region ${{ parameters.Region }} cloudformation deploy \
+        --template-file cloudformation/techila-volume.yaml \
+        --stack-name techila-volume-${{ variables.env }} \
+        --parameter-overrides env=${{ variables.env }} AvailabilityZone=${{ variables.AvailabilityZone }} ServerDataDiskSize=${{ parameters.EBSDiskSize }} ServerDataDiskSnapshotId=${{ parameters.EBSSnapshotId }} --tags easyrisk_id=${{ variables.easyriskid }} env=${{ variables.env }}
+    displayName: "Deploying Volume Stack"
+  - script: |
+      aws --region ${{ parameters.Region }} cloudformation deploy \
+        --template-file cloudformation/techila-server.yaml \
+        --stack-name techila-server-${{ variables.env }} \
+        --parameter-overrides env=${{ variables.env }} CoreStackName=techila-core-${{ variables.env }} az=${{ parameters.AZShort }} DatabaseStackName=techila-database-${{ variables.env }} --tags easyrisk_id=${{ variables.easyriskid }} env=${{ variables.env }}
+    displayName: "Deploying Server Stack"
+  - script: |
+      aws --region ${{ parameters.Region }} cloudformation deploy \
+        --template-file cloudformation/techila-loadbalancer.yaml \
+        --stack-name techila-loadbalancer-${{ variables.env }} \
+        --parameter-overrides env=${{ variables.env }} --tags easyrisk_id=${{ variables.easyriskid }} env=${{ variables.env }}
+    displayName: "Deploying Loadbalancer Stack"

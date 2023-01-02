@@ -1,0 +1,53 @@
+1.Genel:
+- Google Chrome gibi makineleri aksam 1700'da kapat sabah 0800'da ac seklinde komutlar yazabiliriz.
+
+
+2.Automation Account:
+- Once olusturulur.
+
+a.Olusturma:
+> Automation Accounts
+  > Create Automation Account
+  > Name:deneme-aa | Subs | RG | Region
+  > Create
+
+
+3.Runbooks:
+- Tum calisan, calismayan runbook'lari takip edebiliriz.
+
+a.Gallery'den Runbook Acma:
+> Automation Accounts
+  > deneme-aa
+  > Runbooks
+  > Browse gallery (ayrica kendiniz de olusturabilirsiniz ve internette de sablon bulabilirsiniz.)
+  > Ilgili runbook secilir.
+  > Select
+
+b.Kendimiz Runbook Olusturuyoruz:
+> Automation Accounts
+  > deneme-aa
+  > Runbooks
+  > + Create a Runbook
+    > Name: deneme-rb 
+    > Runbook type: Powershell (Python ...) 
+    > Runtime version: 7.1
+    > Create
+  > Ilgili powershell kodlari yazilir.
+  > Publish
+
+
+4.Inventory:
+- Tum resource'larla ilgili envanter olusturabilirsiniz.
+
+
+5.Change tracking:
+- Degisiklikleri takip edebiliriz.
+
+
+6.State configuration:
+- Uygun VM'ler olusturup takip edebilirsiniz.
+
+
+7.Jobs:
+- Calisan isleri takip edebiliriz.
+

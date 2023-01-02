@@ -1,0 +1,87 @@
+1.Genel:
+- Public IP address olmayan VM'lere internetten ulasmak icin atlama noktasidir.
+- Ilgili VM'lerle ayni Vnet'te Azure Bastion kurulur.
+- "AzureBastionSubnet": Bastion icin bu isimde subnet kurulur.
+- TLS ve 443 ile Bastion'a oradan private IP ile diger subnetlerdeki VM'lere ulasilir.
+- Peering: marifetiyle hub olarak kurdugunuz Vnet'e Bastion kurarsaniz. Diger Vnet'lere bastion islevi calisiyor.
+
+
+2.Hands-on:
+- Mevcut private IP address'li VM'ler icin ayni Vnet'te AzureBastionSubnet olusturulup icine Bastion kurulacak.
+
+a.AzureBastionSubnet Olusturma:
+> Vnet1
+  > Subnets
+  > + Subnet
+    > Name: AzureBastionSubnet
+    > Subnet address range: 10.3.2.0/29
+    > NAT gateway: None
+    > Network security group: None
+    > Route table: None
+    > Save
+  
+b.Azure Bastion Olusturma:
+> Bastions
+  > + Create
+    > Subs | RG: Test-RG | Region: North Europe | Name: TestBastion
+    > Tier: Standard 
+    > Instance count: 1
+    > Virtual network: DC-RG-vnet  (VM'nin bulundugu vnet secilir.)
+    > Subnet: AzureBastionSubnet
+    > Public IP Address: Create new
+    > Create
+    
+c.VM ile Bastion Baglantisi Ayarlama:
+> VM1
+  > Connect: Bastion
+    > Username: adminugur (VM'in kullanici adi ve parolasi) 
+    > Password: 123
+    > Connect
+      > Hata verirse: Pop-up blocked
+        > Always allow pop-ups and redirects from htps://portal.azure.com > Done
+      > Connect
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

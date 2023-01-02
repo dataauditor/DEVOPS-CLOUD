@@ -1,0 +1,6 @@
+netstat -tlnp
+  - Server'in acik olan port'larini gosterir. SG'ta acik olsa da serverin kapali olabilir. Ornegin Nginx server'in konfiguration file'inda yalniz 443 varsa 80 kapali olur.
+wget 12.234.2.56
+  - 80 portundan baglanmayi goruruz.
+wget https://www.eyvi.net
+  - https ile baglanma durumunu SSL hatasi var mi goruruz.

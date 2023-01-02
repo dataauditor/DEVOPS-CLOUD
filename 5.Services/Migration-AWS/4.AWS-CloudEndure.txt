@@ -1,0 +1,52 @@
+1.CloudEndure Migration:
+https://docs.aws.amazon.com/prescriptive-guidance/latest/migration-cloudendure/prepare.html
+https://explore.skillbuilder.aws/learn/course/external/view/elearning/1727/aws-application-migration-service-aws-mgn-a-technical-introduction
+https://www.cloudendure.com/
+> Source VM'lere agent yuklenir. 
+  > Agent app'leri, dicc'leri ve db'leri AWS'de staging area subnet'e replica eder. Daha sonra target resourcelari kurar.
+  > Ilk replicadan sonra agent source'taki degisimleri target'lara migrate eder.
+  > Daha sonra istenilen sekilde restructure, rewrite, and re-architect your applications yapilabilir.
+- CloudEndure Migration is an agent-based tool that rehosts your applications on AWS. 
+- CloudEndure Migration simplifies, expedites, and automates large-scale migrations to AWS. 
+- Continuous data replication takes place in the background, without application disruption or performance impact, which ensures that data is synchronized in real time and minimizes cutover windows.
+- It supports self-service, highly automated, lift-and-shift migrations with minimal business disruption. 
+- You install the CloudEndure Agent on your source machines. 
+- The Agent replicates your applications and data in a staging area on AWS. 
+- After the initial replication, the CloudEndure Agent tracks and migrates changes from your source environment to the target staging area by using asynchronous, block-level data replication, without causing downtime or affecting performance.
+- You can use CloudEndure’s self-service, web-based console to configure your target environment, to check for compatibility issues, and to validate that your applications are fully operational on AWS before you cut over. 
+- After you rehost your workloads on AWS, you can restructure, rewrite, and re-architect your applications and take advantage of AWS services.
+- CloudEndure Migration supports both Microsoft Windows and Linux-based workloads
+- After migration, even the most complex applications and databases run natively on AWS, without compatibility issues and with minimal IT skills necessary. 
+
+
+
+2.Hands-on:
+- CloudEndure ile Migration:
+> CloudEndure
+  > Sign in
+  > Username: kepteyn@gmail.com | Password: 123 
+  > Sign in
+    > Dashboard   
+      - Migrate edilecek Sourcelarin durumu izlenir. Sourcelarin adet ve cinsleri izlenebilir.
+    > Machines
+        - Individual VM bazinda replicationun son durumunu gosterir.
+        - Pause kullanilirsa eski snapshotlar dahil siler. Stop kullanirsak silmez.
+        - Otomatik replikasyona baslamayan makineler secilerek "Start Data Replication" tiklanir.
+      > Ilgili VM (Hatali, Replication devam ediyorsa)
+          - Otomatik replikasyona baslamayan makineler secilerek "Start Data Replication" tiklanir.
+          - Oncesinde "SOURCE"tan resource incelenebilir.
+        > Actions > Stop-Pause-Remove-Delete vb secilebilir.
+      > Ilgili VM (Ready for testing yaziyorsa)
+          - "Migration Lifecycle: Ready For Testing": Once "Blueprint incelenir.
+        > Launch Target Machine > Test Mode > Continue 
+            - Tested
+        > Actions > Stop Data Replication > Continue
+    > Job Progress
+      > Migration zamanlari izlenebilir.
+
+       
+
+3.Hands-on:
+> https://www.cloudendure.com/
+  > Migration
+    > 

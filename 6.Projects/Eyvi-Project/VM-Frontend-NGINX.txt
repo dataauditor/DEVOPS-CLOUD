@@ -1,0 +1,145 @@
+1.Install Node.js, npm, NGINX:
+sudo su
+sudo apt update
+
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+sudo apt install nodejs
+node -v
+npm -v
+
+sudo apt install nginx
+nginx -v
+service nginx status (systemctl enable nginx)
+  - nginx'in calistigi gorulur.
+service nginx start (systemctl status nginx)
+  - stopta ise calistirilir.
+
+
+2.Clone React Repo:
+sudo apt-get install git-all -y
+> Ilgili repo 
+  > Repository Settings 
+  > SSH Keys  
+  > Public key copy (VM'in /.ssh/authorized_keys yapistir)
+  > VM'in IP adresini Host address bloguna yapistir 
+  > Fetch
+  > Add
+sudo chmod 644 authorized_keys 
+git clone https://umitceylan11@bitbucket.org/eyvi_project/eyvi-client.git
+
+
+3.Bulid React Project ve Nginx'in Ilgili Adresine Transferi:
+- React'i build etmek icin repoda calistirilir.
+- npm, react'in maven'i gibi index.css dosyalarindan compile ederek index.html olusturur.
+- Daha sonra build folder olusturur.
+npm install
+npm run build
+sudo cp -r /home/ubuntu/your-project-folder/build/. /var/www/html
+
+
+4.NGINX Configuration:
+vim /etc/nginx/sites-available/default
+------------------------------------------------------------------------
+server {
+    listen 80 default_server;  
+    root /var/www/html;
+    index index.html index.htm; 
+    server_name 52.23.4.234;   # IP adresi 
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+------------------------------------------------------------------------
+nginx -t
+service nginx restart
+  - config file'ini efective yaptik.
+
+
+
+
+
+5.OpenSSL ile SSL Certificate:
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
+  - SSL keyi olusturduk.
+vim /etc/nginx/snippets/self-signed.conf
+------------------------------------------------------------------------
+ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
+ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+------------------------------------------------------------------------
+  - NGINX'te SSL key ve self-signed'i refere eden bir conf file olusturduk.
+sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+  - Ikinci bir key olusturduk.
+vim /etc/nginx/sites-enabled/client-config
+------------------------------------------------------------------------
+server {
+    listen 80;
+    server_name ip_of_the_ec2_instance;
+    root path_to_react_build_directory_or_distribution_directory;
+    index index.html; # react by default generate the file in the build directory
+    location / 
+        try_files $uri $uri/ =404;
+    }
+}
+server {
+    listen 443 ssl http2 default_server;
+    listen [::]:443 ssl http2 default_server;
+    include /etc/nginx/snippets/self-signed.conf;
+}
+------------------------------------------------------------------------
+service nginx restart
+
+
+5.Calistirma:
+npm i -g serve
+  - repoda
+sudo serve -s /home/ubuntu/frontend -n
+
+
+
+6.NGINX SIFIRDAN KURMA:
+sudo apt update
+sudo apt install nginx
+
+cd /var/www
+sudo mkdir eyvi
+cd eyvi
+sudo "${EDITOR:-vi}" index.html
+------------------------------------------------------------------------
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Hello, Nginx!</title>
+</head>
+<body>
+    <h1>Hello, Nginx!</h1>
+    <p>We have just configured our Nginx web server on Ubuntu Server!</p>
+</body>
+</html>
+------------------------------------------------------------------------
+cd /etc/nginx/sites-enabled
+sudo "${EDITOR:-vi}" eyvi.net
+------------------------------------------------------------------------
+server {
+       listen 80;
+       listen [::]:80;
+
+       server_name example.ubuntu.com;
+
+       root /var/www/eyvi;
+       index index.html;
+
+       location / {
+               try_files $uri $uri/ =404;
+       }
+}
+------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+

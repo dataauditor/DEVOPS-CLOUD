@@ -1,0 +1,41 @@
+					   Management Groups
+
+		Subscription1	 					Subscription2
+
+Resource Group1		Resource Group2				Resource Group3
+				
+Resource1 Resource2	Resource3 				Resource4	Resource5
+
+
+
+1.Genel Yapi:
+
+a.Management Groups:
+- Subscriptionslarin uzerinde subscriptionlara access saglayan manage access, policy ve comliance 
+for multiple subscriptions.
+- All subscriptions in a management group automatically inherit the conditions applied to the management group.
+
+b.Subscriptions:
+- Logically associates user accounts and the resources that were created by those user accounts.
+- Each subscription has limits or quotas on the amount of resources you can create and use.
+- Organizations can use subscriptions to manage costs and the resources that are created by users, teams and projects.
+
+c.Resource Groups:
+- Resource group bazinda policy olusturabilirsiniz.
+- Deployment'lari inceleyebilirsiniz.
+
+
+
+2.Locks:
+- Read only ve Delete seklinde 2 tip lock vardir. 
+- Delete: modify yetkisi olanlarin resource'u silmesini engeller.
+- Read only: modify yetkisi olanlarin resource'ta degisiklik yapmasini engeller.
+- Degisiklik yapilmasini engeller.
+- Resource level veya Resource groups level locks uygulanabilir.
+- Silmek icin once lock'i kaldirmalari gerek. Modify yetkisi yoksa lock'i kaldiramayacagi icin resource'u silemez.
+- Resource group bir location gosterse de resource'lar ayni locationda olmak zorunda degiller.
+> Resource Groups > umit-rg > Locks > + Add > lock name: donotdelete / Lock type: Delete > ok
+
+
+
+

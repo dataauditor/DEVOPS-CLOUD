@@ -1,0 +1,298 @@
+1.Storage Account:
+- File'lari depolar. AWS EFS gibi sanki.
+- Mevcut Storage account uzerinde configuration degisikligi yapilabilir.
+- Locally-redundant storage (LRS): ayni bolgede her file'in iki yedegi mevcut. Toplam 3.
+- Herhangi bir hata durumunda otomatik olarak yeni bir yedek olusturulur. Yedek fileler invisibledir.
+
+
+3.Storage Account Olusturma:
+> Storage accounts > Subscription: sec / RG: umit-storage > Storage account name: umitstorage
+  / Region: west Europe / Performance: Standard / Redundancy: Locally-redundant storage > next
+  > Enable blob public access: public yapar / Enable storage account key access: key gerektirir / 
+  > Enable hierarchical namespace: tikleme (big data, datawarehouse vb icin)
+  > Access tier: Hot (Cool da var) > Enable large file shares: secme (buyuk file dosyalari icin gerekli)
+  > Connectivity method: Public endpoint (public'ten baglanilsa bile key veya authenticationun olmali publicten baglanmak icin eger onceden baglanma metodunda isaretlediysen)
+  Private endpoint (secilirse private endpoint tanimlama hanesi gelir) 
+  > Routing preference: internet routing (client ile storage arasi internet baglantisini tanimlar. Microsoft network routing: mumkun oldugunca microsoftun intranetini kullanir ve dusuk ucreti var)
+  > Enable point-in-time restore for containers: secmedik (versioning seklinde bacup saglar)
+  > Enable soft delete for blobs: sec (blob icin silinen verileri belirlenen sure 7 gun icindeyse geri getirir.)
+  > Enable soft delete for containers: sec (containerler icin silinen verileri belirlenen sure 7 gun icindeyse geri getirir.)
+  > Enable soft delete for file shares: sec (file shares icin silinen verileri belirlenen sure 7 gun icindeyse geri getirir.)
+  > Enable versioning for blobs: sec (versiyonlama)
+  > Enable blob change feed: secmedik (versiyon degisiminde (degisiklikte) revovery icin yedek alma ikazi gonderir.)
+  > Encryption: Microsoft-managed keys 
+  > Enable support for customer-managed keys: All services
+  > create
+
+
+4.Static website:
+> Recent resources > umitstorage > static website > enabled > index document name: index.html
+
+
+5.Lifecycle management:
+- Cool - Hot ve archive arasi gecisleri belirlenen kullanilmama suresini doldurursa icra eder.
+> Recent resources > umitstorage > Lifecycle management > + Add a rule > apply rule to all blobs 
+  > Rule name: deneme > Block blobs > Blob subtype: Base blobs > Last modified: More than: 7
+  > Then: Move to cool storage (Delete the blob, Move to archive storage)
+
+
+6.Azure CDN:
+- Static file'lara (media files) hizli ulasim saglar.
+> Recent resources > umitstorage > Azure CDN > New endpoint > Create new: deneme
+  > Pricing tier: Standard Verizon / CDN endpoint name: umit / Origin hostname: umit...
+  > create 
+
+
+7.Security:
+> Recent resources > umitstorage > Security > Microsoft Defender (ucretli)
+
+
+9.Access keys:
+- Iki access keyimiz ve connection string var.
+> Recent resources > umitstorage > Access key
+
+
+10.Shared access signature:
+- Storage'lara asil keyi kullanmadan gecici key vererek musterilerin guvenli girmesini saglar.
+> Recent resources > umitstorage > Shared access signature > Allowed services: Blob
+  > Allowed resource types: Object > Allowed permissions: Read 
+  > Start and expiry date/time > start: 04/22/2022 > End: 04/29/2022
+  > Allowed IP addresses: (ip adresi tanimlanabilir)
+  > Allowed protocols: HTTPS only
+  > Preferred routing tier: Basic
+  > Signing key: key1 (iki keyden birini secersin)
+  > Generate SAS and connection string 
+  > Blob service SAS URL (browserdan girmeyi saglar.)
+
+
+11.Containers:
+- Dosyalar 1GB'in katlari seklinde ucretlendirilir. 3 mb olsa da 1 GB ile ucretlendirilir.
+a.Container Olusturma:
+> Recent resources > umitstorage > Containers > + Container > Name: mycontainer 
+  > Public access level: Private (Blob: public'e read yetkisi verir blob'a) (Container: blob ve container'e public read verir) 
+  > create
+
+b.Upload:
+> Recent resources > umitstorage > Containers > mycontainer > Upload > files > umit.jpg
+  > upload
+
+c.SAS Olusturma:
+- Olusturulan SAS ile public'ten secure ulasilabilir.
+> Recent resources > umitstorage > Containers > mycontainer > umit.jpg 
+  > ... (3 nokta) > Generate SAS > saat/tarih/read/write vb belirlenebilir.(default biraktim) > Generate SAS token and URL
+  > Blob SAS URL (kopyala Browserden girilebilir.)
+
+d.Properties:
+> Recent resources > umitstorage > Containers > mycontainer > umit.jpg 
+  > ... (3 nokta) > Properties > URL (kopyala) > Browserdan ulasamadik (access key olusturulmamis)
+  (Generate SAS gerekli)
+
+
+12.Azure Storage Explorer:
+- Portal'dan daha iyi kullanimi olan storage islemlerinin yapildigi bir uygulama.
+> Recent resources > umitstorage > Open in Explorer > 
+
+
+13.Storage browser (preview):
+- Storage explorerin browserda calisan versiyonu.
+- Storage islemlerinin normal portala gore daha fazla secenekle yapilabildigi bolum.
+> Recent resources > umitstorage > Storage browser (preview) > 
+
+Dashboarda pinleme:
+- Onemli tablolari Dashboarda koyma.
+> Recent resources > umitstorage > Monitoring > Ilgili grafik > pin (raptiye) > Dashboardda sergilenir.
+
+
+14.Monitoring / Log Analytics:
+
+a.Insigts:
+- Yapilan islemleri inceleme imkani verir.
+- Failures, performance, availability ve capacity buradan izlenebilir.
+- Hatalar:
+> Recent resources > umitstorage > Insights > Failures
+
+- Performance, Latency:
+> Recent resources > umitstorage > Insights > Performance
+
+b.Alerts:
+- Sisteme ikaz koyariz. Ornegin storage accout 100Gb'yi gecince bilgi verir.
+> Recent resources > umitstorage > Alerts > create alert rule > 
+  > Used capacity > Greater than / Average / 100 / GiB > Done > notification ... > actions ... > create
+
+c.Metrics:
+- Metricleri belli bir zaman dilimi icin veya surekli izleyebilir ve pinleyebiliriz.
+- Metriclere alarm kurabiliriz.
+> Recent resources > umitstorage > Metrics > Scope: umitstorage / Metric namespace: Blob / Metric: Blob Capacity / Aggregation: Avg
+  
+d.Workbooks:
+- Insights'a benzer.
+- Predefined templates.
+> Recent resources > umitstorage > Workbooks
+
+e.Diagnostic settings:
+- Default olarak kapalidir. Istenirse acilarak inceleme yapilabilir.
+- Tum write, read, transaction vb islemleri secip depolayabilir, analiz edebilir, tetikleme olarak kullanabilirsiniz.
+> Recent resources > umitstorage > Diagnostic settings > Blob > Add diagnostic setting
+  > name: blob diagnostocs / logs: StorageRead, StorageWrite, Transaction / Destination details: Send to Log Analytics workspace
+  > Stream to an event hub (trigger maksatli kullanilir function, mail, sms ...)
+
+f.Logs:
+- Onemli.
+- Queryler yazarak warning, access ... vb incelenebilir.
+- Ornek querryleri kullanabilir gelistirebilirsin. 
+- Pin, zaman, ... ozellikleri var.
+> Recent resources > umitstorage > Logs > 
+
+
+15.Configuration:
+- Replication buradan degistirilebilir. Tek/multi bolge vb.
+> Recent resources > umitstorage > Configuration > Replication > Locally-redundant storage
+
+
+16.Endpoints:
+- Blob service, File service ... ayri ayri atanmis URL'lerini bulursunuz.
+> Recent resources > umitstorage > Endpoints > 
+
+
+17.Geo-replication:
+- Bolgesel replicalari gosterir.
+
+
+18.Access tier:
+- Hot/Cool giris sikligini belirler.
+- Storage accountlar icin konfigure edilir.
+- Storage ve access icin ucretlendirmeyi belirler. Hot'ta storage pahali access ucuz, Cool'da storage yari fiyatli, access 2 katidir. 
+- Cool tier'a konulan veri ucretlendirmesi minimum 1 aydir.
+- Ilk olustururken veya sonradan configure edilebilir.
+> Recent resources > Storage accounts >  + create > Access tier: Hot > create
+ 
+Storage'in Tierini Degistirmek:
+> Recent resources > Storage accounts > umitstorage > Configuration > Cool/Hot
+
+File'in Tierini Degistirmek:
+> Recent resources > Storage accounts > umitstorage > Ilgili file > ... (3 nokta) 
+  > Change tier > Cool > 
+
+
+19.Tier ve Performance:
+- Tier:
+   - Storage account bazinda yapilir ve sonradan degistirilebilir.
+   - Archive, Cool ve Hot tier var. Archive: storage cok ucuz, access cok pahali. 
+   - Archive:
+      - Hot tiere gore %90 daha ucuz.
+      - Veri cekmek saatler alabilir. Cekilecek datanin boyutuna gore. Kucuk objeler 1 saatten az surede cekilebilir.
+      - Verileri hydrate ederek arsivler.
+      - Minimum 180 gun periyodu var.
+- Performance:
+   - Storage account bazinda yapilir ve sonradan degistirilemez.
+   - Standard ve Premium seklindedir.
+   - Yalnizca kurulurken secilebilir. Sonradan degistirilemez.
+   - Premium, standard'tan data donusunde 10 kat hizlidir average; burst speed olarak ise 40 kat hizlidir. 
+   - Premium'un storage ucreti hot'a gore 8 kat pahalidir.
+   - Premium'un data transfer ucreti hot'a gore 3'te bir fiyatindadir.
+
+
+20.Lifecycle Management:
+- Storage duzeyinde yapilir ve container bazinda filtrelenebilir.
+- Belli gunden uzun sure modify edilmeyen dosyalari cool/archive klasore atabilir veya silebiliriz.
+- Belirli bloblari secebilirsiniz.
+> Recent resources > Storage accounts > umitstorage > Lifecycle management > Add a rule > Rule name: deneme /
+  / More than: 30 / Move to cool storage > + Add condition >  (delete, archive)
+  / More than: 90 / Move to archive storage > 
+
+
+21.Access Control (IAM):
+- Access key, Access control (IAM) veya Shared access signature (istenen limitlerle) ile storage'a ulasim saglanir.
+- Access key ile full control girilir hesaba. 
+- Shared access signature ile kisitli ve limitli sureli girilir hesaba.
+> Recent resources > Storage accounts > umitstorage > Access Control > 
+  > Add a role assignment > role: Storage Blob Data Contributor > User, Group or service principal
+  > Select members: ugur@bspoke > assign
+
+
+22.Object replication:
+- Bir storage'ten ilgili objeyi farkli/ayni regiondaki baska storage'e copy etmek.
+- Source, destination ve filter belirleyerek kopyalama yapilabilir.
+- Her iki storage'in hot veya cool olmasi beklenir.
+- Yeni dosyalar icin gecerlidir.
+> Recent resources > Storage accounts > umitstorage > Create replication rules > 
+  > destination storage account: umitdeneme > source container: default-container / Destination container: deneme > Filter: > add > Prefix match: dev (dev ile baslayanlar kopyalanir)
+  > source container: default-container / Destination container: deneme2 > Filter: > add > Prefix match: test (test ile baslayanlar kopyalanir)  
+
+
+23.Import-Export Large Files:
+- Buyuk verilerin localden storage'a transferi icin kullanilir.
+- Data box disk: 8TB with 128-bit encrypyion. 5'li pakete kadar gelir.
+- Data box: 100TB. NAS protocolu ve AES 256-bit encyptionu kullanir.
+- Data box heavy: 1PB'lik self contained device.
+
+Export:
+> Import/export jobs > create import/export job > subscription / Resource group / name: importjob-1 / Export from Azure
+  > Source Azure region: East US / Storage account: umitdeneme
+  > Blobs to export: all (Selected containers, export from blob list file)
+  > Carrier name: Fedex / Carrier account number: (Fedex customer account) 
+  > create
+
+Import:
+> Import/export jobs > create import/export job > subscription / Resource group / name: importjob-1 / Import into Azure
+  > Source Azure region: East US / Storage account: umitdeneme
+  > Upload journal files: (ilgili veri) > storage account: umitdeneme
+  > Carrier name: Fedex / Carrier account number: (Fedex customer account) 
+  > create
+
+
+24.Blob Storage:
+- Block blobs, File shares ve Page blobs secenekleri Premium secenegi ile cikar. 
+  - Block blob: High IO, for transactions. Storage pahali, transfer ucuz. SSD'leri kullanir.
+  - File shares: Dosya paylasimi icin kullanilir.
+  - Page blobs: Read/Write islemleri icin kullanilir. OS ve DB islemleri icin uygundur.
+  - Computere baglanmaz.
+- Premium'da Global-redundant secenegi yoktur. Locally-redundant storage (LRS) ve Zone-redundant storage (ZRS) var.
+- Page blobs icin yalnizca LRS secenegi var.
+- Static web site icin storage olarak kullanilabilir ama CDN bu is icin daha iyi/ucuz.
+> Recent resources > Storage accounts > create storage account > Subscription / RG / Storage account name: premiumstorageumit / Region: East US
+  / Performance: Premium / Premium account type: Block blob / Redundancy: Locally-redundant storage (LRS)
+
+
+25.Azure File Share:
+- File'lar ile ilgilenilecekse kullanilir.
+- Yeni bir storage account ile yapacagiz.
+
+a.Storage account olusturma:
+> + New Resource > Storage account > Subs / RG / Storage account name: azsjdfiles11
+  > Redundancy: Locally-redundant storage > ... > create
+
+b.File Share konfigure:
+> Recent resources > Storage accounts > File service > + File share 
+  > Name: tempfiles / Tier: Hot 
+
+c.File Share Kullanimi:
+- Connect:
+- Add directory, Quota: kota belirlenebilir. Tier degistirilebilir.
+> Recent resources > Storage accounts > File service > tempfiles  
+  > Connect > Drive Letter: Z > Ilgili kodu Powershel'e yapistirarak Z: directory'si olustururuz.
+
+
+26.Azure File Sync:
+- Bazi ulkelerde 445 portu kapali oldugu icin File Share dogrudan kullanilamaz. Bu durumda Azure File Sync ile File Share'e sync olunur.
+- Localimizdeki dosyalari ayni anda Azure File Share ve baska server (local bilgisayarlar) ile eslestirir.
+- Sync group: File share'in icindeki bir folder'i sync eder. Burada File share akabinde bir folder secilir.
+- Dosyalarda eksilme, gecikme veya sync problemi yasaniyorsa file sync troubleshooting documentationdan incelenir.
+> Azure File Sync Agent (download) > yuklenip paylasima acilacak tum bilgisayarlara yuklenir.
+
+Portal:
+> Azure File Sync > subs / RG / Name: filesyncim / Region: East US > create > all networks > create
+
+> filesyncim > Sync group > Sync group name: newsyncgroup > Select storage account: azsjdfiles11 > Azure File Share: tempfiles (sectik) > create
+  > Sync groups: paylasilan dosya
+  > Registered servers: file sync'i kurup aga dahil serverlar.
+
+
+27.Tutorials:
+- Documents, ornek uygulamalar.
+> Recent resources > umitstorage > Tutorials
+
+
+
+
+

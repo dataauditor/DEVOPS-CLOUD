@@ -1,0 +1,20 @@
+1.Genel:
+- Resource'lari silme ve degisiklige karsi korur.
+- Subscription, RG veya Resource duzeyinde lock kullanabilir. 
+- Subscriptiona konulan kilit RG ve Resourcelara inherit olur.
+- RG'a konulan kilit Resource'lara kilir
+
+			Okuma	Guncelleme	Silme
+CanNotDelete	Evet	Evet		Hayir
+ReadOnly		Evet	Hayir		Hayir
+
+
+2.Hands-on:
+- RG duzeyinde silmeye karsi kilit olusturma.
+> Deneme RG > Locks > + Add
+  > Lock name: silmeyin
+  > Lock type: Delete
+  > ok
+
+> Deneme RG > Deneme VM
+  > Locks  (silmeyin isimli lock inherit olmus resource'ta)

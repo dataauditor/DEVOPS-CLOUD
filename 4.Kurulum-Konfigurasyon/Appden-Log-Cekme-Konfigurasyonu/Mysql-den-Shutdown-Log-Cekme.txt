@@ -1,0 +1,60 @@
+- You could create a special log file that records when service mysql stop is issued or if mysqld_safe decides to shutdown.
+- Let's say you want the file to be called /var/lib/mysql/.shutdown_signals
+echo -n > /var/lib/mysql/.shutdown_signals
+chown mysql:mysql /var/lib/mysql/.shutdown_signals
+cp /etc/init.d/mysql /etc/init.d/mysql_new
+vi /etc/init.d/mysql_new
+---------------------------------------------------------------------------------------
+DT=`date +"%Y-%m-%d %H:%M:%S"`
+echo "Shutdown Issued : ${DT}"
+whoami >> .shutdown_signals
+w      >> .shutdown_signals
+---------------------------------------------------------------------------------------
+  - Asagidaki gibi, 'stop' veya 'restart'i bul ve altina yukarki satirlari ekle.
+    - 'stop')
+        # Stop daemon. We use a signal here to avoid having to know the
+        # root password.
+    - 'restart')
+        # Stop the service and regardless of whether it was
+        # running or not, start it again.
+
+which mysqld_safe
+  - It will echo "/usr/bin/mysqld_safe"
+
+cp /usr/bin/mysqld_safe /usr/bin/mysqld_safe_new
+vi /usr/bin/mysqld_safe_new
+---------------------------------------------------------------------------------------
+while true
+do
+  rm -f $safe_mysql_unix_port "$pid_file"       # Some extra safety
+
+  eval_log_error "$cmd"
+
+  if test ! -f "$pid_file"              # This is removed if normal shutdown
+  then
+    break
+  fi
+---------------------------------------------------------------------------------------
+  - Look for the word shutdown. You should find something like this:
+- Change the if ... then to:
+---------------------------------------------------------------------------------------
+  if test ! -f "$pid_file"              # This is removed if normal shutdown
+  then
+    DT=`date +"%Y-%m-%d %H:%M:%S"`
+    echo "Shutdown Issued : ${DT}"
+    whoami >> .shutdown_signals
+    w      >> .shutdown_signals
+    break
+  fi
+---------------------------------------------------------------------------------------
+
+- You will need to shutdown mysql and switch the files around:
+service mysql stop
+mv /usr/bin/mysqld_safe /usr/bin/mysqld_safe_old
+mv /usr/bin/mysqld_safe_new /usr/bin/mysqld_safe
+mv /etc/init.d/mysql /etc/init.d/mysql_old
+mv /etc/init.d/mysql_new /etc/init.d/mysql
+service mysql start
+- Going forward, you simply run
+tail -30 /var/lib/mysql/.shutdown_signals
+- So, if you are truly a risk taker...

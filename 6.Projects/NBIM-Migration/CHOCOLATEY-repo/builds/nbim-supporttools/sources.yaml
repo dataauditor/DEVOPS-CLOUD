@@ -1,0 +1,3 @@
+---
+- s3://nbim-s3-euwe1-software-packages-chocolatey/Citrix/Support.zip
+- s3://nbim-s3-euwe1-software-packages-chocolatey/Microsoft/DotNet471/NDP471-KB4033342-x86-x64-AllOS-ENU.exe

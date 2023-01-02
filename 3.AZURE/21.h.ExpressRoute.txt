@@ -1,0 +1,48 @@
+1.Genel:
+- Kendi ISP (service saglayiciniz) ile calisarak bir edge noktaya baglanilir. Soz konusu Edge noktasinin Azure Data Center'larina direk baglantisi var.
+- Bir bolgeye baglandiginizda bu bolgenin yedek bolgesine de ikinci bir baglanti kuruluyor (North Europe baglaninca West Europe'a da yedek baglanti kurulur.).
+- ExpressRoute Premium eklentisiyle tum data centerlara kuresel baglanti imkani var. 
+- ExpressRoute Global Reach: Birden fazla ExpressRoute baglantisini birbirine baglayabiliyorsunuz. 
+- ExpressRoute internete cikmaz guvenlidir.
+- Guvenli bir yuk devretme alternatifi (secondery baglanti) olarak S2S VPN de kurulur. Sistem cokerse buradan devam edilir.
+- ExpressRoute ile bagli olmayan sitelere S2S VPN'leri kullaniriz.
+ExpressRoute:
+  - OnPrem-ISP-Azure seklindedir.
+  - Cok hizli ve pahalidir.
+  - Kurulum icin communications provider ile koordine edilir.
+  - Premium Add-On: Dunya genelindeki VNets'lere baglanmak icin kullanilir.
+  - One virtual circuits on one connection.
+ExpressRoute Direct:
+  - OnPrem-Azure seklinde ISP (internet service provider'a baglanmadan public internete cikis yapmadan dogrudan Azure clouda baglanir.)
+  - Directly connect to Global Microsoft backbone. 
+  - Yaklasik 150 edge location'u var Microsoft'un.
+  - 10 Gbps, 100 Gbps hizlari vardir.
+  - Multiple virtual circuits on one connection.
+  - Tum baglantiyi tek veya multi circuit ile saglayabilirsin. 
+  - Internal network network hizini desteklemeli.
+
+Premium Add-On:
+  - ExpressRoute kurulumunda kullanilir.
+  - Standard ve Premium modeli var.
+    - Standard: tum bant araliklarinda 10 tane VNet link imkani sunar.
+    - Premium: 50Mbps - 20 adet, 100Mbps - 25, ... adet VNet link imkani sunar.
+- Pricing:
+  - ExpressRoute Pricing - Metered Version:
+    - Pay for ISP for connection, ExpressRoute fee, plus outbound traffic
+      - 50 Mbps - $55 per month
+      - 1 Gbps - $436 per month
+      - 10 Gbps - $5000 per month
+  - ExpressRoute Pricing - Unlimited Data
+    - Pay for ISP for connection, ExpressRoute fee
+      - 50 Mbps - $300 per month
+      - 1 Gbps - $5700 per month
+      - 10 Gbps - $51300 per month
+  - ExpressRoute Pricing - Unlimited Plus Premium
+    - Pay for ISP for connection, ExpressRoute fee
+      - 50 Mbps - $375 per month
+      - 1 Gbps - $6450 per month
+      - 10 Gbps - $54300 per month
+
+
+
+

@@ -1,0 +1,545 @@
+Hands-on:
+- Cok iyi ornek.
+- Iki Spoke Vnet'i, Hub Vnet (icinde Firewall var.) uzerinden birlestirme.
+- Her iki Spoke Vnet'te birer adet VM olusturulur.
+- Spoke Vnetler ile Hub Vnet arasinda peering kurulur.
+
+
+
+
+a.Virtual Network Kurulumu:
+- Firewall icin bir VM'ler (vnet-hub) icin 2 Vnet olusturacagiz.
+- vnet-hub'ta AzureFirewallSubnet isimli subnet olusturacagiz.
+
+a.1.Virtual Network (Hub icin) Olusturma:
+> Virtual network
+  > Create
+  > Subs | RG | Region: North Europe | Name: vnet-hub
+  > IPv4 address space: 10.1.0.0/16
+  > + Add subnet
+    > Subnet name: AzureFirewallSubnet (Bu isim sabittir.)
+    > Subnet address range: 10.1.1.0/26
+    > Add
+
+a.2.Virtual Network (Vnet1) Olusturma:
+> Virtual network
+  > Create
+  > Subs | RG | Region: North Europe | Name: vnet-spoke1
+  > IPv4 address space: 10.2.0.0/16
+  > + Add subnet
+    > Subnet name: default  
+    > Subnet address range: 10.2.0.0/26 
+    > Add
+
+a.3.Virtual Network (Vnet2) Olusturma:
+> Virtual network
+  > Create
+  > Subs | RG | Region: North Europe | Name: vnet-spoke2
+  > IPv4 address space: 10.3.0.0/16
+  > + Add subnet
+    > Subnet name: default
+    > Subnet address range: 10.3.0.0/24 
+    > Add
+
+
+
+
+b.Peering Kurulumu:
+- vnet-spoke1 ile vnet-hub ve vnet-spoke2 ile vnet-hub arasinda karsilikli 2 peering kurulur.
+
+b.1.Peering (vnet-hub ile vnet-spoke1) Olusturma:
+- Gelen ve giden trafige izin veriyoruz.
+> vnet-hub
+  > Peerings
+  > + Add
+    > This virtual network 
+      > Peering link name: hub-spoke1
+      > Traffic to remote virtual machine: Allow
+      > Traffic forwarded from remote virtual network: Allow
+      > Virtual network gateway or Route Server: None
+    > Remote virtual network 
+      > Peering link name: spoke1-hub
+      > Virtual network deployment manager: Resource manager
+      > Virtual network: vnet-spoke1
+      > Traffic to remote virtual machine: Allow
+      > Traffic forwarded from remote virtual network: Allow
+      > Virtual network gateway or Route Server: None
+    > Add
+
+b.2.Peering (vnet-hub ile vnet-spoke2) Olusturma:
+> vnet-hub
+  > Peerings
+  > + Add
+    > This virtual network > Peering link name: hub-spoke2
+    > Traffic to remote virtual machine: Allow
+    > Traffic forwarded from remote virtual network: Allow
+    > Virtual network gateway or Route Server: None
+    > Remote virtual network > Peering link name: spoke2-hub
+    > Virtual network deployment manager: Resource manager
+    > Virtual network: vnet-spoke2
+    > Traffic to remote virtual machine: Allow
+    > Traffic forwarded from remote virtual network: Allow
+    > Virtual network gateway or Route Server: None
+    > Add
+
+
+
+
+c.VM (Her iki Vnet'e Firewall'u Test Etmek Maksadiyla) Olusturma:
+
+c.1.VMSpoke1 Olusturma: 
+> Windows Server 2019 Datacenter
+  > Virtual machine name: VMSpoke1
+  > Region: North Europe
+  > Username: adminugur
+  > Password: 123
+  > Select inbound ports: RDP (3389)
+  > Virtual network: vnet-spoke1
+  > Subnet: default
+  > Public IP: VMSpoke1-ip  (VM'e erisebilmek icin aldik.)
+  > create
+
+c.2.VMSpoke2 Olusturma: 
+> Windows Server 2019 Datacenter
+  > Virtual machine name: VMSpoke2
+  > Region: North Europe
+  > Username: adminugur
+  > Password: 123
+  > Select inbound ports: RDP (3389)
+  > Virtual network: vnet-spoke2
+  > Subnet: default
+  > Public IP: VMSpoke2-ip  (VM'e erisebilmek icin aldik)
+  > create
+
+
+
+
+d.RDP ile VMSpoke1 ve VMSpoke2'ye Baglanti Testi:
+
+d.1.Testi Hizlandirmak icin VM'lerin Firewall'lari Kapatilir:
+- Islemler her iki VM icin de icra edilir.
+> Remote Desktop Connection
+  > Computer: 52.138.203.64 (VM Public IP address)
+  > Username: adminugur
+  > Password: 123
+  > OK
+  > Connect
+> Search  (VM icinde yapilir.)
+  > wf.msc 
+  > Windows Defender Firewall with ... > RC > Properties
+    > Domain Profile > Firewall state: Off
+    > Private Profile > Firewall state: Off
+    > Public Profile > Firewall state: Off
+    > OK
+
+d.2.VM'ler Arasi RDP Uzerinden Baglanti Testi: 
+- Private IP address'leri ile iki VM kendi arasinda gorusebiliyor mu test ediyoruz.
+- Her iki VM icin yapilir. Islemler VM'ler uzerinde icra edilir.
+- Firewall kurulu olmadigi veya vnet-spoke1 ile vnet-spoke2 arasinda peering olmadigi icin VM'ler birbiri ile private IP uzerinden baglanamaz.
+> command prompt 
+ipconfig
+  - 10.3.0.1  (VMSpoke2'nin sonucu)
+  - 10.2.0.1  (VMSpoke1'in sonucu)
+ping 10.3.0.1  
+  - Suan VMSpoke1'deyiz ve digerine ping atiyoruz.
+  - Cevap yok.
+ping 10.2.0.1 
+  - Suan VMSpoke2'deyiz ve digerine ping atiyoruz. 
+  - Ping gitmiyor.
+  - vnet-spoke1 ile vnet hub arasinda peering var.
+  - vnet-spoke2 ile vnet-hub arasinda peering var.
+  - vnet-spoke1 ile vnet-spoke2 arasinda peering yok. Dolayisiyla baglanamazlar.
+  - VM'ler arasi baglanti icin Firewall'u kullanacagiz.
+
+
+
+
+e.Firewall Olusturma:
+- Firewall olustururken onemli olan policy'i olusturmak. Sonradan route table ve routes ile doldurulur.
+- Internette koruma saglayacaksa mutlaka public IP address tanimlanir.
+> Firewalls
+  > Create a firewall
+    > Subs | RG | Region: North Europe (vnet-hub ile ayni) | Name: TestFW
+    > Availibility zone: none
+    > Firewall tier: Premium
+    > Firewall policy
+    > Add new
+      > Policy name: TestPolicy
+      > Region: North Europe
+      > Policy tier: Premium
+      > OK
+    > Choose a virtual network: Use existing
+    > Virtual network: vnet-hub
+    > Public IP Address: 
+    > Add new 
+      > AFW-PIP  (yazdik)
+      > OK
+    > create
+
+
+
+
+f.Route Table ve Route Olusturma:
+- Route table ve route'lar ile Firewall'un adresini muteakip atlama adresi olarak gosterir allow/deny kurallari belirleriz.
+- Olusturulan Route tables once ilgili VM'lerin Vnet ve Subnet'leri ile associate edilir.
+- Daha sonra tum cikis trafiginin atlama adresi olarak Firewall'un private addresi tanimlanir.
+- Boylece Route table sayesinde route table'dan cikislar Firewall kurallarina tabi olur.
+- Firewall kurallari da Firewall uzerinden ayarlanir.
+- Bu kurallar ile VM'lere artik Firewall uzerinden ulasilabilir.
+
+f.1.VMSpoke1'e Route Table Olusturma:
+- Firewall'a kurallar tanimlariz.
+> Route tables
+  > + Create
+  > Subs | RG: Test-RG-01 | Region: North Europe | Name: spoke1-rt
+  > create
+
+f.2.VMSpoke2'ye Route Table Olusturma:
+> Route tables
+  > + Create
+  > Subs | RG: Test-RG-01 | Region: North Europe | Name: spoke2-rt
+  > create
+
+f.3.VMSpoke1'e Route Olusturma:
+> Route tables
+  > spoke1-rt
+    > Subnets
+      > + Associate
+        > Virtual network: vnet-spoke1
+        > Subnet: default  (sectik)
+        > OK
+  > Routes
+    > + Add
+      > Route name: Spoke1-RN
+      > Address prefix: 0.0.0.0/0  (heryere giden trafik)
+      > Next hop type: Virtual appliance
+      > Next hop address: 10.1.1.4  (Firewall'un private IP address)
+      > OK
+
+f.4.VMSpoke2'ye Route Olusturma: 
+> Route tables
+  > spoke2-rt
+    > Subnets
+      > + Associate
+        > Virtual network: vnet-spoke2
+        > Subnet: default  (sectik)
+        > OK
+  > Routes
+    > + Add
+      > Route name: Spoke2-RN
+      > Address prefix: 0.0.0.0/0  (heryere giden trafik)
+      > Next hop type: Virtual appliance
+      > Next hop address: 10.1.1.4  (Firewall'un private IP address)
+      > OK
+
+
+
+ 
+g.Firewall'da DNAT (Destination NAT) Rule:
+- DNAT Rule: ile istenilen VM'e gelen veri yonlendirilebilir.
+- Source-Destination ve Translated address ile port'lar belirlenir.
+- Vnet'ler atlama noktasi olarak Firewall'u kullaniyor. 
+- Artik kurallari Firewall uzerinden tanimlariz.
+- DNAT rule ile Firewall aktarim noktasi olacak sekilde internetten Vnet'lere Rule olusturulur.
+- "40.85.90.212:3390": VM1'e yonlendirilir.
+- "40.85.90.212:3391": VM2'e yonlendirilir.
+
+g.1.Firewall'a DNAT Rule Olusturma:
+> Firewalls
+  > TestFW
+    > Firewall public IP: AFW-PIP 
+    > IP address: 40.85.90.212 (copy)
+  > TestFW
+    > Policy: TestPolicy
+      > DNAT rules
+      > Add a rule collection
+        > Name: RDPAllow
+        > Rule collection type: DNAT
+        > Priority: 101
+        > Rule collection group: DefaultDnatRuleCollectionGroup
+        > Rules:
+          > Name: RDP1
+          > Source type: IP Address
+          > Source: *  (kendi public IP address'imizi de yazabiliriz.)
+          > Protocol: TCP/UDP
+          > Destination Ports: 3390  (client bu portu yazarsa VM1'e gider.)
+          > Destination type: IP Address
+          > Destination: 40.85.90.212  
+          > Translated address: 10.2.0.4  (VM1'in private IP address)
+          > Translated port: 3389
+        > Rules:
+          > Name: RDP2
+          > Source type: IP Address
+          > Source: *  (kendi public IP address'imizi de yazabiliriz.)
+          > Protocol: TCP/UDP
+          > Destination Ports: 3391
+          > Destination type: IP Address
+          > Destination: 40.23.183.3  (Firewall'un Public IP address'i)
+          > Translated address: 10.3.0.4  
+          > Translated port: 3389
+        > Add
+
+g.2.RDP ile VMSpoke1'den VMSpoke2'ye Baglanti Testi:
+- RDP ile VMSpoke1'e baglanilir.
+> Remote Desktop Connection
+  > Computer: 40.85.90.212:3390  (Firewall IP:3390 VMSpoke1'in portu)
+  > Username: adminugur
+  > Password: 123
+  > OK
+  > Yes
+> Start
+  > command prompt
+hostname
+  - VMSpoke1
+ping 10.3.0.4
+  - Erisemiyor. Yalniz RDP rule tanimladik.
+Browser:
+www.google.com
+  - Erisemiyor. Yalniz RDP rule tanimladik.
+
+r.RDP ile VMSpoke2'den VMSpoke1'ye Baglanti Testi:
+- RDP ile VMSpoke1'e baglanilir. Buradaki baglanti internet uzerinden.
+> Remote Desktop Connection
+  > Computer: 40.85.90.212:3391
+  > Username: adminugur
+  > Password: 123
+  > OK
+  > Yes
+> Start
+  > command prompt
+hostname
+  - VMSpoke2
+ping 10.2.0.4
+  - Erisemiyor. Yalniz RDP rule tanimladik.
+Browser:
+www.google.com
+  - Erisemiyor. Yalniz RDP rule tanimladik.
+
+
+
+
+h.Firewall'da Network Rule ile Vnet'ler Arasi Baglanti:
+- Yalnizca Route table gibi calisir. Source-Destination ve port'lar belirlenir.
+- DNAT rule ile VM bazinda yonlendirme yapilirken, Network rule ile NAT rule'lari tanimlanir.
+- Vnet'lerbirbirlerine ulasabilmesi icin rule tanimladik.
+
+h.1.Firewall'da Network Rule Olusturma:
+- Vnetler arasi baglanti icin rule olusturulur.
+- "Translate address" tanimlanmaz DNAT rule'da oldugu gibi. 
+> Firewalls
+  > TestFW
+    > Firewall public IP: AFW-PIP > 40.23.183.3 (copy)
+  > TestFW
+    > Policy: TestPolicy
+      > Network Rules
+      > + Add a rule collection
+        > Name: Spoke2Spoke
+        > Rule collection type: Network
+        > Priority: 102
+        > Rule collection action: Allow
+        > Rule collection group: DefaultDnatRuleCollectionGroup
+        > Rules:
+          > Name: Spoke1-Spoke2
+          > Source type: IP Address
+          > Source: 10.2.0.0/16  (vnet1'in adres araligi)
+          > Protocol: Tum
+          > Destination Ports: *
+          > Destination type: IP Address
+          > Destination: 10.3.0.0/16  (vnet2 IP address araligi)
+          > Add
+        > Rules:
+          > Name: Spoke2-Spoke1
+          > Source type: IP Address
+          > Source: 10.3.0.0/16  (vnet2'in adres araligi)
+          > Protocol: Tum
+          > Destination Ports: *
+          > Destination type: IP Address
+          > Destination: 10.2.0.0/16  (vnet1 IP address araligi)
+          > Add
+          
+h.2.VMSpoke1-VMSpoke2 Arasi Baglanti Kontrolu:
+> Remote Desktop Connection
+  > Computer: 40.85.90.212:3390  (Firewall IP:3390 VMSpoke1'in portu)
+  > Username: adminugur
+  > Password: 123
+  > OK
+  > Yes
+> Start
+  > command prompt
+ping 10.3.0.4
+  - VMSpoke1'den VMSpoke2'ye ping atabiliyor. 
+  - DNAT rule ile netten Vnet'lere ayri ayri ulasabiliyoruz. Boylece RDP baglantisi yapabiliyoruz.
+  - Network rule ile Vnet1 ile Vnet2 arasinda baglanti kuruyoruz veya Vnet'lere internete giris/cikis kurallari yazabiliriz.
+
+h.3.VMSpoke2-VMSpoke1 Arasi Baglanti Kontrolu:
+> Remote Desktop Connection
+  > Computer: 40.85.90.212:3391  (Firewall IP:3390 VMSpoke2'in portu)
+  > Username: adminugur
+  > Password: 123
+  > OK
+  > Yes
+> Start
+  > command prompt
+ping 10.2.0.4
+  - VMSpoke2'den VMSpoke1'ye ping atabiliyor. 
+  - DNAT rule ile netten Vnet'lere ulasabiliyoruz. Boylece RDP baglantisi yapabiliyoruz.
+  - Network rule ile Vnet1 ile Vnet2 arasinda baglanti kuruyoruz.
+
+
+
+
+i.Firewall'da Network Rule ile Outbound Rule:
+- 80, 443 portlarindan cikis kurali tanimlanir.
+- Port kisitlamasinda DNS proxy konfigurasyonu gerekmez cunki DNS server ile isimiz yok konu sadece port.
+- Eger Destination'da belirli bir FQDN kullanacak olursak o zaman DNS Proxy enable edilir.
+
+i.1.Vnet-spoke1'den 80, 443 Portu ile Internete Outbound Cikis: 
+- VM'lerden internete cikis izinleri konfigure ediliyor.
+> Firewalls
+  > TestFW
+    > Firewall public IP: AFW-PIP > 40.23.183.3 (copy)
+  > TestFW
+    > Policy: TestPolicy
+      > Network rules
+      > + Add a rule collection
+        > Name: HTTPAllow
+        > Rule collection type: Network
+        > Priority: 105
+        > Rule collection action: Allow
+        > Rule collection group: DefaultDnatRuleCollectionGroup
+        > Rules:
+          > Name: Spoke1
+          > Source type: IP Address
+          > Source: 10.2.0.0/16  (vnet1'in adres araligi)
+          > Protocol: TCP
+          > Destination Ports: 80,443
+          > Destination type: IP Address
+          > Destination: *
+          > Add
+
+i.2.Vnet-spoke2'den 80, 443 Portu ile Internete Outbound Cikis: 
+- VM'lerden internete cikis izinleri konfigure ediliyor.
+> Firewalls
+  > TestFW
+    > Firewall public IP: AFW-PIP > 40.23.183.3 (copy)
+  > TestFW
+    > Policy: TestPolicy
+      > Network rules
+      > + Add a rule collection
+        > Name: HTTPAllow2
+        > Rule collection type: Network
+        > Priority: 106
+        > Rule collection action: Allow
+        > Rule collection group: DefaultDnatRuleCollectionGroup
+        > Rules:
+          > Name: Internet
+          > Source type: IP Address
+          > Source: 10.3.0.0/16  (vnet2'in adres araligi)
+          > Protocol: TCP
+          > Destination Ports: 80,443
+          > Destination type: IP Address
+          > Destination: *
+          > Add
+
+i.3.VM'den Internete Cikis Testi:
+> Remote Desktop Connection
+  > Computer: 40.85.90.212:3391  (Firewall IP:3390 VMSpoke2'in portu)
+  > Username: adminugur
+  > Password: 123
+  > OK
+  > Yes
+Browser:
+www.google.com
+  - Cikis var.
+
+
+
+
+j.DNX Proxy ve Network Rule ile URL, FQDN Filetreleme:
+- Network rule'da "Deny" kurali uygulayarak URL, FQDN filetreleme yapabilmek icin oncesinde DNX Proxy kurulur. 
+- Mevcut kurulu Firewall'dan DNS islemleri uzerinden aktif edilir.
+- Once Firewall'da DNS Proxy enable edilir. Sonra Vnet'ler uzerinde Firewall'un IP address'ini Custom DNS server olarak tanitiriz.
+- Vnet'lerdeki VM'ler DNS sorgulamasi icin Firewall'un DNS Server'ini kullansin diye.
+- Boylece FQDN filtrelemesi yapilabilir.
+- IP address veya FQDN kisitlamasinda DNS Proxy gerekir cunki buradaki olay DNS name ile ilgili konu port degil.
+
+j.1.DNS Proxy Enable Etme:
+- Firewall'da DNS Server ve DNS Proxy enable edilir.
+> Firewalls
+  > TestFW
+    > Firewall public IP: AFW-PIP > 40.23.183.3 (copy)
+  > TestFW
+    > Policy: TestPolicy
+      > DNS
+        > Parent policy: Enabled
+        > DNS Servers: Default (custom DNS'imiz )
+        > DNS Proxy: Enabled 
+        > Apply
+
+j.2.Vnet-spoke1'in FW Yonlenmesi icin DNS Server Konfigurasyonu.
+- Once Firewall'da DNS Proxy enable edilir. Sonra Vnet'ler konfigure edilirler.
+- Istekleri Firewall DNS Server'a yonlendiririz.
+> vnet-spoke1
+  > DNS servers
+    > DNS serves: Custom
+    > IP address: 10.1.1.4  (FW private IP address yazilir.)
+    > Save
+
+j.3.Vnet-spoke2'in FW Yonlenmesi icin DNS Server Konfigurasyonu.
+- Istekleri Firewall DNS Server'a yonlendiririz.
+> vnet-spoke2
+  > DNS servers
+    > DNS serves: Custom
+    > IP address: 10.1.1.4  (FW private IP address yazilir.)
+    > Save
+
+j.4.Vnet'lere DNS Proxy Sayesinde Firewall Uzerinden Kisitlama:
+- Vnet'e Outbound deny kurali uyguluyoruz.
+- "google.com"a ulasimi kisitliyoruz.
+> Firewalls
+  > TestFW
+    > Firewall public IP: AFW-PIP > 40.23.183.3 (copy)
+  > TestFW
+    > Policy: TestPolicy
+      > Network rules
+      > + Add a rule collection
+        > Name: URLBlock
+        > Rule collection type: Network
+        > Priority: 104
+        > Rule collection action: Deny
+        > Rule collection group: DefaultDnatRuleCollectionGroup
+        > Rules:
+          > Name: URL1
+          > Source type: IP Address
+          > Source: 10.2.0.0/16  (vnet1'in adres araligi)
+          > Protocol: TCP
+          > Destination Ports: 80,443
+          > Destination type: FQDN
+          > Destination: google.com
+          > Add
+
+j.5.Vnet'lere DNS Proxy Sayesinde Firewall Uzerinden Kisitlama:
+- Vnet'e Outbound deny kurali uyguluyoruz.
+- "google.com"a ulasimi kisitliyoruz.
+> Firewalls
+  > TestFW
+    > Firewall public IP: AFW-PIP > 40.23.183.3 (copy)
+  > TestFW
+    > Policy: TestPolicy
+      > Network rules
+      > + Add a rule collection
+        > Name: URLBlock
+        > Rule collection type: Network
+        > Priority: 104
+        > Rule collection action: Deny
+        > Rule collection group: DefaultDnatRuleCollectionGroup
+        > Rules:
+          > Name: URL1
+          > Source type: IP Address
+          > Source: 10.2.0.0/16  (vnet1'in adres araligi)
+          > Protocol: TCP
+          > Destination Ports: 80,443
+          > Destination type: FQDN
+          > Destination: google.com
+          > Add
+

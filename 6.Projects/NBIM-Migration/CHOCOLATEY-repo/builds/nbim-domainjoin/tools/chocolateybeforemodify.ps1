@@ -1,0 +1,1 @@
+﻿Write-Host "This process will attempt to re-join the domain"

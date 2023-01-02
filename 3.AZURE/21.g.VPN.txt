@@ -1,0 +1,265 @@
+1.Genel:
+- On-prem'de kullanilan tum VPN cihazlarinin yapilandirma bilgileri kendi sitelerinde yaziyor. Ayrica "docs.microsoft.com" uzerinden azure sayfalarinda da uretici firmalarin konfigurasyon bilgileri mevcut.
+- end-to-end private encrypted connection.
+- private ip ile cloud'a girilir.
+- 3 yontem:
+  - Point to Site (P2S) VPN
+  - Site to Site (S2S) VPN
+  - Vnet-to-Vnet VPN
+  - ExpressRoute (ExpressRoute Direct de var.)
+P2S: Client ile cloud arasi
+  - Azure VPN ile VPN Client Address arasi baglanir.
+  - P2S VPN tunnel bulunur arada.
+  - Client bilgisayarina software yuklenir ve credentials ile tanitilir.
+S2S: Hybrid cloud'da tum on-prime'i clouda baglamak icin kullanilir.
+  - Azure VPN ile OnPrem VPN arasi baglanir.
+  - IPsec/IKE S2S VPN Tunnel bulunur arada.
+  - OnPrem'de fiziki bir VPN gateway ile kurulur.
+ExpressRoute:
+  - OnPrem-ISP-Azure seklindedir.
+  - Cok hizli ve pahalidir.
+  - Kurulum icin communications provider ile koordine edilir.
+  - Premium Add-On: Dunya genelindeki VNets'lere baglanmak icin kullanilir.
+  - One virtual circuits on one connection.
+ExpressRoute Direct:
+  - OnPrem-Azure seklinde ISP (internet service provider'a baglanmadan public internete cikis yapmadan dogrudan Azure clouda baglanir.)
+  - Directly connect to Global Microsoft backbone. 
+  - Yaklasik 150 edge location'u var Microsoft'un.
+  - 10 Gbps, 100 Gbps hizlari vardir.
+  - Multiple virtual circuits on one connection.
+  - Tum baglantiyi tek veya multi circuit ile saglayabilirsin. 
+  - Internal network network hizini desteklemeli.
+
+Premium Add-On:
+  - ExpressRoute kurulumunda kullanilir.
+  - Standard ve Premium modeli var.
+    - Standard: tum bant araliklarinda 10 tane VNet link imkani sunar.
+    - Premium: 50Mbps - 20 adet, 100Mbps - 25, ... adet VNet link imkani sunar.
+- Pricing:
+  - ExpressRoute Pricing - Metered Version:
+    - Pay for ISP for connection, ExpressRoute fee, plus outbound traffic
+      - 50 Mbps - $55 per month
+      - 1 Gbps - $436 per month
+      - 10 Gbps - $5000 per month
+  - ExpressRoute Pricing - Unlimited Data
+    - Pay for ISP for connection, ExpressRoute fee
+      - 50 Mbps - $300 per month
+      - 1 Gbps - $5700 per month
+      - 10 Gbps - $51300 per month
+  - ExpressRoute Pricing - Unlimited Plus Premium
+    - Pay for ISP for connection, ExpressRoute fee
+      - 50 Mbps - $375 per month
+      - 1 Gbps - $6450 per month
+      - 10 Gbps - $54300 per month
+
+
+
+2.Yuksek Kullanilabilirlik:
+- Active/active ve Active/standby (default) seklinde iki secenek mevcuttur.
+
+a.Active/standby:
+- Bir aktif VPN gateway mevcut bir tane de standby'da VPN Gateway mevcut. Belli bir downtime suresi vardir.
+
+b.Active/active:
+- Minimum 2 adet aktif VPN Gateway kurulur.
+- On-prem ile mesh baglanti kurulur.
+- On prem'de iki VPN kurulur. Herbir VPN'den her iki VPN Gateway'a baglanti kurulur. Boylece 4 baglanti olusur.
+
+
+
+
+2.Site-to-Site VPN:
+- Azure'da 1 VPN Gateway olusturulur.
+- On-prem'de VPN cihazi yapilandirilir.
+
+Surec:
+> Azure:
+  > Vnet ve Subnet olustur.
+  > DNS Server olustur (optional).
+  > Gateway Subnet olustur. (/27'lik bir CIDR blogu kullanilir. Isim her halukarda "GatewaySubnet" olmak zorunda. Baska cihaz, VM eklenemez buraya.)
+  > VPN Gateway olustur.
+  > Local Network Gateway olustur. (On-premdeki VPN cihazinin Public IP address bilgisi ve on-prem'de kullandiginiz ip address araliklari(muhtemel private ip address araligi) yapilandirilir.)
+
+> On-prem:
+  > VPN cihazini konfigure et. (Azure'da kullanilan sifreleme metodlari, VPN gateway'in Public IP address'i ve Azure'daki Vnet'in IP araligi girilir.)
+
+> Azure:
+  > VPN connection olustur/kur.
+
+
+Olusturma:
+a.GatewaySubnet Kurulumu:
+> Vnet1
+  > Subnets
+  > + Gateway subnet
+    > Subnet address range: 10.1.3.0/27
+    > save
+
+b.Virtual Network Gateway Kurulumu:
+> Virtual network gateways
+  > + Create
+    > Name: Vnet1-vng
+    > Region: North Europe  (Ilgili Vnet'in regionu secilir.)
+    > VPN (sec)
+    > Route-based (sec)
+    > SKU: VpnGw1  (bant genisligi ayarlaniyor. 1 en yavas ve en az baglanti adedi; 4 en hizli ve en cok baglanti adedi.)
+    > Virtual network: vnet-prod-ne-01  (uzerine Gateway subnet olusturulan Vnet secilir.)
+    > Subnet: GatewaySubnet (kurulu GWSub otomatik secilir.)
+    > IP address: create new
+    > Public IP address name: vpn1ngw-pip-01  (vpn2ngw-pip-02)
+    > Availibility zone: Zone-redundant
+    > Enable active-active mode: Disabled  (high availibility secmedik)
+    > Configure BGP: Disabled  (On-prem destekliyorsa secilebilir.)
+
+c.Local Network Gateway Kurulumu:
+> Local network gateways
+  > + Create
+    > Region: North Europe (GWSub ile ayni olmali.)
+    > Name: localngw
+    > Endpoint: IP address
+    > IP address: 33.2.1.5  (On-prem'deki VPN cihazinin public IP address'i girilir.)
+    > Address Space: 10.11.0.0/16  (kurum icindeki Private IP Address araligi girilir.)
+    > create
+
+d.VPN Connection Kurulumu:
+> Vnet1-vng  (Virtual network gateway)
+  > Connections 
+  > + Add
+    > Name: sts-vpn
+    > Connection type: Site-to-site (IPsec)
+    > Virtual network gateway: Vnet1-vng (otomatik secili.)
+    > Local network gateway: localnwg 
+    > Shared key (PSK): 123qwe  (On-prem'e de ayni sifre yazilir.)
+    > Use Azure Private IP Address (secmedik)
+    > Enable BGP (secmedik)
+    > IKE Protocol: IKEv2
+    > OK
+
+e.VPN Cihazina Yonelik Configuration Bilgilerinin Alinmasi:
+- Olusturulan connection'un on-prem'deki VPN cihazina yonelik configuration bilgilerinin alinir. 
+- Ilgili cihaz bilinmiyorsa marka yazilmaz "Device vendor: Generic Samples" secilir.
+> Vnet1-vng  (Virtual network gateway)
+  > Connections 
+  > sts-vpn
+  > Download configuration
+    > Device vendor: Generic Samples (Biliniyorsa on-prem'deki cihaz markasi secilir.)
+    > Device family: Device parameters
+    > Firmware version: 1.0
+    > Download configuration
+
+f.On-prem'de VPN Konfigurasyonu:
+> VPN 
+  - Yukarda download edilen verilerle on-prem'deki VPN cihazini configure ederiz.
+  - Azure'da kullanilan sifreleme metodlari, 
+  - VPN gateway'in Public IP address'i,
+  - Azure'daki Vnet'in IP araligi girilir.
+
+
+
+
+
+3.Vnet-to-Vnet VPN:
+- Her iki Vnet'te VPN Gateway kurulur.
+- Peering'e alternatiftir ama kurulumu uzun oldugu icin tercih edilmez.
+- Farkli region'da olabilir Vnet'ler.
+- IP address space: Vnet'lerin farkli olmali. 
+- Her iki Vnet'te
+  * GatewaySubnet
+  * Virtual Network Gateway
+  * Connection kurulur. Connection'da baglanilacak Vnet secilir.
+  
+a.GatewaySubnet Kurulumu:
+> Vnet1/Vnet2
+  > Subnets
+  > + Gateway subnets
+    > Subnet address range: 10.1.3.0/27 (10.2.3.0/27 Vnet2'ye)
+    > save
+
+b.Virtual Network Gateway Kurulumu:
+> Virtual network gateways  (Her iki Vnet icin de kurulur.)
+  > + Create
+    > Name: Vnet1-vng  (Vnet2-vng)
+    > Region: North Europe  (Ilgili Vnet'in regionu secilir.)
+    > VPN (sec)
+    > Route-based (sec)
+    > SKU: VpnGw1  (bant genisligi ayarlaniyor. 1 en yavas ve en az baglanti adedi; 4 en hizli ve en cok baglanti adedi.)
+    > Virtual network: Vnet1  (Vnet2)
+    > Subnet: GatewaySubnet (kurulu GWSub otomatik secilir.)
+    > IP address: create new
+    > Public IP address name: vpn1ngw-pip-01  (vpn2ngw-pip-02)
+    > Availibility zone: Zone-redundant
+    > Enable active-active mode: Disabled  (high availibility secmedik)
+    > Configure BGP: Disabled  (On-prem destekliyorsa secilebilir.)
+    > create
+
+c.VPN Connection Kurulumu:
+> Vnet1-vng  (Virtual network gateway) (Vnet2-vng)
+  > Connections 
+  > + Add
+    > Name: Vnet1-Vnet2
+    > Connection type: Vnet-to-Vnet
+    > First Virtual network gateway: Vnet1-vng (otomatik secili.)
+    > Second Virtual network gateway: Vnet2-vng
+    > Local network gateway: localnwg 
+    > Shared key (PSK): 123qwe  (On-prem'e de ayni sifre yazilir.)
+    > Use Azure Private IP Address (secmedik)
+    > Enable BGP (secmedik)
+    > IKE Protocol: IKEv2
+    > OK
+
+d.VPN Connection Inceleme:
+> Vnet1-vng  (Virtual network gateway) (Vnet2-vng)
+  > Connections 
+    - Burada incelenebilir.
+    - Status: Connected (gorulmeli)
+
+
+
+
+4.Point-to-Site VPN:
+- Tek bir clientin Azure baglanabilmesi icin bir yapidir.
+
+a.GatewaySubnet Kurulumu:
+> Vnet1
+  > Subnets
+  > + Gateway subnet
+    > Subnet address range: 10.1.3.0/27
+    > save
+
+b.Virtual Network Gateway Kurulumu:
+> Virtual network gateways
+  > + Create
+    > Name: Vnet1-vng
+    > Region: North Europe  (Ilgili Vnet'in regionu secilir.)
+    > VPN (sec)
+    > Route-based (sec)
+    > SKU: VpnGw1  (bant genisligi ayarlaniyor. 1 en yavas ve en az baglanti adedi; 4 en hizli ve en cok baglanti adedi.)
+    > Virtual network: vnet-prod-ne-01  (uzerine Gateway subnet olusturulan Vnet secilir.)
+    > Subnet: GatewaySubnet (kurulu GWSub otomatik secilir.)
+    > IP address: create new
+    > Public IP address name: vpn1ngw-pip-01  (vpn2ngw-pip-02)
+    > Availibility zone: Zone-redundant
+    > Enable active-active mode: Disabled  (high availibility secmedik)
+    > Configure BGP: Disabled  (On-prem destekliyorsa secilebilir.)
+
+c.Point-to-Site Configuration Kurulumu:
+> Vnet1-vng
+  > Point-to-site configuration
+  > Configure now
+    > Address pool: 192.2.4.0/23
+    > Tunnel type: 
+    > Authentication type:
+    > save
+
+d.
+- Download edilen file ile client server'i configure ederiz.
+> Vnet1-vng
+  > Point-to-site configuration
+  > Download VPN client
+  
+
+
+
+
+
+

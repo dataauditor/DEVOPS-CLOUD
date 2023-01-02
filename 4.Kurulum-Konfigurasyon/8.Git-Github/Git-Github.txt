@@ -1,0 +1,91 @@
+1.Merge:
+git checkout master
+git branch new-branch
+git checkout new-branch
+...develop some code...
+git add –A
+git commit –m "Some commit message"
+git checkout master
+git merge new-branch
+  - master uzerinde iken master'e merge yapilir.
+git push origin master
+
+
+2.Local Branch ve Remote Branch:
+git branch yeni
+git add .
+git commit -m "degisiklik"
+git push -fu origin yeni
+  - remote branch olusturup push ediyoruz.
+
+
+
+2.Remote Branch Olusturup Push:
+git switch main
+git pull
+git branch prod
+git checkout prod
+...develop some code...
+git add .
+git commit -m "w"
+git push origin prod
+  - remote prod olustu.
+git checkout main
+git merge prod
+  - prod, main'e merge oldu.
+git push origin main
+
+
+
+3.Locale Clone Yapip Github'ta Olusturulan Repo'ya Push Edebilme:
+git clone https://github.com/mit-dci/opencbdc-tctl.git
+cd opencbdc-tctl && sudo rm -R .git
+git init
+git add .
+git commit -m "initial"
+git branch trunk 
+git switch trunk
+git remote add origin https://github.com/dataauditor/opencbdc-tctl.git
+git push -fu origin trunk
+# git fetch
+git push --set-upstream origin trunk 
+git remote -v
+git remote set-url origin https://github.com/dataauditor/opencbdc-tctl.git
+
+
+
+
+4.Tum Remote Branchlari Locale Cekme:
+git fetch origin
+  - Baskasi tarafindan veya baska localde olusturdugun branchlari locale inidirir.
+git checkout -b deneme origin/deneme
+  -Localde deneme branchi olusturup remottan pull eder.
+
+
+
+
+2.Pull-Request:
+git branch f1
+git checkout f1
+...develop some code...
+git add .
+git commit -m "w"
+git push origin f1
+> Pull requests
+  > Create pull request
+  > prod - main | Description: deneme | Create pull request
+  > Approve | Merge
+
+
+
+3.Hata:
+a.Problem:
+Your branch and 'origin/main' have diverged, and have 1 and 1 different commits each, respectively. (use "git pull" to merge the remote branch into yours)
+
+Answer:
+git rebase origin/main
+  - localde main'de iken uyguladim.
+
+b.Problem:
+
+Answer:

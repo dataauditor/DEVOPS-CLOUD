@@ -1,0 +1,118 @@
+1.Genel:
+> Azure Boards  (Jira)
+  > Engineer
+  > Visual Studio
+  > Azure Repos
+  > Azure Test Plans
+  > Azure Pipelines
+  > Azure Web Apps
+  > Azure Application Insights
+
+
+
+2.Hands on:
+a.Azure Devops Ilk Kurulum:
+www.visualstudio.microsoft.com
+> Sign in
+> Create a new organization
+  > Organization name: byildiz2019
+    - Azure DevOps'a yonlendirir.
+  > Project name: devops
+  > Visibility: Public
+  > Create project
+
+
+b.Repo'nun Kurulumu:
+Azure DevOps:
+> Repos 
+  > Initialize main branch with a README or gitignore
+    > Initialize 
+      - "devops" isimili bir repo olusturduk. 
+
+
+c.Repo'nun Locale Clonlanmasi:
+Microsoft Visual Studio:  
+  - Azure hesabi ile baglan
+> Checkout from: Azure DevOps
+  > devops  (repoyu sectik)
+  > Clone
+
+
+d.Visual Studio ile Launch Web App:
+Microsoft Visual Studio
+- ASP.NET projesi deploy edecegiz.
+> View > Team Explorer
+  > Solutions > New
+    - ASP.NET Web Application (.NET Framework) yuklu degil.
+    > Open Visual Studio Installer 
+      > ASP.NET and web development  (yukluyoruz)
+      > Modify
+  > Solutions > New
+    > ASP.NET Web Application (.NET Framework)
+    > Name: myAzureApp
+    > OK
+
+e.
+Microsoft Visual Studio
+> Project
+  > myAzureApp Properties
+    > Publish
+
+f.Visual Studio ile Local'den Yayinlama:
+Microsoft Visual Studio
+> Team Explorer
+  > Changes
+    - Local repo
+
+
+
+
+
+3.Azure Devops:
+> Azure Devops 
+  > Organization: bspoke / North Europe
+  > Project name: devops
+  > Visibility: Public (Adresi girerek herkes girebilir, Private ise yetki vermek gerek)
+  > Invite: remi@bspoke.no  (userlar davet edilir)
+
+2.Boards:
+> Work Items 
+  > + New Work Item 
+    > Epic  (Backlog'a katilacak bir task tanimlanir)  
+      > New Epic: search
+      > State / Reason / Description / Priority ... (tanimlanir)
+      > Save
+  > + New Work Item 
+    > Issue:    
+      > New Issue: deneme    
+      > State / Reason / Description / Priority ... (tanimlanir)
+      > save
+  > + New Work Item 
+    > Task:    
+      > New Task: gorev1    
+      > State / Reason / Description / Priority ... (tanimlanir)
+      > save
+
+3.Repos:
+
+4.Pipelines:
+a.Environments:
+  - Collection of resources where you deploy your apps.
+  - VMs, Containers, Web apps ...
+
+b.Releases:
+  - Pipeline stores the data of your pipeline or stages, tasks and deeployments in azure pipelines 
+
+c.Library:
+  - Variable'lar tanimlanir.
+
+d.Task groups:
+  - A way to standardize and centrally manage deployment steps for all applications in the project.
+
+e.Deployment groups:
+  - Yalnizca classic release pipeline'lar ile available'dir.
+  - A collection of deployment related steps
+
+
+4.Test Plans:
+  - 

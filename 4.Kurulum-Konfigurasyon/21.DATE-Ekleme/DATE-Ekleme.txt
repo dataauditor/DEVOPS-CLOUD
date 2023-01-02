@@ -1,0 +1,32 @@
+1.File Ismine Tarih Ekleme:
+
+a.Declarative:
+DATE=`date +"%d_%b_%Y_%H%M"`
+SQLFILE=/var/backup/db/db_backup_${DATE}.sql
+DATABASE=<database_name>
+USER=<db_user>
+PASSWORD=<db_user_password>
+ 
+# (2) in case you run this more than once a day,
+# remove the previous version of the file
+unalias rm     2> /dev/null
+rm ${SQLFILE}     2> /dev/null
+rm ${SQLFILE}.gz  2> /dev/null
+ 
+# (3) do the mysql database backup (dump)
+sudo mysqldump -u ${USER} -p${PASSWORD} ${DATABASE}|gzip > ${SQLFILE}.gz
+
+
+b.Imperative:
+sudo vim .my.cnf
+-----------------------------------------------------------------------
+[mysqldump]
+protocol=tcp
+host=localhost
+port=3306
+user=root
+password=lindaelizabethremimarkusadrianumit11
+-----------------------------------------------------------------------
+sudo chmod 600 ~/.my.cnf
+sudo service mysql restart
+mysqldump eyvidb > ~/backup/backup_`date +"%d_%b_%Y_%H%M"`.sql

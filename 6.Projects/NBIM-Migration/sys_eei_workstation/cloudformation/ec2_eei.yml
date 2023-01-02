@@ -1,0 +1,185 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  ImageId:
+    Type: String
+    
+  Env:
+    Type: String
+    Default: "dev"
+  AppName:
+    Type: String
+    Default: "eei-workstation"
+  InstanceType:
+    Type: String
+    Default: "m5.large"
+  VpcId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/networking/private-vpc-1
+  Subnet1:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/networking/private-vpc-1/subnet-1
+  Subnet2:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/networking/private-vpc-1/subnet-2
+  Subnet3:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/networking/private-vpc-1/subnet-3
+  NbimUserPrefixList:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /eei-workstation/networking/prefixlist/userprefixlist
+  NbimOfficePrefixList:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /eei-workstation/networking/prefixlist/officeprefixlist
+  NbimDirectoryId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/mad/directoryid
+  NbimDirectoryName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/mad/directoryname
+
+Resources:
+  EEIWorkstationSGIP:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "InstanceProfile-${AppName}-${Env}"
+      Roles:
+        - !ImportValue EEIWorkstationRole  # check
+
+  EEIWorkstationLT:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "LaunchTemplate-${AppName}-${Env}"
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 1
+          HttpTokens: required
+        ImageId: !Ref ImageId
+        KeyName: !Ref MyKeypair
+        InstanceType: !Ref InstanceType
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            AssociatePublicIpAddress: False
+            Groups:
+              - !ImportValue EEIWorkstationSG  # check
+        IamInstanceProfile:
+          Arn: !GetAtt EEIWorkstationSGIP.Arn
+        BlockDeviceMappings: 
+          - DeviceName: /dev/sda1
+            Ebs:
+              VolumeSize: 200
+
+  EEIWorkstationASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub "AutoScalingGroup-${AppName}-${Env}"
+      VPCZoneIdentifier:
+        - !Ref Subnet1
+        - !Ref Subnet2
+        - !Ref Subnet3
+      LaunchTemplate:
+        LaunchTemplateId: !Ref EEIWorkstationLT
+        Version: !GetAtt EEIWorkstationLT.LatestVersionNumber
+      MinSize: 0
+      MaxSize: 1
+      DesiredCapacity: 1
+      HealthCheckGracePeriod: 600
+      HealthCheckType: EC2
+      Tags:
+        - Key: Name
+          Value: !Sub "eei-${Env}"
+          PropagateAtLaunch: True
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 0
+
+  EEIWorkstationLHLaunch:
+    Type: AWS::AutoScaling::LifecycleHook
+    Properties:
+      AutoScalingGroupName:
+        Ref: EEIWorkstationASG
+      LifecycleTransition: "autoscaling:EC2_INSTANCE_LAUNCHING"
+      DefaultResult: CONTINUE
+      HeartbeatTimeout: 900
+
+  EEIWorkstationLHTerminate:
+    Type: AWS::AutoScaling::LifecycleHook
+    Properties:
+      AutoScalingGroupName:
+        Ref: EEIWorkstationASG
+      LifecycleTransition: "autoscaling:EC2_INSTANCE_TERMINATING"
+      DefaultResult: CONTINUE
+      HeartbeatTimeout: 300
+
+  DomainJoinDocument:
+    Type: AWS::SSM::Document
+    Properties:
+      Content:
+        schemaVersion: '2.2'
+        description: Set hostname and domain join
+        parameters:
+          Env:
+            default: dev
+            type: String
+        mainSteps:
+          - action: aws:runPowerShellScript
+            name: setHostNameAndDomainJoin
+            inputs:
+              runCommand:
+                - |
+                  Rename-Computer -NewName "eei-{{ Env }}" -Force
+          - action: aws:runDocument
+            name: domainjoin
+            inputs:
+              documentType: SSMDocument
+              documentPath: AWS-JoinDirectoryServiceDomain
+              documentParameters:
+                directoryId: !Ref NbimDirectoryId
+                directoryName: !Ref NbimDirectoryName
+          - action: aws:runPowerShellScript
+            name: addLocalGroups
+            inputs:
+              runCommand:
+                - |
+                  Add-LocalGroupMember -Group "Administrators" -Member "MOAWINDOM\LG_(Rubix_WorkstationUAT)_(Administrators)"
+                  Add-LocalGroupMember -Group "Administrators" -Member "MOAWINDOM\x1-nbaba3"
+                  Add-LocalGroupMember -Group "Users" -Member "MOAWINDOM\LG_(Rubix_WorkstationUAT)_(RDP)"
+                  Restart-Computer
+          - action: aws:runPowerShellScript
+            name: installMAtlab
+            inputs:
+              runCommand:
+                - |
+                  choco install nbim-ctx-office -y 
+                  choco install nbim-vscode -y 
+                  choco install nbim-python3.10 -y  
+                  choco install nbim-gitscm -y 
+                  choco install nbim-ssms18 -y 
+                  Restart-Computer          
+      DocumentType: Command
+
+
+
+  SetupEc2:
+    Type: AWS::SSM::Association
+    Properties:
+      AssociationName: !Sub "Setup-${AppName}"
+      Name: !Ref DomainJoinDocument
+      Parameters:
+        Env:
+          - !Ref Env
+      Targets:
+        - Key: tag:Name
+          Values:
+            - !Sub "eei-${Env}"
+
+      OutputLocation:
+        S3Location:
+          OutputS3BucketName: !ImportValue S3LogBucket  # check
+
+  MyKeypair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName: EE1KeyPair
+

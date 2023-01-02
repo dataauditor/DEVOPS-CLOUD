@@ -1,0 +1,20 @@
+1.Localdeki MySQL Containere Baglanma: 
+sudo mysql -h 172.18.0.2 -P 3306 -u clarusway -p 
+  - ilgili containerin ip'si ile mysql'e localden baglandim.
+telnet 172.18.0.2 3306 
+  - containerin ip'sine baglanti var mi
+
+show databases;
+use dbname;
+
+CREATE TABLE `offices` (
+    ->   `office_id` int(11) NOT NULL,
+    ->   `address` varchar(50) NOT NULL,
+    ->   `city` varchar(50) NOT NULL,
+    ->   `state` varchar(50) NOT NULL,
+    ->   PRIMARY KEY (`office_id`)
+    -> ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+Query OK, 0 rows affected (0.031 sec)
+
+SELECT * FROM offices;
+INSERT INTO `offices` VALUES (3,'54 Northland Court','Richmond','VA');

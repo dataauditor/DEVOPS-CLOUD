@@ -1,0 +1,3 @@
+---
+- s3://nbim-s3-euwe1-software-packages-chocolatey/longview/Longview_Client/75.1.1.6307/Longview-Trading-System.zip
+- s3://nbim-s3-euwe1-software-packages-chocolatey/longview/Build_6300_Linedata_FIXLogReader.zip

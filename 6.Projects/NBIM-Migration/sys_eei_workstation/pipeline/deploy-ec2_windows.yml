@@ -1,0 +1,37 @@
+trigger:
+  paths:
+    include:
+      - cloudformation/ec2_eei.yml
+
+pr: none
+
+variables:
+  stack_name: 'eei-workstation'
+  region: 'eu-west-1'
+  ${{ if in(variables['Build.SourceBranchName'], 'master', 'main') }}:
+    env: 'prod'
+    pool_name: '(AWS)_(nbim-eei-workstation-prod)'
+  ${{ if eq(variables['Build.SourceBranchName'], 'develop') }}:
+    env: 'dev'
+    pool_name: '(AWS)_(nbim-eei-workstation-dev)'
+  ${{ if notin(variables['Build.SourceBranchName'], 'master', 'main', 'test', 'develop', 'dev') }}:
+    env: 'dev'
+    pool_name: '(AWS)_(nbim-eei-workstation-dev)'
+
+pool:
+  name: $(pool_name)
+  demands:
+  - agent.os -equals Linux
+
+steps:
+  - script: |
+      ami_id=`aws ec2 describe-images  --filters "Name=name,Values=windows-2022full-nbim-prod-*" --owners 066615927333 --query "Images[].[CreationDate, ImageId, Name ]" --output text | sort -k1 | tail -n1 | awk '{print $2}'`
+      echo "AMI ID: $ami_id"
+      echo "##vso[task.setvariable variable=ImageId]$ami_id"
+    displayName: "Get the base AMI ID"
+  - script: |
+      aws --region ${{ variables.region }} cloudformation deploy \
+        --template-file cloudformation/ec2_eei.yml \
+        --stack-name ${{ variables.stack_name }} \
+        --parameter-overrides ImageId=$(ImageId) Env=${{ variables.env }}
+    displayName: "Deploying EEI workstation"

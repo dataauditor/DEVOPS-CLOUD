@@ -1,0 +1,29 @@
+1.Genel:
+- vm olusturulurken default olarak yapilir.
+- SSE: Server side encryption
+
+
+2.VM Encryption:
+- platform managed key, customer managed key veya ikisini ayni anda ihtiva eden kriptolama secilebilir.
+> + create a resource > vm > Encryption at-rest with a platform-managed key
+
+
+3.Azure Disk Encryption (ADE):
+- Bitlocker ile disk'lerin encryptionunu yapar. Bunun icin minimum image, size requirements var.
+- Minimum: Size: Standard DS1 v2, Image: Windows Server 2019 Datacenter -Gen1
+> windows-vm > Disks > Additional Settings > Disks to encrypt > OS disk (OS and data disks)
+  > Key vault > Create new > RG / Key vault name: azdiskenc / Pricing tier: Standard
+    > Enable access to: Azure Disk Encryption for volume encryption 
+    > Permission model: Vault access policy > create
+  > Key: (bos) / Version: (bos) 
+  > save
+
+
+
+
+
+
+
+
+
+

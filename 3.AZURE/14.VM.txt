@@ -1,0 +1,152 @@
+1.VM Olusturma:
+- Availability options: Her regionda yok. Yalnizca olustururken secilebilir.
+- Username/Password: Windows remote desktop olarak baglanirken kullanilir. Linux makine icin SSH kullanilir.
+- Windows makine icin RDP baglantisi secilir.
+- Data disk: additional disk.
+- Diagnostics: Kapatti
+- Auto shutdown: On 18:00PM / Eastern Time (aksamlari otomatik olarak cihazlari kapatir.)
+- Proximity placement group: Availability placement group'tan farkli olarak cihazlar ayni AZ'de ve hizli calisirlar.
+- Extensions: Windows icin Script
+- Cloud Init: Linux icin Script
+
+
+2.Connect to Windows VM:
+- Ilgili makine Windows yuklu.
+- Ilgili makineye RDP ile ilk defa baglanirken bize bir profile olusturur.
+> azure-vm > connect > Download RDP File 
+  > More choises > Use a different account > Username: umit / Password: 123qwe > ok
+  > sol alt > disconnect
+
+
+3.VM Azailibility:
+- Availability Zone: VM basina olur. Sadece premium disk icin %99,99 connectivity garanti eder.
+- Availability Set: En az 2 identical olarak ayni VM ayni Availability Set'e deploy edilirse %99,95 availabilty connectivity olur.
+> Availability Set > Create new > Name: azavset 
+  > Fault domains: 3 (fiziki switch vb 3'e cikarip ariza durumunu azaltabiliriz.)
+  > Update domains: 5 (patch'lerin update yonetimidir. 5 gruba ayirir VM'leri. Max yapilabilirsa teker teker update eder.)
+
+
+4.Overview:
+- VM'leri izleriz.
+- pin buttonlar ile ilgili grafikleri dashboarda koyabiliriz.
+- Dashboard'taki grafikleri customize edebiliriz.
+> azure-vm > overview > monitoring > 
+
+
+5.Diagnostics Settings:
+- VM kurulurken secilmeli. Secilmezse guest-level ile izleme yapilabilir.
+- Diagnostic icin otomatik bir storage account olusturulur Azure tarafindan.
+- Basic: 1 dk arayla veri cekerler. Custom ile dusurulebilir.
+> azure-vm > Diagnostic Settings > Enable quest-level monitoring 
+  > Performance counters > Basic veya Custom
+  > Logs > Error, Warning... loglarini seceriz (storage accounta gonderir.)
+  > Crash dumps > memory icerigini 
+  > Agent (agent ile ilgili problem varsa remove edilebilir.)
+
+
+6.Insights:
+- performance ve health ile ilgili monite eder.
+> azure-vm > Insights > Enable 
+
+
+7.Extensions + Applications:
+- Custom Script Extension: Remotely powershell script yazmaya yarar.
+> azure-vm > Extensions + Applications > + Add > Custom Script Extension 
+
+
+8.Run Command:
+- Buradan dogrudan shell script yazilabilir. 
+- Burada yazilan script dogrudan VM'de uygulanir.
+- Extensions + Applications'a benzer.
+> azure-vm > Run command > RunPowerShwllScript
+------------------------------------------------------------------
+$PSVersionTable.PSVersion
+------------------------------------------------------------------
+
+
+9.Bastion:
+- Subnetini, Azure otomatik ayarlar veya customize edilebilir. Biz costumize ediyoruz burada.
+- Bastion icin subnet olusunca Bastion olusturulur. 
+> azure-vm > Bastion > Configure manually (otomatik de secilebilir) > Subn / RG / Name: bastion-subnet 
+  / Region / Virtual network: umitVnet / Manage subnet configuration > + Subnet (VM'in yanina bastion icin yeni bir Subnet olusturulur.)
+  > Name: bastion-subnet / Subnet address range: 10.0.2.0/24 (mevcut degistirildi) > save
+> azure-vm > Bastion > create 
+  > Username: aztestuser / Password: 1234qwer
+> Yukarda olusan pop-up'a tiklayarak azure-vm'ye ulasilir.
+
+ 
+
+10.Create VM in Powershell:
+- Oncelikle RG olusturulurki resourcelari silmek kolay olsun.
+- Sonra VM olusturulur.
+
+Powershell:
+verb-resource
+Get-AzResourceGroup 
+New-AzResourceGroup -Name aznewrgtest -Location EastUS
+New-AzVM -ResourceGroupName "aznewrgtest" -Name "aznewvm" -Location "EastUS" -VirtualNetworkName "azvnet" -SubnetName "default" -SecurityGroupName "newNSG" -PublicIpAddressName "myipaddr" -OpenPorts 80,443,3389
+  > User: admin / password: 123456Qwerty
+Stop-AzVM -ResourceGroupName "aznewrgtest" -Name "aznewvm"
+Start-AzVM -ResourceGroupName "aznewrgtest" -Name "aznewvm"
+
+
+
+11.Size:
+- Size degisikligi yapar. 
+- Oncesinde vm stop edilir.
+> my-vm > Size > bir size secilir > Select 
+
+
+12.Redeploy VM:
+- Start, stop, RDP connection fail ... vb sorunu olan VM'yi redeploy ederiz.
+- Iki sekilde yapilabilir: Cloud Shell veya Redeploy sekmesinden.
+- Powershell ile ilgili vm'i terminate eder yeniden acariz.
+
+a.Powershell:
+> my-vm > Cloud Shell > Powershell:
+Set-AzureRmVM -Redeploy -ResourceGroupName "umit-rg" -Name "my-vm"
+
+b.Redeploy:
+> my-vm > redeploy > redeploy 
+
+
+13.Move:
+- RG uzerinden resourcelari secerek veya dogrudan resource uzerinden ilgili resourcelari baska RG'ye aktarabiliriz.
+- Powershell ve CLI ile de RG degisikligi yapilabilir. 
+> umit-rg > my-vm, my-nic, my-disk, my-new-ip > move 
+
+
+14.Backup:
+- Backup ile VM ayni Regionda olmali.
+- Gunluk + haftalik ve aylik ayri ayri backup policy eklenebilir veya yalniz biri. 
+> my-vm > Backup > Recovery Services vault: Create new > vault249 / RG 
+  > Create a new policy > Policy Name: DailyPolicy2 > Backup schedule > Frequency: Daily / 11:00PM / UTC+01:00 / 
+  > Retention Range: 30 days  
+  > Retention of weekly backup point: Sunday / 08:00 / 12 weeks
+  > Retention of monthly backup point: First / Sunday / 8:00 / 12 months
+  > ok > Enable Backup
+
+
+15.Restore From Backup:
+- Backup uzerinden yeni VM olusturulur.
+> my-vm > Backup > Viev all jobs (backup islemlerini gosterir)
+
+a.Yeni VM Restore Etme:
+> my-vm > Backup > Restore points > 11/05/2022 > ... (3 nokta) > Restore VM
+  > Create new > Create virtual machine (Restore disks) > VM name: azvm004
+  / RG / storage account > ok
+
+b.Replace Existing VM:
+> my-vm > Backup > Restore points > 11/05/2022 > ... (3 nokta) > Restore VM
+  > Replace existing > Replace disks / .. > ok
+
+
+
+
+
+
+
+
+
+
+

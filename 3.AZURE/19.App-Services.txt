@@ -1,0 +1,127 @@
+1.Genel:
+- Size secimi yapilmaz. Yalnizca service secilir. PaaS
+- Source Kodu ve Kodun configurasyonunu gonderirsin otomatik calisir.
+- VSC, AzureDevops, Github actions ile uyumlu bir env sunar.
+- App Service Plan: Web App olusturmak icin gerekiyor. Web App, application olarak dusunursek , App Service Plan'i hosting olarak degerlendirebiliriz.
+- Web App ucretsiz, App Service Plan ucretlidir.
+- Web app: windows ise kurarken, linux ise sonradan CI/CD pipeline ile deployment pipeline kurulabilir.
+- Github, Bitbucket, Git local ... ile uyumludur.
+
+
+
+2.App Service Olusturma:
+- Once App Service Plan olusturulur sonra Web App(ler) olusturulur.
+
+
+
+3.App Service Plan:
+- Hosting gibi dusunulebilir.
+- Birden fazla Web App uzerinde calisabilir.
+- Web App'lerin uzerinde calistigi resourcelardir.
+- Windows ve Linux sistemleri ayri ayri bazi appsleri calistiramiyor.
+- Linux: Ruby, Java yalniz linuxta calisiyor.
+- Windows: .NET yalniz windows'ta calisiyor.
+> + Create a resource > Web > App Service Plan > create > 
+  > Subs / create new RG / name: appplan-rg / App Service Plan details / Name: my-appplan
+  / Linux / B1 (instance type) / create
+
+
+
+4.Web App:
+- App Service Plan ile ayni RG'da olmali.
+- Ismi unik olmali.
+- CD: Yalniz Windows ile calisir.
+> + Create a resource > Web > Web App > Subs / RG: appplan-rg / Name: umitwebapp 
+  > Publish: Code (Docker container, Static Web App) / Runtime stack: .NET Core 3.1 
+  > Linux > Central US > Linux plan: my-appplan (sectik) 
+  (> Deployment ile ilgili Github repodan Github action vasitasiyla deployment yapilabilir. Yalniz Windows ile calisir bazi sizeleri ile.)
+  > create
+
+
+a.Deployment center
+- Web App configurationi yapilir. 
+- Olusturduktan sonra configure edilir.
+- Olustururken Deployment secilmediyse burada deployment yapilir. Linux'ta otomatik olmuyor.
+- Github, Bitbucket, Local Git, Azure Repo veya FTP'dan CI/CD yapilabilir.
+> appplan-rg > umitwebapp > Deployment center > ...
+
+
+b.Configuration:
+- ayarlar yapilabilir. configuration file ayarlari...
+> appplan-rg > umitwebapp > Configuration
+
+
+c.Custom domains:
+- HTTPS only enable, IP address 
+> appplan-rg > umitwebapp > Custom domains > HTTPS only enable
+
+
+d.Networking:
+- Allow ve Deny rule'lari belirlenir.
+- NAT gibi ayarlamalar... yapilabilir.
+- IP bazli kisitlamalar uygulanabilir.
+- Iki endpoint olur. Biri public digeri administrator endpointtir (umitwebapp.scm.azurewebsites.net).
+> appplan-rg > umitwebapp > Networking > Access restriction (ilgili allow-deny rulelar belirlenir.)
+> appplan-rg > umitwebapp > Networking > App assigned address (SSL ile ilgili ayarlar) > HTTPS only: off
+> appplan-rg > umitwebapp > Networking > Private endpoints (premiumda calisir ve farkli subscriptionlar arasi private endpointlerle baglanirlar kendi arasinda)
+> appplan-rg > umitwebapp > Networking > VNet integration (VM'den Web service'e internete cikmadan baglanti imkani saglar. Boylece tum public trafigi de blocklayabiliriz. Access Rest ile.)
+  > + Add VNet > 
+
+e.Scale out:
+- Cihaz sayisini artirir/azaltir. Her planda calismaz.
+- Otomatik olarak LB ilave edilir.
+- Maximum cihaz sayisi plana bagli olarak degisir.
+- Manual (her makinede calismaz) ve Custom autoscale (basic planlarda calismaz) seklinde iki secenek var.
+- Rule eklerken hem yukseltmeye hem de azaltmaya olacak sekilde minimum 2 rule ekle.
+- Thresholdun disinda oldugu surece 5dk'da bir instance acar/kapatir.
+> appplan-rg > umitwebapp > Scale out > Manual > Instance count: 2
+> appplan-rg > umitwebapp > Scale out > Custom autoscale > Scale based on metric
+  > + Add a rule 
+    > metric source: my-applan / average / greater than: %75 / Duration: 10 (10 dk suresince %75 uzerinde cpu kullanimi olursa)/ 
+    > Operation: Instance count by (belirlenen adet bazinda artir) / Instance count: 1 / Cool down: 5dk (5 dk bekleyip yeni instance ekle) > add
+  > + Add a rule 
+    > metric source: my-applan / average / less than: %25 / Duration: 10 (10 dk suresince %25 altinda cpu kullanimi olursa)/ 
+    > Operation: Decrease count by (belirlenen adet bazinda azalt) / Instance count: 1 / Cool down: 5dk (5 dk bekleyip bir instance kapat) > add
+  > Instance limits > Minimum: 1 / Maximum: 3 / Default: 2 > save
+
+
+f.Scale up:
+- Cihazi daha guclu cihazla degistirir.
+- F1'den B1 planina (cihaz modeli) gecebiliriz.
+- Plan degisikliklerini dev/test, prod ayri ayri yapabiliriz. 
+> appplan-rg > umitwebapp > Scale up > Dev/Test > B1 > apply
+> appplan-rg > umitwebapp > Scale up > Production > S2 > apply
+
+
+g.Backups:
+- Web app'in source code, configurationu ... vb hepsi yedeklenir.
+- Basic planlar ile calismaz.
+- Backup'i yedeklemek icin container gerekli. Storage account ile Web app ayni subscriptionda olmali.
+- Once configure edilir sonra Backup alinir.
+- Manual ve scheduled backup imkani var.
+
+Backup Kurulum:
+> appplan-rg > umitwebapp > Backups > Configure > Storage settings 
+  > + Storage account: 
+    > Name: appbkp / Storage v1 /Standard / LRS / Region / Version 1.2 > ok
+    > + Container > appbkp-container / private > create > appbkp-container > select
+  > Scheduled backup (on)
+    > Backup Every: 4 (planin kapasitesi gunde kac backupa izin veriyor) / Hours / 
+    > Start backup schedule from: 09/05/2022 11:00PM / Retention days: 15
+    > Keep at least one backup: yes
+  > save
+
+Manual Backup Alma:
+- Backup'a tiklayinca manual olarak yedekler.
+- Scheduled backup ile de ayrica backup otomatik alinir.
+> appplan-rg > umitwebapp > Backups > Backup 
+
+
+h.Restore:
+- Mevcut Backuplardan biri secilerek restore yapilir.
+> appplan-rg > umitwebapp > Backups > Restore
+
+
+
+
+

@@ -1,0 +1,247 @@
+1.AKS (Kubernetes Services):
+- K8s servisidir ve cluster olusturur.
+- kubectl ile komut girilir.
+- AKS dahil Container calistirabilen/calistiran serviceler:
+  - Web App: EC2 veya container secerek yukleme yapilabilir. Container tum dependenciesleri karsilar.
+  - Kubernetes services: ECS EC2 gibi cluster olusturup containerlerle calisir.
+  - Container Instances (ACI): ECS Fargate fibi instance ile isiniz olmaz. Serverless.
+  - Service Fabric Cluster: Microservice mimarisi kapsaminda containerleri olusturur. Localdekiler dahil bircok serveri ayni anda yonetebilir.
+  - VM: Docker yukleyerek de container kullanilabilir.
+- Podelari "kubectl scale --replicas=3 deployment/azure-vote-front" komutu ile scale ederiz.
+- Node'lari "Node pools" ile scale ederiz.
+
+
+2.Kubernetes Service:
+- Cluster olusturur. Deploymentlari yapmaz.
+- VM'lerde calisir. ECS EC2 gibi.
+- Autoscale, node tipi belirlenerek cluster olusturulur.
+- LB otomatik olusur, zorunlu.
+- Autoscaling sayesinde node sayisi ihtiyaca gore azalip artar.
+
+a.Olusturma:
+> + Create a resource > Containers > Kubernetes Service 
+  > Subs / RG: k8s-rg / Standard / Region / Cluster name: my-cluster
+  / Zones: hepsini sec / version / Node size / Scale method: Autoscale / Node count range: 1-5
+  > Node pools: farkli workloadslari icin acilabilir. Mevcut node poolun 1-5 node'u var.
+  > Enable virtual nodes: secmedik
+  > Role-based access control (RBAC): Enabled
+  > Network configuration: Kubenet (CNI'da var)
+    / DNS name prefix: my-cluster-dns / Load balancer / Enable HTTP application routing: sec / ...
+    > Container monitoring: Enabled 
+    > create
+
+b.Node pools:
+- Node'lari scale etmek icin kullanilir esas olarak.
+- Ilgili poolu gorup yeni poollar ekleyebiliriz.
+- Mevcut poolun node sayisini artirabilirsiniz.
+- K8s ve image'i upgrade edebiliriz.
+> k8s-rg > my-cluster > Node pools > ... (3 nokta) > Scale node pool > 7 > apply
+
+
+3.Kubectl:
+- Localden kullanabilmek icin credentials tanitilir ve azure cli yuklenir.
+- Cloud Shell ile de kullanilabilir.
+
+VSC:
+sudo apt install azure-cli
+az aks install-cli       
+  - tanitma
+az aks get-credentials --resource-group k8s-rg --name my-cluster 
+  - credentialslari localimizdeki /home/umit_ceylan/.kube/config 'e tanitildi.
+
+Cloud Shell:
+az aks install-cli       
+  - localde calisirken az cli yukleriz.
+az aks get-credentials --resource-group k8s-rg --name my-cluster 
+  - credentialslari localimizdeki /home/umit_ceylan/.kube/config 'e tanitildi.
+  - Cluster'a baglaniriz.
+kubectl get nodes
+vi azure-vote.yaml
+-----------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-vote-back
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: azure-vote-back
+  template:
+    metadata:
+      labels:
+        app: azure-vote-back
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+      - name: azure-vote-back
+        image: mcr.microsoft.com/oss/bitnami/redis:6.0.8
+        env:
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "yes"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 6379
+          name: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: azure-vote-back
+spec:
+  ports:
+  - port: 6379
+  selector:
+    app: azure-vote-back
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-vote-front
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: azure-vote-front
+  template:
+    metadata:
+      labels:
+        app: azure-vote-front
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+      - name: azure-vote-front
+        image: mcr.microsoft.com/azuredocs/azure-vote-front:v1
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+        env:
+        - name: REDIS
+          value: "azure-vote-back"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: azure-vote-front
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+  selector:
+    app: azure-vote-front
+-----------------------------------------------------------------------
+  - 1 frontend 1 backend ve herbirine bir service var. 
+  - Frontend'in service'i LB.
+kubectl apply -f azure-vote.yaml 
+kubectl get service
+
+Browser:
+<public-ip:80>
+  - servise ulasilir.
+
+Cloud Shell:
+az aks browse --resource-group k8s-rg --name my-cluster --listen-port 8002   
+  - podelari, namespaceleri gosterir.
+  - Yalniz localde calisiyor olabilir bu code.
+kubectl get pods -o wide
+  - back ve front 2 tane var.
+kubectl scale --replicas=3 deployment/azure-vote-front
+  - Ilgili deploymentin pode sayisini degistirdik.
+kubectl get pods -o wide
+  - 4 pode var. 1 back 3 tane front icin pode var.
+kubectl autoscale ...
+  - pode'lar icin autoscale ayarlanir. (min, max vb kriterler girilir.)
+
+
+
+4.ACI (Container Instances):
+- Fargate gibi container.
+- Scaling vb ihtiyaci olmayan tek container kullanimlarinda iyidir.
+
+a.Olusturma:
+- Fargate gibi calisan serverlestir.
+> + Create a resource > Container Instances > create 
+  > subs / rg: aci-rg / Container name: newcontainer / region / az
+  / Image resource: Quickstart images (hazir imageler)
+    - Other registry: Docker hub, ECR'dan private/public imageleri cekebiliriz.
+    - Azure Container Registry: Azure'un kendi imagelerinden cekebiliriz.
+  / Image: Linux / Size : Change size: 1 core, 1 GIB
+  > Networking type: Public
+  / DNS name label: ugur (domainname)
+  / Ports: 80
+  > Restart policy: On failure 
+  / Environment variables: Key: Name / Value: Development
+  / Command override: [ "/bin/bash", "-c", "echo hello; sleep 100000" ]
+  > create
+
+b.Kullanim:
+> All resources > newcontainer > FQDN: ugur.useast1.azurecontainer.io
+  - Ilgili FQDN ile browserdan containere ulasilabilir.
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,373 @@
+1.Genel: 
+- Public ve Internal LB var.
+- Internal LB, Public LB ile yonetilen VM'lerden gelen veriyi alip ikinci kademe vm'lere dagitimi saglar.
+"Azure Quickstart Templates"
+- NAT ile istenen port istenen VM'e yonlendirilebilir. 
+- AZ'leri kullanabiliriz.
+- Availibility Set (Update domain ve Fault domain olarak bolunen VM setleri)'lerinde yuk dengelemesi yapilabilir.
+- VM, VMSS, AKS, Web-app'lere lb kurulabilir.
+
+a.Azure Load Balancing Services:
+- Azure Load Balancer: basic ucretsiz, standard ve gateway ucretlidir. Layer 4. Internal ve public icin kullanilir.
+- Azure Application Gateway (Layer-7 LB with HTTP rules):    
+  * Ucretlidir.
+  * SSL/TLS (Secure Sockets Layer)
+  * Otomatik olceklendirme,
+  * Static VIP,
+  * Farkli AZ'lerde calisiyor,
+  * URL tabanli filtreleme,
+  * Yeniden yonlendirme (header rewrite ozelligi),
+  * Session affinity,
+  * IP'ler yerine HTTP/HTTPS ile calisir.
+  * WAF (Web application firewall) ozelligi de mevcuttur.
+  * Path-based routing ve Multiple-site routing yapilabilir.
+  * Path-based routing: ilgili FQDN'e girip contoso.com/images/* veya contoso.com/video/* seklinde pathlere baglanilabiliyor.
+  * Multiple-site routing: Application Gateway birden fazla domainname (FQDN) destekler. Ornegin talepler once application gateway gelir. Buradan fabrikam.com veya contoso.com'un havuzuna yonlendirilir.
+- Azure Front Door Service
+
+b.SKU's:
+Basic LB (SKU): 
+  * Port forwarding (baglanti noktasi yonlendirme),
+  * Free,
+  * HTTPS'i desteklemez,
+  * Up to 300 instances in the backend pool,
+  * Otomatik yeniden yapilandirma,
+  * Health probe,
+  * Kaynak ag adresi cevirisi (SNAT) araciligiyla giden baglantilar,
+  * Public yukdengeleyiciler icin Azure Log Analytics araciligi ile diagnostics.
+Standard SKU: 
+  * Recommended for production workloads, 
+  * HTTPS health probe,
+  * Yuksek kullanilabilirlik (HA) baglanti noktalari,
+  * Giden trafik icin ayri yonlendirmeler ici kurallar,
+  * has SLA, 
+  * NAT Gateway support, 
+  * Private Link support, 
+  * Farkli AZ'lerde kullanilabilir, 
+  * up to 1000 instances in the backend pool.
+Azure Application Gateway SKU:
+ 
+
+
+
+2.Load Balancer:
+a.LB Olusturma:
+> Load Balancer > + Create 
+  > subs / RG: lb-rg / Name: ugur-lb / Region: East US
+  > SKU: Basic (Standard, Gateway de secilebilir)
+  > Type: Public (Internal: private IP adresi olur.)
+  > Tier: Regional (Global)
+  > + Add a frontend IP configuration (birden fazla Frontend IP conf eklenebilir.)
+    > Name: frontend-1
+    > IP version: IPv4
+    > Public IP address: (mevcut bir IP adresi veya DNSname secilebilir) > create new: lb-public-ip / Dynamic > Add
+  > + Add a backend pool
+    > Name: backend-pool-1
+    > Virtual network: lb-vn
+    > Associated to: Virtual machines (Virtual machines scale set, Unassociated)
+    > IPv4
+    > + Add (ilgili VM'ler eklenir)
+  > + Add a backend pool
+    > Name: backend-pool-2
+    > Virtual network: lb-vn
+    > Associated to: Unassociated (Virtual machines, Virtual machines scale set) Sonradan vm kurup associate edilmeli.
+  > + Add a load balancing rule:
+    > Name: lb-rule-1
+    > IP Version: IPv4
+    > Frontend IP address: frontend-1
+    > Backend pool: backend-pool-1
+    > Port: 80
+    > Backend port: 80
+    > Health probe: create new: 
+      > Name: probe1
+      > Protocol: HTTP
+      > Port: 80
+      > Path: /
+      > Interval: 5 (5 sn'de bir check eder.)
+      > Unhealthy threshold: 2
+      > ok
+    > session persistence: None
+    > Idle timeout: default
+    > Floating IP: Disabled
+    > Add
+
+
+b.LB (ugur-lb)'i Inceleme:
+> ugur-lb 
+  > Frontend IP configuration > frontend-1 (IP address: 40.87.94.205)
+    > rule ve public IP address'i gorebiliriz.
+  > Backend pools > backend-pool-1
+    > Ilgili associated vm'leri gosterir. > vm-1
+      > stop/start edilebilir vm.
+  > Health probes
+    > ilgili port, interval ve threshold incelenebilir.
+  > Loadbalancing Rules
+    > Frontend IP:port ile public adresini ve icerde gonderecegi Backend port ve pool'u gosterir.
+  > Alerts
+    > New alert rule
+      > Select condition > Signal type: all > Monitor service: all
+      > Health Probe Status
+      > Dimension name:  ...
+
+
+c.ARM Templates ile LB Olusturma:
+> https://github.com/dataauditor/azure-quickstart-templates
+  > quickstarts 
+  > microsoft.network
+  > load-balancer-standard-create
+  > Deploy to Azure
+    > RG: lb-rg / Region / Project name: lb-proj / Admin Username: fw-web-instance / Admin Password: Mustafa11,lb
+    > create
+
+
+d.Arm Template Deploymet:
+- Resource group altinda incelenebilir.
+> lb-rg > Deployments > Microsoft.LoadBalancer-24056 (Succeded-ilgili arm template'i deploy edildigini gosteriyor)
+
+
+
+ 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+3.Azure Application Gateway:
+- Application gateway icin VM'lerden farkli bir subnet olusturulur.
+Surec:
+> frontend IP olusturulur.
+  > Listener: frontend IP'yi hangi certificate ile hangi port'lardan dinleyeceginiz listener olusturulur.
+    > Port: Listener'a port tanimlanir.
+    > Certificate: Listener'a certificate tanimlanir.
+  > WAF kurulabilir.
+  > Rule: tanimlanabilir.
+    > HTTP Setting: Custom Probe, health probe olusturulabilir.
+    > Backend Pool: Rule'a tanimlanir.
+
+
+a.Application Gateway Olusturma:
+- Oncesinde ayni Vnet'te Bir Subnet kurulur veya baska Vnet'te kurulacaksa VM'lerin bulundugu Vnet ile peering kurulur.
+> Application Gateway > create
+  > RG / Name: TestAPGW / Region 
+    > Tier: Standard V2 (Standard, WAF (web application firewalls), WAF V2)
+    > Enable autoscaling: Yes / Minimum instance count: 2 / Maximum instance count: 3
+    > Availibility zone: Zone 1, Zone 2, Zone 3
+    > HTTP2: disabled (acilabilir.)
+    > Virtual network: lb-vn  (farkli bir Vnet secilebilir. Peering ile baglanilir.)
+    > Subnet: apgw-subnet (app gw'a has kurduk.)
+  > Frontend IP address type: Public (Private, Both)
+    > Public IP Address: > Add new 
+      > Name: APPGW-PIP 
+      > OK
+  > Add a backend pool (ilgili vm'ler eklenir.)
+    > Name: APPGW-BP
+    > Add backend pool without targets: no (yes dersek VM'leri sonradan ekleyebiliriz.)
+    > Target type: virtual machine (App services, VMSS, IP address) 
+    > Target: 10.2.0.4, 10.2.0.6 (VM'lerin IP address'leri veya FQDN'leri veya Virtual machine secilerek tag ile girilir.) 
+    > Add
+  > Add a routing rule 
+    > Rule name: rule1
+    > Listener
+      > Rule name: APGW-RR
+      > Listener name: APGW-L
+      > Frontend IP: Public (onceden kurdugumuzu sectik)
+      > Protocol: HTTP
+      > Port: 80
+      > Listener ntype: Basic (Multi-site)
+      > Error page url: No (Yes: hata durumunda error page olusturur.)
+    > Backend targets:
+      > Target type: Backend pool
+      > Backend target: APPGW-BP
+      > HTTP settings
+        >  HTTP settings name: APGW-HS
+        > Backend protocol: HTTP
+        > Backend port: 80
+        > Cookie-based affinity: Disabled
+        > Connection draining: Disabled
+        > Request time-out: 20
+        > Override with new host name: No (Yes: yeni bir hostname eklenerek degistirilebilir.)
+        > Add
+   > create
+
+
+b.Backend Pool'a VM Ekleme:
+- Eger App gateway olustururken "Add backend pool without targets: yes" dersek VM'leri sonradan ekleriz.
+> TestAPGW
+  > Backend pools
+  > Add backend pool without targets: No
+  > Target type: 
+    > Virtual machine: Web01 (IP address secip adresleri ile de ekleyebiliriz.)
+    > Virtual machine: Web02
+    > save
+
+
+c.WAF (Web Application Firewall) Enable Etme:
+- OWASP Core Rule Set (CRS) araciligi ile koruma,
+- Azre Monitor ile izleme, loglari inceleme imkani,
+- Kurallari ve siteye ozel ilkeleri kullanarak ozellestirme,
+- Azure Application Gateway, Front Door ve Content Delivery Network (CDN) destegi (onizleme).
+- XSS attack ve SQL injection'lara karsi koruma saglar. 
+- WAF enable edip ardindan kurallar tanimlanabilir.
+> TestAPGW
+  > Web application firewall
+  > Tier: WAF V2
+  > Save
+
+
+d.Autoscale:
+> TestAPGW
+  > Configuration
+  > Capacity type: Autoscale
+  > Instance count: 2
+
+
+e.SSL Certificate Ekleme:
+> TestAPGW
+  > SSL settings (Preview)
+  > + SSL Profiles
+  > SSL Profile Name: 
+  > Upload a new certificate (onceden varsa secilebilir de.)
+  > Add
+
+
+
+
+
+4.Azure Front Door:
+- Application GW'den farki regionless (global) calismasi.
+- Microsoft'un kuresel uc aginda calisir. Bu yuzden disaster durumunda etkilenmez.
+- Birden fazla region'da bulunan ayni app'ler icin kullanilabilir.
+- Azure ve Azure olmayan hostlari destekler.
+- OSI layer 7 firewall.
+- Cesitli yonlendirme yontemleri sunar: gecikme onceligi, agirlikli ve oturum yakinligi.
+- CDN ile uygulama performansi artirilabilir.
+- URL-based routing.
+- Multiple-site hosting
+- TSL sonlandirma,
+- Ozel etki alanlari ve sertifika yonetimi,
+- URL yonlendirmesi,
+- URL rewrite,
+- IPv6 ve HTTP/2
+- WAF enkinlestirilebilir.
+- Iki farkli region'daki app uygulamasinda (biri yedek olarak dusunulebilir.) her birinin onunde Application Gateway kurulur. Iki Application Gateway ise bir Front door'a baglanir. Boylece Front door'un backend poolunda iki App Gw olur. Front door regionsuz.
+
+
+
+
+
+5.Azure Traffic Manager:
+- Front Door'a benzer eski bir service'tir.
+- Regionless, global calisir.
+- WAF ozelligi yok.
+- DNS tabanlidir.
+- Trafigin uc noktalare arasinda esit veya farkli agirliklar kullanarak dagitilmasi,
+- Trafigin, kullanicilari, DNS sorgularinin nereden kaynaklandigina gore geographic olarak dagitilmasi (Almanya'dan gelen istekler Almanya'ya yonlensin vb.), 
+- Trafigin oncelikli bir hizmet uc noktalari (VM, endpoint...) listesi kullanarak dagitilmasi,
+- Trafigin kullanicilari en iyi performansa sahip uc noktalarina yonlendirilmesi,
+
+
+
+
+
+6.Hands-on:
+- Availibility Set'e dahil ve Public IP address olmayan, ayni Subnette 2 VM var.
+a.LB Kurulumu:
+> Load balancing
+  > create load balancer
+    > subs | RG | Name: lb-web-1 | Region 
+    > SKU: Basic
+    > Type: Public
+    > Tier: Regional
+  > + Add a frontend IP configuration (birden fazla Frontend IP conf eklenebilir.)
+    > Name: lbpip
+    > IP version: IPv4
+    > Public IP address: (mevcut bir IP adresi veya DNSname secilebilir) > create new: > Name: lb-pip-01 > AZ: nine > OK
+    > Gateway Load Balancer: None
+    >Add
+  > + Add a backend pool
+    > Name: backend-pool-1
+    > Virtual network: lb-vn
+    > Associated to: Virtual machines (Virtual machines scale set, Unassociated)
+    > IPv4
+    > + Add (ilgili VM'ler eklenir)
+  > + Add a backend pool
+    > Name: webbp
+    > Virtual network: lb-vn (VM'lerin bulundugu Vnet secilir.)
+    > Backend pool configuration: 
+    > Associated to: Unassociated (Virtual machines, Virtual machines scale set) Sonradan vm kurup associate edilmeli.
+  > + Add a load balancing rule:
+    > Name: lb-rule-1
+    > Backend Pool Configuration: NIC
+    > IP Version: IPv4
+    > Virtual machines (Virtual machines scale set de secilebilir.) > + Add
+      > Web1 ve Web2 VM'leri secilir.
+      > Add
+    > Add
+  > create
+
+b.VM1 icin Inbound NAT Rule Olusturma:
+- VM'lere ayri rule'lar tanimlanabiliyor.
+> Load balancers
+  > lb-web-1
+  > Inbound NAT rules
+  > + Add
+    > Name: Web01-RDP
+    > Target virtual machine: Web01 (VM bazinda rule olusturulabilyor.)
+    > Network IP configuration: ipconfig (10.1.0.4) (VM'in private IP'si secildi.)
+    > Frontend IP address: lbpip (13.94.114.133) (lb'in public adresi)
+    > Frontend port: 3390
+    > Backend port: 3389
+    > Protocol: TCP
+    > Enable
+
+c.VM2 icin Inbound NAT Rule Tanimlama:
+> Load balancers
+  > lb-web-1
+  > Inbound NAT rules
+  > + Add
+    > Name: Web02-RDP
+    > Target virtual machine: Web02
+    > Network IP configuration: ipconfig (10.1.0.5) 
+    > Frontend IP address: lbpip (13.94.114.133) 
+    > Frontend port: 3391
+    > Backend port: 3389
+    > Protocol: TCP
+    > Enable
+
+d.RDP Baglantisi:
+- Farkli portlar ile farkli VM'lere ayni LB uzerinden baglanilabilir.
+> Remote Desktop Connection (acilir.)
+  > Computer: 13.94.114.133:3390  (3391)
+  > Connect
+  > Username: ugur
+  > Password: ...
+  > Yes
+
+e.Health probe:
+> Load balancers
+  > lb-web-1
+  > Health probes
+  > + Add
+    > Name: WEB-hp
+    > Protocol: TCP
+    > Port: 80
+    > Interval: 5
+    > Unhealthy threshold: 2
+    > Add
+
+f.Load Balancing Rule Olusturma:
+- LB ip address ile VM'lerin web sayfalarina ulasilabilir.
+> Load balancers
+  > lb-web-1
+  > Load balancing rules
+  > + Add
+    > Name: HTTPinbound 
+    > IP Version: IPv4
+    > Frontend IP Address: lbpip (13.94.114.133) 
+    > Backend pool: webbp
+    > Protocol: TCP
+    > Port: 80
+    > Backend port: 80
+    > Health probe: WEB-hp
+    > Session persistence: None (Ayni client ayni VM'e baglanabilir istenirse.)
+    > TCP reset: Disabled
+    > Floating: Disabled
+    > Add
+
+

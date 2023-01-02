@@ -1,0 +1,191 @@
+1.CLI:
+> Manage jenkins > Configure Global Security > Authentication (Disable olmamali) > save
+localhost:8080/cli
+  - cli komutlari var kullanilabilir.
+  > jenkins-cli.jar'a tiklanip indirilir ve asagidaki komutlar ayni konumda calistirilir.
+java -jar jenkins-cli.jar -s http://localhost:8080/ --username admin --password 123
+  - permission hatasi verirse jenkins username ve password tanimlanir yukardaki gibi.
+java -jar jenkins-cli.jar -s http://localhost:8080/ build Proje1
+ 
+
+2.Installation:
+a.Linux OS:
+sudo yum update -y
+yum install java -y
+wget http://mirrors.jenkins.io/war-stable/latest/jenkins.war
+java -jar jenkins.war --httpPort=8080
+  - Yuklemeyi yapar ve sonunda admin sifresi verir. Alternatifi diger Jenkins.txt'de.
+
+b.Container:
+docker run -d -p 8080:8080 jenkins/jenkins
+  - jenkins yuklenir containere ve bize admin sifresi verir.
+docker ps
+  - containerin id'si alinir.
+docker logs <containerid>
+  - loglari gorebilirsin sifreyi almak icin.
+docker exec -it <containerid> bash
+  - sifreyi alabilirsin.
+cat /var/jenkins_home/secrets/initialAdminPassword
+
+c.Maven/Jave/Git Yuklemesi:
+sudo yum update -y
+sudo amazon-linux-extras install java-openjdk11 -y
+sudo yum install java-devel 
+  - java yukledik.
+sudo su
+cd /opt
+rm -rf maven
+wget https://ftp.itu.edu.tr/Mirror/Apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
+tar -zxvf $(ls | grep apache-maven-*-bin.tar.gz)
+rm -rf $(ls | grep apache-maven-*-bin.tar.gz)
+sudo ln -s $(ls | grep apache-maven*) maven
+echo 'export M2_HOME=/opt/maven' > /etc/profile.d/maven.sh
+echo 'export PATH=${M2_HOME}/bin:${PATH}' >> /etc/profile.d/maven.sh
+exit
+source /etc/profile.d/maven.sh
+  - Maven yukledik.
+sudo yum install git -y
+git config --global user.name dataauditor
+git config --global user.email byildiz2019@gmail.com
+
+> Manage Jenkins > Configure System > Environment variables > Add 
+  > Name: PATH+EXTRA / Value: /opt/maven/bin > Save
+  - Maven Path'ini default user icin tanimladik.
+> Manage Jenkins > Global Tool Configuration > Maven > Maven Installation 
+  > Install automatically > Name: maven-3.6.3 > Version: 3.6.3 > Save
+
+
+3.Variable Atama/Degistirme: 
+a.Windows'a Environment Variable Tanitma:
+- Windows'ta jenkins_home adresinin enviromente tanitilarak degistirilmesi:
+> The Pc > RC > Properties > Advanced system settings > Environment variables 
+  > System variables > New (JENKINS_HOME varsa sadece adresi degistirilir) 
+  > Variable name: JENKINS_HOME / Variable value: D:\Tools\JenkinsHome\ > ok
+
+b."jenkins.xml"::
+- Windows'ta olusan jenkins.xml dosyasi uzerinden degisiklik yapilabilir.
+> Program files > ... > jenkins.xml > JENKINS_HOME=D:\Tools\JenkinsHome\ > save
+
+c.".bash_profile": 
+- Ana klasorde bulunur ve buradaki komutlar sistemde calisir.
+> .bash_profile > export JENKINS_HOME=D:\Tools\JenkinsHome\ > save
+
+d."export" Komutu:
+- Yalnizca bu bash'te gecerli olur.
+export JENKINS_HOME=D:\Tools\JenkinsHome\ 
+
+
+4.Configuration:
+a.Credentials Tanimlama:
+- Private repolar icin gerekli.
+> Manage Jenkins > Manage Credentials > Jenkins > Global credentials > 
+  > Add credentials > Username: dataauditor / Password: Mustafa11, 
+  (repomuzun isim ve sifresi girilir) / ID: MyGithub (ozel isim tanimlanir)
+
+b.Custom Workspace:
+- Item bazinda farkli bir adrese tanimlanabilir.
+> Bir item > General > Advanced > Use custom workspace > 
+  > Directory: D:\Tools\JenkinsHome\ > save  
+
+c.Herkese Izin Verme:
+> Manage jenkins > Configure Global Security > Authorization > Anyone can do anything > save
+
+d.User olusturma:
+> Manage jenkins > Manage Users > Create user > username: user2 / password:123 > create user
+
+e.Role Based Authorization Strategy:
+> Manage jenkins > Manage Plugins > Avaikable > Role-based Authorization Strategy > install without restart
+> Manage jenkins > Configure Global Security > Authorization > Role-Based Strategy > Save
+> Manage jenkins > Manage and Assign Roles > Manage Roles > Role to add: employee > add
+  > Global roles > employe: overall: read / job: read 
+  > Item roles > Role to add: Tester > Pattern: Test.* (Item'larin ismi Test ile baslarsa yetkisi burada tanimlanir.) > add
+    > Tester: Credentials: create, delete / Job: Configure ... vb tanimlanir.
+  > Item roles > Role to add: Developer > Pattern: Dev.* (Item'larin ismi Dev ile baslarsa yetkisi burada tanimlanir.) > add
+    > Developer: Credentials: create, delete / Job: Configure ... vb tanimlanir. > Save
+> Manage jenkins > Manage and Assign Roles > Assign Roles 
+  > Global roles 
+    > user1 > add > employee
+    > user2 > add > employee
+  > Items roles
+    > User1 > add > Developer
+    > User2 > add > Tester > apply / save
+
+
+
+5.Chain Jobs:
+- Itemlari artarda birlestirme/tetikleme:
+- BuildJob, DevJob, DemoJob ve TestJob seklinde 4 Item olustururuz.
+- 3 Item'i pipeline yapariz. Birinin sonucu digerini tetikler.
+- Tetikledigi Item'da Upstream Projects, Tetiklendigi Item'da Downstream Projects olarak gorulur.
+- Post-build'ten build other actions veya Build Triggers'ten build after other projects built ile yapilabilir.
+- BuildJob --> DevJob --> TestJob / DemoJob
+> BuildJob > Configure > Post-build Actions > Build other projects 
+  > projects to build: DevJob > Trigger only if build is stable > save
+> DevJob > Configure > Post-build Actions > Build other projects 
+  > projects to build: TestJob > Trigger only if build is stable > save
+> DemoJob > Configure > Build Trigers > DevJob > save
+  
+
+
+
+6.Pipeline Gosterimi:
+- Bagimli job'lari grafiksel gosterir.
+> Manage Jenkins > Manage Plugins > Plugin manager > Build Pipeline > install without restart
+  - Diger pipelinelarda yuklenebilir (Docker vb)
+> Dashboard > + (Yeni view) > View name: BuildPipeline > Build Pipeline View (pipeline plugini ile ortaya cikar) > ok
+  > Pipeline Flow > Select Initial Job: BuildJob > No Of Displayed Builds: 5 > Apply/Save
+ 
+
+
+7.Artifact:
+> Source Code Management: Git > Repo URL: https://github.com/JBCodeWorld/java-tomcat-sample.git > main  
+> Build > Invoke top-level Maven targets > Maven version: maven-3.6.3 > Goals: clean package > Advanced > POM: pom.xml
+  - Maven onceden yuklenip configure edilir. Yukarda anlatiliyor.
+> Post-build Actions > Archive the artifacts > Files to archive: **/*.war
+
+
+
+8.Jenkinsfile:
+> Manage Jenkins > Manage Plugins > Installed: Pipeline (yuklu degilse yukle) > install without restart
+> New item > name: Pipeline1 / Pipeline > Ok
+  > Definition: Pipeline script (repodan da cekilebilir) > try sample Pipeline 
+  > Hello World (ornek verir) > Pipline Syntax > Sample step: build: Build a job 
+  > Project to Build: DevJob > Quiet periot: 5 > Generate Pipeline Script > 
+  > build quietPeriod: 5, job: 'DevJob' (olusan script kopyalanarak Pipeline'a yapistirilir.)
+---------------------------------------------------------
+pipeline {
+  agent any
+  stages {
+    stage('Hello') {
+      steps {
+        echo 'Hello world'
+      }
+    }
+    stage('Build') {
+      steps {
+        echo 'Building'
+        build quietPeriod: 5, job: 'DevJob'
+      }
+    }
+    stage('Deploy') {
+      steps {
+        echo 'Deploying'
+      }
+    }
+    stage('Test') {
+      steps {
+        echo 'Testing'
+      }
+    }
+    stage('Release') {
+      steps {
+        echo 'Releasing'
+      }
+    }
+  }
+}
+---------------------------------------------------------
+  > save 
+ 
+
+

@@ -1,0 +1,4 @@
+1.Genel:
+- Azure'da bulunan uygulamalari monite edebiliriz.
+- Akilli uyarilar ve otomasyonlar olusturabiliriz.
+- Kendi sorgu sablonlarini da kullanabiliriz.

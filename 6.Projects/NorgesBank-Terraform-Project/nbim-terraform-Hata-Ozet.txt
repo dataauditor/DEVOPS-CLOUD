@@ -1,0 +1,23 @@
+Accomplished jobs about the open-source project:
+a.Configurations:
+- An Ubuntu VM is opened.
+- The terraform 1.2.1 version is configured with tfenv
+- ssh-key is established and past to variables.
+- Docker is installed.
+- AWS CLI2 is installed.
+- Github token is created and configurt.
+- aws configure code is configurt to us-east-1.
+- Domainname is registered with Route53.
+- An s3 bucket is established.
+- Open-source Github repositories:
+  * terraform-aws-opencbdc-tctl
+  * opencbdc-tctl
+  * opencbdc-tx are cloned to VM.
+- Access-token, domainname, name of my cloned repositories is configurt in variables.
+
+b.Establish Environment with Terraform and Problems:
+- When i used "terraform apply", environment is established but there was a problem with "agent codebuild" in codepipeline.
+- Afterwards i solved the problem with the related Dockerfile. There was a code which was absent in the Dockerfile.
+- After i solved the problem i restart the codepipeline again, but this time the deployment process to ecs which is name "Controller Deploy" worked endless. After approximately one hour it stopped and gave a message which is "time is expired".
+- When i try to debugging i noticed that there is no data for debugging in codepipeline, so i tried to check ECS Fargate, but i couldn't find a reasonable explanation about the error in ECS.
+- I am not sure but i will connect to ecs fargates from bash and check if the image is downloaded or installed or maybe there is another problem. If the image is not downloaded i can download and install with shell. 

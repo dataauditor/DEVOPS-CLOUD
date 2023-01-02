@@ -1,0 +1,191 @@
+1.General:
+- Cloud based ETL and data integration service.
+- Managed, serverless data integration service.
+- It enables you to visually integrate data sources with more than 90 built-in, maintenance-free connectors.
+- It can help you manage complex hybrid extraction, transformation, and loading (ETL), extract-load-transform, and data-integration projects.
+
+
+
+Surec:
+a.Datanin Cekilmesi:
+  * On premise, Azure ve ucuncu parti sourcelardan,
+  * Structured/unstructured/semistructured data cekebilir. 
+  * Data copy edilerek baska ortama cekilir.
+b.ETL'de data transformu:
+  * data flows ile veya
+  * Azure HDInsight Hadoop,
+	Azure Databricks,
+	Azure SQL Database servicelerinden biri ile yapilabilir.
+c.Transformed olan data data stores'lara publish edilir: 
+  * Storage blob: datayi ingest eder. Daha sonra Azure Synapse Analytics'e gonderir.
+  * Azure Synapse Analytics: used as a storage.
+d.Analysis:
+  * Azure Analysis Service: Datayi analiz eder.
+e.Visualization:
+  * Power BI
+
+
+
+A.Connect and collect (Datanin Cekilmesi):
+The copy activity performs the following high-level steps:
+* Read data from source data store.
+* Perform the following tasks on the data:
+  - Serialization/deserialization
+  - Compression/decompression
+  - Column mapping
+* Write data to the destination data store (known as the sink).
+Linked Service ile baglanti kurulur. Linked service ingeste imkan tanir ve gerektiginde compute serviceleri gerektiginde calistirir.
+  * 100'den fazla connector vardir data source ile ADF'yi baglayan.
+
+B.ETL ve Transform:
+Data Transformation yapilir:
+* Data flows:
+  - Create data transformation graphs that run on Spark
+  - Grafiksel olarak pipeline vb surecleri kurabiliriz kodsuz olarak.
+* Alternatif Serviceler:
+  - Azure HDInsight Hadoop, 
+  - Azure Databricks, 
+  - Azure Synapse Analytics.
+
+
+C.CI/CD and Publish:
+It helps to Develop and deliver ETL processes incremantally before publish.
+* Azure Devops
+* GitHub
+
+
+D.Analysis:
+Ilgili transform edilmis veri herhangi bir analiz engine ile incelebilir:
+* Azure Synapse Analytics
+* Azure SQL Database
+* Azure Cosmos DB
+
+
+E.Monitor:
+Azure Data Factory provides support for pipeline monitoring by using one of the following:
+* Azure Monitor
+* API
+* PowerShell
+* Azure Monitor logs
+* Health panels in the Azure portal
+
+
+
+
+
+Hands-on:
+a.Create Data Factory:
+  > Subscription | RG | Region | Name | Version: V2 
+  
+
+b.Create Linked Service:
+Cekilecek data ile baglantinin kurulmasi.
+- Copy Data Activity olarak ADF designer'da tanimlanabilir veya,
+- Independently programmatically olarak da tanimlanabilir:
+------------------------------------------------------------
+{
+    "name": "<Name of the linked service>",
+    "properties": {
+        "type": "<Type of the linked service>",
+        "typeProperties": {
+              "<data store or compute-specific type properties>"
+        },
+        "connectVia": {
+            "referenceName": "<name of Integration Runtime>",
+            "type": "IntegrationRuntimeReference"
+        }
+    }
+}
+------------------------------------------------------------
+Azure SQL Database Linked Service:
+------------------------------------------------------------
+{
+  "name": "AzureSqlLinkedService",
+  "properties": {
+    "type": "AzureSqlDatabase",
+    "typeProperties": {
+      "connectionString": "Server=tcp:<server-name>.database.windows.net,1433;Database=ctosqldb;User ID=ctesta-oneill;Password=P@ssw0rd;Trusted_Connection=False;Encrypt=True;Connection Timeout=30"
+    }
+  }
+}
+------------------------------------------------------------
+Azure Blob Storage Linked Service:
+------------------------------------------------------------
+{
+  "name": "StorageLinkedService",
+  "properties": {
+    "type": "AzureStorage",
+    "typeProperties": {
+      "connectionString": "DefaultEndpointsProtocol=https;AccountName=ctostorageaccount;AccountKey=<account-key>"
+    }
+  }
+}
+------------------------------------------------------------
+
+
+c.Dataset:
+Datanin cekilecegi kaynak.
+- dataset in Data Factory can be defined as an object within the Copy Data Activity,
+- As a seperate object veya,
+- Programmatically olarak da tanimlanabilir:
+------------------------------------------------------------
+{
+    "name": "<name of dataset>",
+    "properties": {
+        "type": "<type of dataset: AzureBlob, AzureSql etc...>",
+        "linkedServiceName": {
+                "referenceName": "<name of linked service>",
+                "type": "LinkedServiceReference",
+        },
+        "schema": [
+            {
+                "name": "<Name of the column>",
+                "type": "<Name of the type>"
+            }
+        ],
+        "typeProperties": {
+            "<type specific property>": "<value>",
+            "<type specific property 2>": "<value 2>",
+        }
+    }
+}
+------------------------------------------------------------
+Azure Blob Dataset:
+code InputDataset.json 
+------------------------------------------------------------
+{
+      "name": "InputDataset",
+      "properties": {
+          "linkedServiceName": {
+              "referenceName": "AzureStorageLinkedService",
+              "type": "LinkedServiceReference"
+          },
+          "annotations": [],
+          "type": "Binary",
+          "typeProperties": {
+              "location": {
+                  "type": "AzureBlobStorageLocation",
+                  "fileName": "emp.txt",
+                  "folderPath": "input",
+                  "container": "adftutorial"
+              }
+          }
+      }
+  }
+
+  ```
+------------------------------------------------------------
+  - Burada ornek cekilecek bir dataset olusturuyoruz.
+Set-AzDataFactoryV2Dataset -DataFactoryName $DataFactory.DataFactoryName `
+    -ResourceGroupName $ResGrp.ResourceGroupName -Name "InputDataset" `
+    -DefinitionFile ".\InputDataset.json"
+       * Dataset olusturuldu.	  
+
+
+
+d.ADF Activities and Pipelines:
+3 turlu aktivite var:
+* Data movement activities: Copy activity 
+* Data transformation activities: Mapping Data Flow or with a compute resource.
+* Control activities: Pipeline ile activiteleri yapar.
+Execution ve Control activities var.

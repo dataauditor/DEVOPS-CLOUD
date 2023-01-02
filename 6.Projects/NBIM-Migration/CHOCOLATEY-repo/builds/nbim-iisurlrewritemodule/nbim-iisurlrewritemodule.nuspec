@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>nbim-iisurlrewritemodule</id>
+    <version>7.2.1993</version>
+    <description>IIS URL Rewrite Module 2</description>
+    <projectUrl>https://www.iis.net/downloads/microsoft/url-rewrite</projectUrl>
+    <authors>nbela2 - Eskil Uhlving Larsen</authors>
+    <title>nbim-iisurlrewritemodule</title>
+    <tags>nbim-iisurlrewritemodule</tags>
+    <owners>my company</owners> <!-- also known as package mantainers -->
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

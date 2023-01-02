@@ -1,0 +1,7 @@
+1.Genel:
+- Birden fazla Vnet veya Subnetlerde bulunan uygulamalari 80/443 portlarini acmak istiyorsaniz bu durumda oluturabilirsiniz.
+- Ayni anda farkli Vnet/Subnetlerde kullanilabilir.
+- NSG'de olusturdugunuz kurallari gruplamaya yarar.
+
+
+

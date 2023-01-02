@@ -1,0 +1,69 @@
+
+1.BAGLANTI, IP, DOMAIN KONTROLU:
+!!!!
+while :; do netstat -ptn | grep 22; sleep 1; done
+watch -n 2 "netstat -ptn | grep 22"
+  - Source ile Destination arasinda aktif baglanti "established" var mi gosterir.
+  - Asagidaki anlik gosterir.
+
+
+!!!
+Test-NetConnection p-db-eu-west-1-dciq.cszfekhuwsy3.eu-west-1.rds.amazonaws.com -Port 1433
+Test-NetConnection microsoft.com -port 443
+  - RDS endpoint ve microsoft ile veri alis-verisi var mi baktik.
+
+
+!!!
+netstat -an | sls "listen"
+  - Destination hangi portlari dinliyor.
+
+!
+nslookup p-db-eu-west-1-dciq.cszfekhuwsy3.eu-west-1.rds.amazonaws.com
+  - RDS endpoint'e ulasabiliyoz mu baktik.
+
+
+nslookup 10.2.1.134
+
+!
+ipconfig
+  - hostname, ip address, dns
+
+!
+ping 8.8.8.8
+  - Ulasiyor mu?
+
+
+
+
+2.DOSYA CEKME ve INDIRME:
+curl https://localhost:8443/web 
+  - Ilgili sayfayi gosterir.
+
+
+curl "https://github.com/PowerShell/PowerShell/releases/download/v7.3.0/PowerShell-7.3.0-win-x64.msi" -OutFile .\posh7x64.msi
+  - Ilgili dosyayi indiririz.
+
+
+Invoke-WebRequest "https://github.com/PowerShell/PowerShell/releases/download/v7.3.0/PowerShell-7.3.0-win-x64.msi" -OutFile .\posh7x64.msi
+  - "curl" ile ayni.
+
+
+Invoke-WebRequest "https://localhost:8443/web" -SkipCertificateCheck
+  - "The remote certificate is invalid" hatasi verirse kullanilir.
+
+
+
+
+3.ENV VARIABLES:
+Get-Item Env:\
+  - env variablesleri gosterir.
+
+
+
+4.DOSYA-FILE PATH BULMA:
+ls . -Recurse | where {$_.name -like "*index.jsp*"} | select fullname
+
+
+
+
+

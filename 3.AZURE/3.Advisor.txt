@@ -1,0 +1,6 @@
+1.Genel:
+- Resource'lari analiz edip optimize etmeye yarar.
+- Availibility, Security, Performance, Cost, Operational Excellence konularinda tavsiye verir.
+- Ornegin mevcut VM yuksek performansli ise ve bu performansa ihtiyac yoksa maliyeti azaltici sekilde onerilerde bulunur.
+- Aboneliginize gore Reserve instance kullanmanizi, hybrid benefitleri kullanmanizi onerebilir.
+- Guvenlik ile ilgili sikintilar tespit ettiyse tavsiyelerde bulunabilir.

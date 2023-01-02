@@ -1,0 +1,15 @@
+
+VM:
+> Connect
+  > RDP
+  > IP address: DNS name (IP address veya DNS name'i secebiliriz.)
+  > Port number: 3389
+  > Download RDP File
+
+Remote Desktop Connection:
+> Yuklenen file tikla
+  > Connect
+  > User name: (VM'de kayitli olan)
+  > Password: (VM'de kayitli olan)
+  > Ok
+  > Yes

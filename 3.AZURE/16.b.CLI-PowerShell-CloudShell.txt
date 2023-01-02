@@ -1,0 +1,180 @@
+https://docs.microsoft.com/en-us/cli/azure/?view=azure-cli-latest
+  - cli documentation
+https://docs.microsoft.com/en-us/powershell/azure/?view=azps-7.4.0&viewFallbackFrom=azps-3.3.0
+ - powershell documentation
+
+
+
+1.CLI:
+- Tum OS'lerde kullanilabilir.
+- Komutlar _groups_ ve _subgroups_ seklinde yapilandirilmistir.
+- "find" komutu ile komutlari bulabiliriz.
+- "help" detay bilgi verir.
+
+a.Install:
+
+
+b.Baglanma:
+az login
+
+
+c.Genel Kodlar:
+az resource command 
+
+az group create --name Test03RG --location northeurope
+
+az vm create --name umitVM --resource-group Test03RG --image UbuntuLTS --location NorthEurope --public-ip-sku Standard --admin-username adminumit --admin-password  Ugur123456789
+az vm delete
+az vm list
+
+az keyvault list
+az keyvault create
+az keyvault delete
+
+az network vnet list
+az network vnet create
+az network vnet delete
+  - vnet, network'un subcategory'si.
+
+az network vnet subnet list
+az network vnet subnet create 
+az network vnet subnet delete
+
+
+
+2.Powershell:
+- Azure aboneligine baglanilir.
+- Tum OS'lerde yerel kurulum olarak mevcuttur.
+
+"command-AzResource"
+
+Get-AzVM
+New-AzVM
+Remove-AzVM
+
+Get-AzKeyVault
+New-AzKeyVault
+Remove-AzKeyVault
+
+Get-AzVirtualNetwork
+New-AzVirtualNetwork
+Remove-AzVirtualNetwork
+
+Get-AzVirtualNetworkSubnetConfig
+New-AzVirtualNetworkSubnetConfig
+Remove-AzVirtualNetworkSubnetConfig
+
+
+a.Powershell Install/Upgrade:
+$PSVersionTable.PSVersion
+  - mevcut versiyona bakar.
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+  - Mevcut kullanici icin kullanma yetkisi verir.
+Install-Module -Name Az -Scope CurrentUser -Repository PSGallery -Force
+  - "-Allowclobber": cakisma durumunda overwrite yapar.
+  - "-Force": Farkli bir az module yuklu ise bu modulu de yanina yukler. Birlikte kullanilabilir.
+Get-InstalledModule -Name Az -AllVersions | Select-Object -Property Name, Version
+  - Indirilen module'leri gosterir.
+  - Onceden indirilen versiyonlar da olsa guncel versiyonu kullanir. Eskileri silebilirsiniz.
+Connect-AzAccount
+  - Ilgili tenant'i secerek baglanilir. Bunun icin Azure portal'a girmenizi ister. Credentials gibi dusunulebilir.
+Get-AzSubscription
+  - Birden fazla Subscription varsa gosterir. Baglanmak istenilen Subscriptionun "Id"si kopyalanir.
+Set-AzContext -Subscription <Girilmek istenilen Subscription Id>
+  - Ilgili Subscription/account'a baglanilir.
+Get-AzVM
+  - Hic birsey yok.
+Get-AzVirtualNetwork
+  - Mevcut virtual network'u gosterir.
+
+
+b.Subscription Secme:
+Get-AzSubscription
+  - Tum subscriptionlarimi gosterir. Halihazirda 1 adet var.
+$context = Get-AzSubscription -SubscriptionId af2c3318-c49d-4b0f-9fb2-c33be71c5a5e
+  - Resourcelari olusturmak istedigimiz subscriptionun id'sini secerek ilgili kodu context'e kaydediyoruz.
+Set-AzContext $context
+  - bu subscription'u kullanacagim demek. Resource'lar bu subscription'da olusur.
+
+
+c.Create VM:
+- Oncelikle RG olusturulurki resourcelari silmek kolay olsun.
+- Sonra VM olusturulur.
+Get-AzResourceGroup 
+New-AzResourceGroup -Name aznewrgtest -Location EastUS
+New-AzVM -ResourceGroupName "aznewrgtest" -Name aznewvm -Location "EastUS" -VirtualNetworkName azvnet -SubnetName "default" -SecurityGroupName "newNSG" -PublicIpAddressName "myipaddr" -OpenPorts 80,443,3389
+ - User: admin / password: 123456Qwerty
+
+
+d.RDP Baglantisi:
+Get-AzPublicIpAddress -ResourceGroupName "aznewrgtest" | Select "IPAddress"
+  - RG'daki IP addresi gosterir. Yukarida olusturulsun komutu vermistik.
+mstsc /V:myipaddr
+  - PowerShell'de gecen kullanici adi ile acilan RDP pop up'indan VM'e baglanilir.
+  - username: ".\adminonder" seklinde girdi.
+
+
+e.RDP ile Remote VM'e Install:
+- Baglandigimiz VM'de PowerShell acip:
+Install-WindowsFeature -name Web-Server -IncludeManagementTools
+  - Internet Information Services kuruldu. IP addresi ile 80 portundan baglanilabilir.
+
+
+e.Create Template:
+New-AzResourceGroupDeployment -Name exampledeployment -ResourceGroupName ExampleResourceGroup -TemplateFile <path-to-template-file> -TemplateParameterUri c:\MyTemplates\storage.parameters.json
+
+
+
+
+3.Azure Cloud Shell
+- Portal uzerinden erisilir.
+- Bash ve PowerShell sunar.
+- Gecicidir ve kullanici bazinda otorum basina acilir. 
+- RG, Storage hesabi ve Azure dosya paylasimi gerektirir.
+- Otomatik kimlik dogrulamasi yapar.
+- Kullanici hesabi basina bir makine atanir.
+- 20dk sonra zaman asimi olur.
+- Normal powershell ve bash komutlarini kullanabilirsiniz.
+- Storage hesabina dosya yukleyip indirebilirsiniz.
+> Portal ustundeki dugmeye tiklayinca acilir. 
+  > Bash veya PowerShell secilir.
+
+Get-AzResourceGroup
+  - Mevcut Subscription'daki RG'leri getirir.
+New-AzResourceGroup -Name Test01RG -Location "North Europe"
+  - RG olusturma.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

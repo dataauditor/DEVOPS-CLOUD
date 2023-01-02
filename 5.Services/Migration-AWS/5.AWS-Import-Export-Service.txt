@@ -1,0 +1,106 @@
+1.Genel:
+
+2.Hands-on:
+- Mevcut bir VM'i tasiyacagiz.
+- Bunu tasirken once S3'e tasinir.
+- S3'e tasimak icin ise S3'u kullanabilmek icin rol tanimlanir.
+
+
+a.S3 Olusturulur:
+> +Create bucket
+  > Bucket name: demoimportedvms | Region
+  > All Default
+  > Create
+
+
+b.Policy ve Roller icin Json File'lar Olusturulur:
+> trust-policy.json  # isminde file olustur calisma bilgisayarinda.
+--------------------------------------------------------------------------
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": { "Service": "vmie.amazonaws.com" },
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "StringEquals": {
+          "sts:ExternalId": "vmimport"
+        }
+      }
+    }
+  ]
+}
+--------------------------------------------------------------------------
+role-policy.json
+--------------------------------------------------------------------------
+{
+   "Version":"2012-10-17",
+   "Statement":[
+      {
+         "Effect":"Allow",
+         "Action":[
+            "s3:ListBucket",
+            "s3:GetBucketLocation"
+         ],
+         "Resource":[
+            "arn:aws:s3:::demoimportedvms"
+            "arn:aws:s3:::demoimportedvms/*"
+         ]
+      },
+      {
+         "Effect":"Allow",
+         "Action":[
+            "s3:GetObject"
+         ],
+         "Resource":[
+            "arn:aws:s3:::demoimportedvms/*"
+         ]
+      },
+      {
+         "Effect":"Allow",
+         "Action":[
+            "ec2:ModifySnapshotAttribute",
+            "ec2:CopySnapshot",
+            "ec2:RegisterImage",
+            "ec2:Describe*"
+         ],
+         "Resource":"*"
+      }
+   ]
+}
+--------------------------------------------------------------------------
+containers.json
+--------------------------------------------------------------------------
+[
+  {
+    "Description": "Server 2012 R2",
+    "Format": "vhdx",
+    "UserBucket": {
+        "S3Bucket": "demoimportedvms",
+        "S3Key": "VMS/Server 2012 R2.vhdx"
+    }
+  }
+]
+--------------------------------------------------------------------------
+  - S3 key olusturulur.
+
+
+c.AWS CLI 2 ile Role Olusturulup Policy Atanir:
+- Txt dosyasindaki policy'ler cekilerek rol/policyler olusturuldu.
+aws iam create-role --role-name vmimport --assume-role-policy-document "file://C:\VMIE\Policies\trust-policy.json"
+  - role olusturup import policy'i uzerine ekler.
+aws iam put-role-policy --role-name vmimport --policy-name vmimport --policy-document "file://C:\VMIE\Policies\role-policy.json"
+  - mevcut role'a policy atadik.
+
+
+d.S3'e Tasinacak VM'in Image'i Upload Edilir.
+- Elle tasidik.
+aws ec2 import-image --description "Server 2012 R2" --license-type byol --disk-containers "file://C:\VMIE\Policies\containers.json"
+  - "ImportTaskId": Import islemi monite edilir.
+  - Import: Image Import islemine basliyor.
+aws ec2 describe-import-image-tasks --import-task-ids import-ami-02ecb06e8648b04c1
+  - Monite: Ilgili import islemi monite edilir.
+  - "import-ami-02ecb06e8648b04c1": "ImportTaskId" olarak bir onceki import isleminde alinir.
+  - "Status": active: Import islemi basladi.

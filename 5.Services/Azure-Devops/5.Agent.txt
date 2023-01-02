@@ -1,0 +1,75 @@
+Self Hosted Agents:
+- Pool altinda tanimlanirlar.
+- Microsoft hosted agents: Azure kendi makinelerini kullanir.
+- Configure own agents and connect to Azure.
+- On-prem, baska cloud service'ler, cluster vb hepsi agent olarak tanimlanabilir.
+- Download islemi ile configuration file agent'a indirilir.
+
+3.a.Windows Server Agent Olarak Kurulup Azure Devops'a Baglanilir:
+> Ilk olarak agent olarak kullanilacak Windows Server kurulup baglanilir.
+
+3.b.Configuration File Agent'a Download Edilir:
+> Organization Settings
+  > Agent pools
+  > Add pool
+    > Pool to link: New
+    > Pool type: Self hosted
+    > Name: LocalPoolum
+    > Pipeline permissions: Grant permission tol all pipelines, Auto-provision this agent pool in all projects
+    > Create
+  > LocalPoolum
+  > Agents
+  > New agent
+    > Windows | x64 | 
+    > Download
+
+3.c.Agent'ta Token Olusturulur:
+> Azure Devops
+  > User settings
+  > Personal access tokens
+  > + New Token
+    > Name: PATToken
+    > Organization: byildiz2019
+    > Expiration: 30 days
+    > Scopes: Full access
+    > Create
+  > Copy token
+
+3.d.Agent'in Konfigurasyonu:
+> Downloads/vsts-agent-win-x64-2.204.0.zip - copy
+  > Desktop/Agents - past
+  > vsts-agent-win-x64-2.204.0.zip > RC > Extract Here
+  > config.cmd - cift tikla
+    > Enter server URL: https://dev.azure.com.byildiz2019/
+      - Azure Devops'ta browserdaki adresin.
+    > Enter authentication type (press enter for PAT)
+    > Enter personal access token: <token yapistirilir> 
+    > Enter agent pool: LocalPoolum
+    > Enter agent name: WindowsAgent 
+      - ister isim yazariz istersek kendisi atar.
+    > Enter run agent as service: - Enter
+      - No dedik.
+    > Enter configure autologon and run agent on startup: - Enter
+      - No dedik.
+
+3.e.Agent'in Calistirilmasi/Online Yapilmasi:
+> Desktop/Agents
+  > run.cmd - cift tikla
+
+3.f.Agent'in Durumu:
+> Azure Devops
+  > Organization settings
+  > Agent pools
+  > LocalPoolum
+  > Agents
+  > Refresh
+  > WindowsAgent
+    - run.cmd calistirilmazsa "Offline" gozukur.
+
+3.g.Agent'in Mevcut Pipeline'a Tanimlanmasi:
+> Pipelines
+  > Ilgili pipeline 
+  > ... (3 nokta) 
+  > Edit
+    > Pipeline 
+    > Agent pool: LocalPoolum

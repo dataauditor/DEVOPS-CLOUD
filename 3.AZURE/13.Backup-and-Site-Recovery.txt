@@ -1,0 +1,129 @@
+1.Backup and Site Recovery:
+> + New resource > Backup and Site Recovery > create > Subs / RG / Vault name: storage-recservault / Region
+  > create
+
+
+2.Backup:
+- Backup vault ilgili resource ile ayni regionda olmali. Multiple region'da da herbir regiona backup kurulur.
+- On premise ve Azure resource sistemlerini yedekleyebiliriz.	
+- VM, Azure File Share ve SQL VM backupi alinabilir.. 
+
+a.Backup Alma:
+> storage-recservault > + Backup > Azure / Azure file share > storage account: sec > add
+  > Backup policy: Schedule: Daily 23:59 / Retain: 7 day
+  > tempfiles (ilgili File share) > Ilgili Folder > create
+
+
+b.Backup Infrastructure:
+- Backup'i alinan resourcelari goruruz.
+> storage-recservault > Backup Infrastructure > Storage Accounts > azsjdfiles11
+
+
+b.Backup VM:
+- Backup ile VM ayni Regionda olmali.
+- Gunluk + haftalik ve aylik ayri ayri backup policy eklenebilir veya yalniz biri. 
+> my-vm > Backup > Recovery Services vault: Create new > vault249 / RG 
+  > Create a new policy > Policy Name: DailyPolicy2 > Backup schedule > Frequency: Daily / 11:00PM / UTC+01:00 / 
+  > Retention Range: 30 days  
+  > Retention of weekly backup point: Sunday / 08:00 / 12 weeks
+  > Retention of monthly backup point: First / Sunday / 8:00 / 12 months
+  > ok > Enable Backup
+
+
+c.File Recovery:
+- 12 saatligini backup diski baglanir. Bu arada islemleri yapariz.
+> storage-recservault > Backup Items > Azure Storage (Azure Files) > tempfiles > view details > File Recovery
+  > Yuklenmek istenen zaman secilir > Download Executable > 
+
+
+c.Backup On-Premises:
+- DB, server, folder ... vb backup secenekleri var.
+> storage-recservault > + Backup > On-Premises / Files and folders 
+  > Download Agent for Windows Server or Windows Client (MARSAgentinstaller.exe)
+  > Download vault credentials to register the server to the vault.  
+  > Schedule backup using Recovery Services Agent UI
+  > Once the backups are scheduled, you can use backup jobs page to monitor the backups
+  > You can also Configure Notifications from alerts page to receive email alerts for backup failures.
+
+> storage-recservault > + Backup > On-Premises / Bare Metal Recovery (tum server, OS dahil)
+
+
+d.Backup Reports:
+- Sirasiyla Log Analytics Workspace, Diagnostoc setting kurulur ve Backup Reports olusur.
+
+(1) Log Analytics Workspace:
+> + create a resource > Log Analytics Workspace > create > subs / RG / Umit-workspace > create
+
+(2) Diagnostoc setting:
+> storage-recservault > Diagnostic settings > + Add diagnostic setting > Diagnostic setting name: umit-diagnostic
+  > Logs: Backup reports  (all logs / ...) 
+  > Destination: Send to Log Analytics workspace (Archive to a storage account / Stream to an event hub / Send to partner solution diger secenekler)
+  > Log Analytics Workspace: Umit-workspace > create
+
+
+
+3.Azure Site Recovery:
+- Region'un cokmesi durumuna karsin failover senaryosunda Disaster recovery icin kullanilir.
+- Sistem hata verince recovery site olarak yedeklenmis sistem marifetiyle baska bir regiona sistemi tasiyarak 10-15 dk'da acar.
+- Site-Recovery tum sistemi ec2'lar, storage'lar, public ip'ler, load balancer'lari...vb baska yerde syncronized olarak hazir bulundurur.
+- VM'i Disaster Recovery kurarsak sadece disk ucreti alir.
+
+a.VM'ye Disaster Recovery Kurma:
+- Belirlemedigin herseyi yeni acar. Or: Vnet, ... 15dk kadar surebilir.
+> azure-vm > Disaster Recovery > Target Region: East US > Subs / RG / VN > Single instance > 
+  > start replication
+
+
+b.Recovery Services Vaults:
+- Disaster Recovery kurulmus sistemin durumunu gosterir.
+> Recovery Services vaults > Site recovery vault-eastus2 > Site Recovery Jobs (Disaster Recovery'deki tum resourcelarin durumunu gosterir.) 
+> Recovery Services vaults > Site recovery vault-eastus2 > Site Recovery 
+> Recovery Services vaults > Site recovery vault-eastus2 > Replicated Items (replice edilen VM'i gosterir.)
+
+
+c.Test Failover:
+- Ilgili Resource'tan da Recovery Services Vaults'tan oldugu gibi Disaster Recovery secenegi ile Replicasina ulasilabilir.
+- Ilgili resource'u durdurup recovery-site'i calistirir. 5-10dk surer.
+- Failover: Test Failover'dan farkli olarak ilgili resource'u siler, Recovery-site'daki replica'yi acar.
+> azure-vm > Disaster Recovery > Test Failover > Choose a recovery point: latest processed (hangi backup acilsin)
+  > Azure virtual network: aztestnvet (oncesinde olusturduk) > ok
+> azure-vm > Disaster Recovery > Cleanup test failover > ok
+
+
+
+4.Soft Delete:
+- Sildiginiz seyleri belli sure yedekler. 
+- 14 gun yedekler.
+- Default olarak olusur. 
+
+
+
+5.Restore From Backup:
+- Backup uzerinden yeni VM olusturulur.
+> my-vm > Backup > Viev all jobs (backup islemlerini gosterir)
+
+a.Yeni VM Restore Etme:
+> my-vm > Backup > Restore points > 11/05/2022 > ... (3 nokta) > Restore VM
+  > Create new > Create virtual machine (Restore disks) > VM name: azvm004
+  / RG / storage account > ok
+
+b.Replace Existing VM:
+> my-vm > Backup > Restore points > 11/05/2022 > ... (3 nokta) > Restore VM
+  > Replace existing > Replace disks / .. > ok
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

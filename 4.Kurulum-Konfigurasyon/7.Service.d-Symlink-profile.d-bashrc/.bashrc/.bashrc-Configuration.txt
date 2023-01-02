@@ -1,0 +1,7 @@
+Genel:
+- Degiskenleri burada tanimlariz ve her terminal acildiginda bunlari devreye sokar.
+
+echo 'export MYSQL_ROOT_PASSWORD=lindaelizabethremimarkusadrianumit' >> /home/ubuntu/.bashrc
+echo 'export MYSQL_DATABASE=eyvidb' >> /home/ubuntu/.bashrc
+echo 'export MYSQL_USER=eyvi' >> /home/ubuntu/.bashrc
+echo 'export MYSQL_PASSWORD=detregnermyesno' >> /home/ubuntu/.bashrc

@@ -1,0 +1,53 @@
+1.Genel:
+https://explore.skillbuilder.aws/learn/course/1727/play/5700/aws-application-migration-service-aws-mgn-a-technical-introduction
+- AWS Application Migration Service (AWS MGN)
+- LIFT-AND-SHIFT Migration yapar. 
+- Application'lari, DB'leri on-prem'den AWS'ye veya AWS'den AWS'ye veya Cloud'tan AWS'ye tasir. 
+- Highly secure transfer saglar.
+- Her OS ile calisir.
+- Windows'ta short downtime olur.
+- AWS managed customer master keys veya CMKs veya customer managed CMKs ile extra guvenlik saglanabilir.
+- Agent yukleyerek calisir.
+
+
+
+2.Surec:
+> Assess: Identify servers, networking and instance sight sizing
+  > Install AWS Replication Agent: Agent tum source resourcelara install edilir. Replication begins into lightweight staging area subnet.
+  > Configure LAunch Settings: Update at any time without disturbing replication.
+  > Launch Test Instances: Launch instances in nondisruptive tests.
+  > Cutover: Instances (ready olunca) are automatically converted to run natively in AWS.	
+
+
+
+!!!!!!!!
+3.Detayli Surec:
+Step 0: Prerequisites
+Step 1: Creating an AWS IAM user.
+Step 2: Accessing the AWS MGN console.
+Step 3: Configuring the replication settings template.
+Step 4: Installing the AWS Replication Agent.
+Step 5: Creating the WordPress content. Source env olusturuyoruz test icin.
+Step 6: Configuring the launch settings.
+Step 7: Launching a test instance.
+Step 8: Launching a cutover instance.
+Step 9: Cleaning up after final cutover. 
+
+
+
+4.Terimler:
+- AWS Replication Agent: Herbir source'a yuklenir ve veriyi AWS'ye gonderir.
+- Replication Server: Agent ile ortak calisir ve agenttan gelen datayi EBS'ye kaydeder.
+- Staging Area Subnet: Original datanin depolandigi subnet.
+- Conversion Server: An EC2 instance that will take the replicated data and make relevant changes to help your migrated server run natively in Amazin EC2.
+
+
+
+
+
+
+
+1.Hands-on:
+- On-prem'den AWS'ye miration.
+- WordPress server kullanilacak.
+> 

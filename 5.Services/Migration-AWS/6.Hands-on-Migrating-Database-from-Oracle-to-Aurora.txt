@@ -1,0 +1,367 @@
+Hands on:
+- Oracle DB'nin AWS Aurora DB'ye AWS DMS ve AWS SCT ile migration'u.
+Surec:
+> Create "Oracle" db.
+  > Load Oracle db with "sample data".
+  > Create a PostgreSQL-compatible db in "Aurora".
+  > Migrate schema with AWS "SCT".
+  > Create replication "instance" in AWS DMS.
+  > Create "Endpoints" in AWS DMS.
+  > Create replication "Task" in AWS DMS.
+  > Complete the migration and clean up resources.
+
+
+1.a.Create an Oracle Database (RDS):
+> RDS
+  > Create database
+    > Standard Create
+    > Engine type: Oracle
+    > Edition: Oracle Standard Edition Two 
+    > License: license-included
+    > Templates: Dev/Test
+    > DB instance identifier: my-legacy-database
+    > Master username: admin
+    > Master password: 123
+    > DB instance class: Burstable classes (includes t classes): db.t3.small
+    > Storage type: General Purpose SSD (gp2)
+    > Allocated storage: 20
+    > Storage autoscaling: Enable storage autoscaling
+    > Maximum storage threshold: 1000
+    > Multi-AZ deployment: Do not create a standby instance
+    > Don’t connect to an EC2 compute resource
+    > Virtual private cloud (VPC): Default VPC
+    > DB Subnet group: default
+    > Public access: Yes
+    > VPC security group: Create new
+    > New VPC security group name: legacy-database
+    > Availability Zone: No preference
+    > Database authentication options: Password authentication
+    > Create database
+
+
+
+
+1.b.Take Endpoint of Oracle Database:
+> RDS
+  > Databases
+  > my-legacy-database
+    > Connectivity & security
+    > Endpoint: my-legacy-database.c9mvnnwhwlma.us-east-1.rds.amazonaws.com  - copy
+
+
+
+2.SQL*Plus (Client Programi) Installation:
+- Kurulumda ORACLE/Client altinda ekdik de olsa var.
+> https://www.oracle.com/database/technologies/instant-client/winx64-64-downloads.html
+  > Base:
+    > Basic Package: instantclient-basic-windows.x64-21.6.0.0.0dbru.zip - download
+  > Tools:
+    > SQL*Plus Package: 
+instantclient-sqlplus-windows.x64-21.6.0.0.0dbru.zip
+    > Tools Package:  
+instantclient-tools-windows.x64-21.6.0.0.0dbru.zip   
+
+
+
+3.Load Oracle db with Sample data:
+
+a.Ilgili Datanin Local (Sahsi) Bilgisayara Indirilmesi:
+> Ilgili uzanti tiklanarak indirildi.
+  > Extract to /oracle/sampledb/v1
+  > cd ...\Sample-Oracle-Databases\aws-database-migration-samples-master\oracle\sampledb\v1
+  
+b.Ilgili Datanin Client ile RDS'e Yuklenmesi:
+sqlplus username/password@endpoint/ORCL
+sqlplus admin/Mustafa11,@my-legacy-database.c9mvnnwhwlma.us-east-1.rds.amazonaws.com/ORCL
+@install-rds.sql
+  - ilgili dosyanin adini yazdik. Kendisi yukluyor.
+
+
+
+4.a.Create a PostgreSQL Compatible Database in Aurora:
+- Aurora database olusturuluyor.
+> RDS
+  > Create database
+    > Standard Create
+    > Engine type: Amazon Aurora
+    > Edition: Amazon Aurora PostgreSQL-Compatible Edition
+    > Templates: Dev/Test
+    > DB instance identifier: cloud-native-database
+    > Master username: postgres
+    > Master password: 123
+    > DB instance class: Burstable classes (includes t classes): db.t3.medium
+    > Multi-AZ deployment: Do not create an Aurora Replica
+    > Don’t connect to an EC2 compute resource
+    > Network type: IPv4
+    > Virtual private cloud (VPC): Default VPC
+    > DB Subnet group: default
+    > Public access: Yes
+    > VPC security group: Create new
+    > New VPC security group name: cloud-native-database
+    > Availability Zone: No preference
+    > Database authentication options: - 
+      - Password authentication: Default olarak kurulur.
+    > Create database
+
+4.b.Aurora Database'in Endpoint'ini Alma:
+> RDS
+  > Databases
+  > cloud-native-database
+  > Connectivity & Security
+  > Endpoint: cloud-native-database.cluster...rds.amazonaws.com  - copy
+    - Writer: olan kopyalanir.
+
+
+
+
+5.Migrate Your Schema with AWS SCT:
+- Oracle DB'den Aurora DB'ye schema migrationu.
+> Oracle JDBC driver ve Aurora JDBC driverlar local'e download edilir.
+  > SCT download edilir.
+  > SCT ile proje olusturulur.
+  > Source db'deki schema'lar target'a aktarilir. 
+
+a.Target ve Source Database'lere JDBC Driver Yuklenir:
+- Oracle DB'ye Oracle JDBC driver ve Amazon PostgreSQL'e PostgreSQL JDBC driver yuklenir.
+> https://www.oracle.com/database/technologies/appdev/jdbc-downloads.html
+> https://aws-tc-largeobjects.s3-us-west-2.amazonaws.com/CurationBreakFree/Oracle-to-Aurora.pdf#page=21
+
+b.AWS SCT Yuklenir:
+> https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.html#CHAP_Installing.Procedure
+  > Windows versiyonu - tiklanarak download edilir.
+  > Extract edilir.
+  > AWS Schema Conversion Tool-1.0.build-number.msi  - CT'narak calistirilir.
+
+c.SCT ile Proje Olusturma:
+> Create a new database migration project
+  > Project name: BreakFreeFromLegacy
+  > Location: /Users/umit/AWS Schema Conversion Tool/Projects
+  > Transactional database (OLTP)
+  > Source database engine: Oracle
+  > I want to switch engines and optimize for the cloud
+  > Next
+  > Connect to Oracle
+    > Type: SID
+    > Server name: my-legacy-database.c9mvnnwhwlma.us-east-1.rds.amazonaws.com
+      - Oracle db'nin endpointi.
+    > Server port: 1521
+    > Oracle SID: ORCL
+    > User name: admin
+    > Password: 123
+    > Oracle driver path: > Browse: /Users/umit/Downloads/ojdbc8.jar
+      - Indirilen Oracle JBDC driver'in path'i tanimlanir.
+    > Test connection
+  > Next
+    > DMS_SAMPLE
+      - Oracle RDS icinde Schema klasoru altindaki Schema folderlari acilir.
+      - Migrate edecegimiz Schema'lardan birini seceriz.
+      - Uygunlugunu denetler.
+  > Next
+    - Executive Summary: Uygunluk raporu verir.
+  > Next
+    > Target database engine: Amazon Aurora (PostgreSQL compatible)
+    > Server name: cloud-native-database.cluster...rds.amazonaws.com
+      - Aurora db'nin endpointi.
+    > Server port: 5432
+    > Database: dms_sample
+      - Biz olusturuyoruz.
+    > User name: postgres
+    > Password: 123
+    > Amazon Aurora driver path: > Browse: /Users/umit/Downloads/postgresql-42.2.12.jar
+      - Indirilen Oracle JBDC driver'in path'i tanimlanir.
+    > Test connection
+  > Finish
+
+d.AWS SCT Acilir:
+- Sol tarafta Source db'nin icerigi, sag tarafta target db'in icerigi.
+> DMS_SAMPLE - RC 
+    - sol tarafta.
+  > Convert schema
+  > dms_sample - RC.
+      - sag tarafta olusur.
+    > Apply to database
+      - Ilgili schema object target'a gonderildi.
+
+
+
+
+6.Create a Replication Instance in AWS DMS:
+- Database migration'unu yapan EC2'dur.
+
+a.EC2 Olusturma:
+> AWS DMS
+  > Replication instances
+  > Create replication instance
+    > Name: break-free-from-legacy
+    > Instance class: dms.t2.micro
+    > Engine version: 3.4.7
+    > Allocated storage: 50
+    > VPC: vpc-c978e3a0
+    > Publicly accesible
+    > Advanced security and network configuration
+      > Replication subnet group: default-vpc-c978e3a0
+      > Availability zone: No preference
+      > VPC security group(s): legacy-database
+        - Source db'in sg'si secilir.
+      > KMS key: (Default) aws/dms
+   > Create
+
+b.SG'lara Rule Tanimlama:
+- Replication EC2'nun source ve target db'leri erisimi icin rule'lar tanimlanir.
+- Halihazirda birer tane rule tanimli. Ilave 2. birer rule tanimliyoruz.
+
+b.1.Source Database'e Rule Ekleme:
+> EC2
+  > Security Groups
+  > legacy-database 
+  > Edit inbound rules
+  > Add rule  
+    > Type: Oracle-RDS | TCP | 1521 | Custom | legacy-database 
+      - Replication instance sg'nun ismi verilir.
+  > Save rules
+
+b.2.Target Database'e Rule Ekleme:
+> EC2
+  > Security Groups
+  > cloud-native-database
+  > Edit inbound rules
+  > Add rule  
+    > Type: PostgreSQL | TCP | 5432 | Custom | legacy-database 
+      - Replication instance sg'nun ismi verilir.
+  > Save rules
+
+
+
+
+7.Create Endpoints in AWS DMS:
+
+a.Source Database icin Endpoint Olusturma:
+> AWS DMS
+  > Endpoints
+  > Create endpoint
+    > Endpoint type: Source endpoint
+    > Select RDS DB instance - check
+    > RDS Instance: my-legacy-database 
+      - Source database secilir.
+    > Endpoint identifier: my-legacy-database 
+    > Source engine: Oracle
+    > Access to endpoint database: Provide access information manually
+    > Server name: my-legacy-database.c9mvnnwhwlma.us-east-1.rds.amazonaws.com
+    > Port: 1521
+    > User name: admin
+    > Password: 123
+    > Secure Socket Layer: none
+    > Test endpoint connection (optional)
+      > VPC: vpc-045
+      > Replication instance: break-free-from-legacy
+      > Run test
+        - successful: sg ve endpoint'i duzgun konfigure etmisiz.
+    > Create endpoint
+
+b.Target Database icin Endpoint Olusturma:
+> AWS DMS
+  > Endpoints
+  > Create endpoint
+    > Endpoint type: Target endpoint
+    > Select RDS DB instance - check
+    > RDS Instance: cloud-native-database-instance-1
+      - Target database secilir.
+    > Endpoint identifier: my-legacy-database cloud-native-database-instance-1
+    > Source engine: aurora-postgresql
+    > Access to endpoint database: Provide access information manually
+    > Server name: cloud-native-database-instance-1.c9mvnnwhwlma.us-east-1.rds.amazonaws.com
+    > Port: 5432
+    > User name: postgres
+    > Password: 123
+    > Secure Socket Layer: none
+    > Database name: dms_sample
+    > Test endpoint connection (optional)
+      > VPC: vpc-04565
+      > Replication instance: break-free-from-legacy
+      > Run test
+        - successful: sg ve endpoint'i duzgun konfigure etmisiz.
+    > Create endpoint
+
+
+
+
+
+8.Create a Replication Task in AWS DMS:
+- Database'in transferi yapilir.
+- psql veya baskaca bir postgresql client ile db'ye baglanip transferin sonucu incelenebilir.
+> AWS DMS
+  > Database migration tasks
+  > Create database migration task
+    > Task identifier: oracle-postgresql
+    > Replication instance: break-free-from-legacy-vpc-0425e
+    > Source database endpoint: my-legacy-database
+    > Target database endpoint: cloud-native-database-instance-1
+    > Migration type: Migrate existing data 
+      - "Migrate existing data and replicate ongoing changes" veya "Replicate data changes only" secilebilirdi.
+    > Editing mode: Wizard 
+    > Target table preparation mode: Truncate
+      - "AWS SCT": kullanilacaksa "Drop tables on target" kullanilmamali yoksa SCT'nin gonderdigi tablolar silinir.
+    > Include LOB columns in replication: Limited LOB mode
+    > Add new selection rule
+        - Burasi yeni versiyonda yok.
+      > Schema: Enter a schema
+      > Schema name: DMS_SAMPLE
+        - Source'ta AWS SCT ile donusturulen schemanin dosyasi.
+        - Oracle'de buyuk PostgreSQL'de kucuk karakterler ile yazilir.
+      > Table name: %
+      > Action: Include 
+    > Transformation rules
+        - Burasi yeni versiyonda yok.
+      > Add new transformation rule
+        > Target: Schema
+        > Schema name: Enter a schema
+        > Schema name: %
+        > Action: Make lowercase
+    > Premigration assessment: - uncheck
+    > Migration task startup configuration: Automatically on create
+  > Create task   
+
+
+
+
+9.Migration Sonrasi Islemler:
+
+a.AWS DMS Task'in Silinmesi:
+> AWS DMS
+  > Database migration tasks
+  > oracle-postgresql - check
+  > Action
+  > Delete
+
+b.Endpoint'lerin Silinmesi:
+> AWS DMS
+  > Endpoints
+  > Source endpoint - check, Target endpoint - check
+  > Action
+  > Delete
+
+c.Replication Instance'in Silinmesi:
+> AWS DMS
+  > Replication instances
+  > break-free-from-legacy - check
+  > Action
+  > Delete
+
+d.Source Database'in Silinmesi:
+> RDS
+  > my-legacy-database - check
+  > Action: Delete
+
+
+
+
+
+
+
+
+
+
+
+
+
+

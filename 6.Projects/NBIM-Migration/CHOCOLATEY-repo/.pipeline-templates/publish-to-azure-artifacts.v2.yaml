@@ -1,0 +1,28 @@
+# Depending on the branch and build reason, publishes to Azure Artifacts
+
+parameters:
+  # OPTIONAL Path to the .nupkg directory
+  # Default is a .nupkg in the Artifact Staging Directory
+  - name: pathToNupkgDirectory
+    default: $(Build.ArtifactStagingDirectory)
+
+steps:
+  # Publish to the Choco-Dev Artifact Feed if this is a CI build (i.e. not a scheduled or PR build) AND this is not on the master/main branch
+  - task: NuGetCommand@2
+    inputs:
+      command: 'push'
+      packagesToPush: '${{ parameters.pathToNupkgDirectory }}/**/*.nupkg;!${{ parameters.pathToNupkgDirectory }}/**/*.symbols.nupkg'
+      nuGetFeedType: 'internal'
+      publishVstsFeed: 'Software Packages/NBIM-Chocolatey-Packages-Dev'
+    condition: and( in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'), notIn(variables['Build.SourceBranchName'], 'master', 'main') )
+    name: PublishToAzureArtifactsChocolateyDev
+
+  # Publish to the NBIM-Artifacts-Shared Feed if this is a CI build (i.e. not a scheduled or PR build) AND this is on the master/main branch
+  - task: NuGetCommand@2
+    inputs:
+      command: 'push'
+      packagesToPush: '${{ parameters.pathToNupkgDirectory }}/**/*.nupkg;!${{ parameters.pathToNupkgDirectory }}/**/*.symbols.nupkg'
+      nuGetFeedType: 'internal'
+      publishVstsFeed: 'NBIM-Chocolatey-Packages'
+    condition: and( in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'), in(variables['Build.SourceBranchName'], 'master', 'main') )
+    name: PublishToAzureArtifactsProd

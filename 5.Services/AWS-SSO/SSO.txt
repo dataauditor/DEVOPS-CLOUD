@@ -1,0 +1,112 @@
+AWS SSO'yu Nodejs icin Identity Provider Olarak Ayarlama:
+
+https://www.youtube.com/watch?v=lsDv5cjIaVY
+
+
+1.SSO Ilk Kurulum ve User Olusturma:
+> AWS SSO
+  > Enable SSO
+  > Users
+  > Add user
+    > Username: ugur
+    > Password: Generate a one-time password
+    > Email address: byildiz2019@gmail.com
+    > First name: umit
+    > Last name: ceylan
+    > Add user
+
+
+
+2.Giris:
+a.AWS SSO
+  > User portal URL - copy
+
+b.Browser:
+> User portal URL - past
+  > username: ugur
+  > password: <maille gelen password>
+    - hesaba girdik ama izin verilen birsey yok.
+
+
+
+3.Application (npm) Configurasyonu:
+a.npmjs.com/package/passport-saml
+  > Repository: https://github.com/node-saml/passport-saml
+  > FAQ
+  > Is there an example I can look at?: https://github.com/gbraad/passport-saml-example/
+  > Code: Download ZIP
+    - Ilgili zip dosyasi localde acilir.
+  > Usage: "npm install  bower install  npm start"
+    - Ilgili komutlari localde calistiririz.
+
+
+b.Explorer
+> Downloads
+  > passort-saml-example-master.zip - extract
+cd passort-saml-example-master
+cd config
+vim config.js
+----------------------------------------------------
+...
+port: process.env.PORT || 3000
+...
+path: process.env.SAML_PATH || '/login/callback',
+entryPoint: process.env.SAM_ENTRY_POINT || 'https://portal.sso.us-east-1.amazonaws.com/sam..'
+issuer: 'passport-saml'
+cert: 
+...
+----------------------------------------------------
+  - 'entryPoint': sondaki url adresi AWS SSO sign-in URL ile degistirilir. 
+npm install
+bower install
+npm start
+
+
+
+
+
+4.AWS SSO'ya Application Ekleme:
+> AWS SSO
+  > Applications
+  > Add a new application
+  > Add a custom SAML 2.0 application
+    > Display name: NoswJSSAMLApp
+    > Application metadata: If you don't have a metadata file...
+    > Application ACS URL: http://localhost:3000/login/callback
+      - config.js'teki 'port' ve 'path'ten alindi.
+    > Application SAML audience: passport-saml
+      - config.js'teki 'issuer'den alindi.
+  > Save changes
+
+
+
+5.NoswJSSAMLApp'daki Metadatalarin config.js'e Yazilmasi:
+> AWS SSO
+  > Applications
+  > NoswJSSAMLApp
+  > AWS SSO metadata
+    > AWS SSO sign-in URL: https://portal.sso.us-east-1.amazonaws.com/sam.. - copy
+    > AWS SSO sign-out URL
+    > AWS SSO issuer URL
+    > AWS SSO certificate 
+    > Download certificate
+      - Indirilir.
+
+
+
+6.Certificate Passport-saml-example-master Dosyasina Tasinir:
+cd Downloads
+cp AWS_SSO_for_Custom_Certification_certificatr.pem 
+  - Kopyalanir.
+cd passort-saml-example-master
+past AWS_SSO_for_Custom_Certification_certificatr.pem 
+  - awsssocert.pem olarak ismini degistirdik.
+
+
+
+
+
+
+
+
+

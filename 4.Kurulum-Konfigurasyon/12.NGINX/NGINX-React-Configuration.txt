@@ -1,0 +1,116 @@
+1.NGINX ILE 80 PORTUNDAN CIKIS.
+
+a.Install Node.js, npm, NGINX:
+sudo su
+sudo apt update
+
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+sudo apt install nodejs
+node -v
+npm -v
+
+sudo apt install nginx
+nginx -v
+service nginx status (systemctl enable nginx)
+  - nginx'in calistigi gorulur.
+service nginx start (systemctl status nginx)
+  - stopta ise calistirilir.
+
+
+b.Clone React Repo:
+sudo apt-get install git-all -y
+> Ilgili repo 
+  > Repository Settings 
+  > SSH Keys  
+  > Public key copy (VM'in /.ssh/authorized_keys yapistir)
+  > VM'in IP adresini Host address bloguna yapistir 
+  > Fetch
+  > Add
+sudo chmod 644 authorized_keys 
+git clone https://umitceylan11@bitbucket.org/eyvi_project/eyvi-client.git
+
+
+
+c.NGINX Configurasyonu Port:
+sudo vim /etc/nginx/sites-enabled/eyvi
+-------------------------------------------------------------------------------
+server {
+       listen 81;
+       listen [::]:81;
+
+       server_name 87.123.4.56;
+
+       root /var/www/eyvi;
+       index index.html;
+
+       location / {
+               try_files $uri $uri/ =404;
+       }
+}
+-------------------------------------------------------------------------------
+  - 80 ve 81 portlari nginx icindir. Ikisinden birini kullanabiliriz.
+
+
+d.Bulid React Project ve Nginx'in Ilgili Adresine Transferi:
+- React'i build etmek icin repoda calistirilir.
+- npm, react'in maven'i gibi index.css dosyalarindan compile ederek index.html olusturur.
+- Daha sonra build folder olusturur.
+npm install
+npm run build
+# npm i -g serve
+#   - repoda
+# sudo serve -s /home/ubuntu/frontend -n
+
+
+e.NGINX Configurasyonu index.html:
+sudo mkdir /var/www/eyvi
+sudo cp -r /home/ubuntu/eyvi-client/build/. /var/www/eyvi
+  - npm ile olusturulan build dosyasinin icrerigi buraya aktarilir.
+service nginx restart
+service nginx stop
+service nginx start
+  - 80 portu calisiyor.
+
+
+
+
+2.NGINX ile 443 PORTU ve SSL CERTIFICATION:
+
+a.OpenSSL ile SSL Certificate:
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
+  - SSL keyi olusturduk.
+
+
+b.SSL Certificate Conf File:
+vim /etc/nginx/snippets/self-signed.conf
+------------------------------------------------------------------------
+ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
+ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+------------------------------------------------------------------------
+  - NGINX'te SSL key ve self-signed'i refere eden bir conf file olusturduk.
+sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+  - Ikinci bir key olusturduk.
+vim /etc/nginx/sites-enabled/client-config
+sudo vim /etc/nginx/sites-enabled/eyvi
+---------------------------------------------------------------------------
+server {
+       listen 80;
+#       listen [::]:80;
+       listen 443; # ssl http2 default_server;
+
+       server_name 16.170.108.70;
+
+       root /var/www/eyvi;
+       index index.html;
+
+       location / {
+               try_files $uri $uri/ =404;
+       }
+
+       listen [::]:443 ssl http2 default_server;
+       include /etc/nginx/snippets/self-signed.conf;
+
+}
+---------------------------------------------------------------------------
+service nginx restart
+

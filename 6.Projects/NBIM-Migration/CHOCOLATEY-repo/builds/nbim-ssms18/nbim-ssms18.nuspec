@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>nbim-ssms18</id>
+    <title>nbim-ssms18</title>
+    <tags>nbim-ssms18</tags>
+    <version>18.12.1</version>
+    <description>Install and configure SQL Server Management Studio (SSMS)</description>
+    <authors>Eskil Uhlving Larsen nbela2@nbim.no</authors>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

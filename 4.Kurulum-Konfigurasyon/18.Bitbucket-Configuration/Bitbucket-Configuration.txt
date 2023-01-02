@@ -1,0 +1,105 @@
+1.SSH key Ekleme:
+> Account: Personal settings
+  > SSH keys
+  > Add key ile eklenir.
+  
+
+
+2.Pipeline Enable:
+> Repository settings 
+  > Pipelines: Settings
+  > Enable Pipelines -  Tikle
+
+
+3.SSH key Ekleme:
+- Her bir repo icin tanitilir.
+- EC2 ile Bitbucket'a key tanitilir.
+> Repository settings > SSH keys > Create SSH key 
+  > copy Public key > ec2'daki /home/ubuntu/.ssh/authorized_keys 'e ekle   (chmod gerekebilir.)
+  > Host address: <ec2 public ip address> > Fetch 
+
+
+4.Variables:
+> Bitbucket-pipelines.yml
+  > Edit
+  > Variables
+  > Key: IP_Address  Value: 45.234.9.4  
+    - seklinde yazilirlar.
+    - yaml file da "${IP_Address}" olarak kullanilirlar.
+
+ 
+5.Ornek Pipeline:
+--------------------------------------------------------------------------------------
+options:
+  max-time: 15
+
+pipelines:
+  default:
+    - step:
+        name: Unit-Test
+        image: eclipse-temurin:17-jdk-jammy
+        caches:
+          - gradle
+        script:
+          - ./gradlew check --stacktrace
+
+  branches:
+    main:
+      - step:
+          name: Flyway Migrate
+          image: kroniak/ssh-client:3.15
+          script:
+            - ssh ubuntu@${IP_Address} "cd eyvi-akvakultur && git fetch --all --prune --verbose && git switch ${BITBUCKET_BRANCH} && git pull --ff-only --verbose origin ${BITBUCKET_BRANCH}"
+            - ssh ubuntu@${IP_Address} "cd eyvi-akvakultur && ./gradlew flywayMigrate"
+
+      - step:
+          name: Build and Test
+          image: eclipse-temurin:17-jdk-jammy
+          caches:
+            - gradle
+          script:
+            - ./gradlew build
+          artifacts:
+            - application/build/libs/application-0.0.1-SNAPSHOT.jar
+    
+      - step:   
+          name: Package and Deploy 
+          image: kroniak/ssh-client:3.15
+          script:
+             - scp application/build/libs/application-0.0.1-SNAPSHOT.jar ubuntu@${IP_Address}:/home/ubuntu/backend/
+             - ssh ubuntu@$IP_Address "sudo systemctl restart eyvid"
+
+
+
+    eyvi_staging:
+      - step:
+          name: Flyway Migrate
+          image: kroniak/ssh-client:3.15
+          script:
+            - ssh ubuntu@${IP_Address2} "cd eyvi-akvakultur && git fetch --all --prune --verbose && git switch ${BITBUCKET_BRANCH} && git pull --ff-only --verbose origin ${BITBUCKET_BRANCH}"
+            - ssh ubuntu@${IP_Address2} "cd eyvi-akvakultur && ./gradlew flywayMigrate"
+
+      - step:
+          name: Build and Test 
+          image: eclipse-temurin:17-jdk-jammy
+          caches:
+            - gradle
+          script:
+            - ./gradlew build
+          artifacts:
+            - application/build/libs/application-0.0.1-SNAPSHOT.jar
+    
+      - step:   
+          name: Package and Deploy 
+          image: kroniak/ssh-client:3.15
+          script:
+             - scp application/build/libs/application-0.0.1-SNAPSHOT.jar ubuntu@${IP_Address2}:/home/ubuntu/backend/
+             - ssh ubuntu@$IP_Address "sudo systemctl restart eyvid"
+             
+    database:
+      - step:
+          name: Sending Tables
+          image: kroniak/ssh-client:3.15
+          script:
+            - ssh ubuntu@${IP_Address} "cd eyvi-akvakultur && cat tabeller | mysql"
+------------------------------------------------------------------------------------------

@@ -1,0 +1,87 @@
+1.Mysql RDS Olusturduk:
+> RDS
+  > Create database
+  > Standard create
+  > Mysql
+    - Sadece bunda serverless engine var.
+  > Templates: Dev/Test
+  > DB cluster identifier: database-1
+  > Master username: admin
+  > Master password: 123
+  > DB instance class: Serverless: db2-t3-small
+  > Don’t connect to an EC2 compute resource - check
+  > Virtual private cloud (VPC): Default VPC
+  > DB Subnet group: default
+  > Public access: Yes
+  > VPC security group (firewall): default
+  > Availability Zone: No preference
+  > Database authentication options: Password authentication
+  > Initial database name: serverlessdemo
+  > Gerisi - Default
+  > Create database
+
+
+
+2.RDS Security Group'un Konfigurasyonu:
+- Onceden 3306 acilmadiysa yapilir emin olmak icin.
+> RDS
+  > Databases
+  > database-1
+  > Connectivity & security
+  > VPC security groups: default (sg-41ef7358)
+  > Inbound rules
+  > Edit inbound rules
+  > Add rule
+  > Mysql/Aurora | 3306 | TCP | Custom | 0.0.0.0/0
+  > Save rules
+
+
+
+
+3.RDS Endpoint:
+> RDS
+  > Databases
+  > database-1
+  > Connectivity & security
+  > Endpoint: database-1.c9mvnnwhwlma.us-east-1.rds.amazonaws.com - copy
+
+
+
+4.Role Olusturma:
+> IAM
+  > Roles
+  > Create role
+  > 
+
+
+
+5.Lambda Function Olusturduk:
+> Lambda
+  > Functions
+  > Create function
+    > Author from stratch - check
+    > Function name: lambdaRDS
+    > Runtime: Python 2.7
+    > Role: Choose an existing role
+    > Existing role: lambda_basic_execution
+    > Create function
+
+
+
+
+6.MySQL Workbench:
+> MySQL Connections +
+  > Connection name: LambdaRDS
+  > Connection method: Standard (TCP/IP)
+  > Hostname: database2.c9mvnnwhwlma.us-east-1.rds.amazonaws.com
+    - RDS'in Endpointi.
+  > Port: 3306
+  > User name: admin
+  > Password: 123
+  > Test connection
+
+
+
+7.PyMySQL Yuklenmesi:
+- Ilgili code yuklenirse python ile SQL code'lari yazip baglanabiliriz lambda'dan.
+

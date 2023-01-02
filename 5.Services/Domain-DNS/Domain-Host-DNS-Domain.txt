@@ -1,0 +1,61 @@
+Host: Ev sahipligi
+Hosting: Ev sahipligi yapma, barindirma. Hosting firmalarinda 24 saat acik 100'lerce bilgisayar ve harddisk vardir.
+
+IP: Internet protocol address
+IP Packet: Gonderilen pakette Header (belki Future) ve Data kismi vardir.
+Header: 192 bit'ten olusur. Source IP, Destination IP, TCP/UDY, TTL, Version, Checksum vb bilgiler bulunur.
+DHCP: Bilgisayarlara otomatik private IP atar. Kendisinin hem public hem private ip'si olur.
+NAT: Bilgisayara tanimli port'larin hangi private ip'ye ait oldugunu gosterir tablo vasitasiyla bilir ve WAN'den gelen talebi LAN'da ilgili private ip'ye gonderir.
+
+Domain: Alan (web sitesi) adidir. "araba.com", "sahibinden.com"
+  - Subdomain		 : www
+  - Domain		 : sahibinden
+  - Top-level domain(TLD): com
+
+Hosthing hizmeti veren Firmadan:
+  - Hem domainname hem de hosting hizmeti alinabilir.
+  - Hosting hizmeti icin domainname alinmis olmali. ornegin: spor.com. Yillik kiralanir ve taksiti yillik odenir. Domainname'i alinca web sitesi kurmak zorunlu degil.
+  - Domainname'i baska hosting firmasina transfer edebiliriz.
+  - Web sitesi'ne tanimlanan ip numarasi ilgili aomainname'e attach edilir.
+  - Hosting firmasi sizin ip numarasi-domainname eslesmesini DNS'e kaydeder ve internet dunyasi ile paylasir.
+
+TCP (Transport Control Protocol): 
+> Gonderim:
+  > Veriyi 1500Byte'lik paketlere boler.
+  > Paketlere sira numarasi verir.
+  > Port ve sessions'lari ayarlar. Source ve destination portunu match eder. Http (80)'e gidiyor olsa da localdeki/sourcetaki portu 65409 olabilir. Session, transactionlarin ayrilmasi. Ayni anda birden fazla or google.com ile irtibat olmasi.
+  > Congestion Adjustement: Destination yolundaki tikanikliga gore hizin ayarlanmasi. Boylece hiz dusurulerek paketlerin kaybolmasi engelleniyor. Paketin yasama suresinin uzerine cikan paketler silinecegi icin yavaslatmak gerekir. Paket drop edilir.
+  > Alinamayan paketler karsi taraftan istenir ve tekrar gonderilir. Boylece hizi azaltir.
+  > Hand-Shake: Gittigi-Geldigi-Geldiginin bildirimi seklinde 3 kere yapilir. Gonderimin baslangicina ve bitisine izin vermek icin yapilir.
+
+
+ifconfig			: configurasyonu doker.
+ipconfig			: "ifconfig" windows versiyonu.
+traceroute www.google.com	: ilgili adrese giderken ugradigi yolu/adresleri
+gosterir.
+tracert www.google.com		: "traceroute" windows versiyonu.
+ping google.com			: Ilgili adresin ulasilabilir olup olmadigini ve ulasma suresini gosterir.
+nslookup server			: NS server'i gosterir.
+nslookup sahibinden.com		: Once DNS serverin IP, sonra ilgili adresin IP'sini verir.
+nslookup server google.com	: Default server olarak google.com'u alir ve onun DNS'ini kullanir.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

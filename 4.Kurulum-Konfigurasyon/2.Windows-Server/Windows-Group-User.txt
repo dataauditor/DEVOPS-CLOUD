@@ -1,0 +1,8 @@
+
+
+
+RDP Baglanti Yetkisi Olan Groupleri Inceleme:
+lusrmgr
+> Local Users and Groups
+  > Groups
+  > Remote Desktop Users

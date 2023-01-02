@@ -1,0 +1,36 @@
+/*
+ Copyright 2017 Amazon.com
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+create table seat_type
+(name varchar2(15) NOT NULL,
+ description varchar2(120),
+ relative_quality NUMBER(2),
+ constraint st_seat_type_pk primary key(name)
+);
+
+insert into seat_type(name,description,relative_quality)
+values('luxury','Excellent seats - box seats, behind the plate, etc. etc.',1);
+insert into seat_type(name,description,relative_quality)
+values('premium','Really good seats - first level, mid field, etc. etc.',2);
+insert into seat_type(name,description,relative_quality)
+values('standard','Standard seats - not super awesome but pretty good',3);
+insert into seat_type(name,description,relative_quality)
+values('sub-standard','End zone, nose bleed, etc.',4);
+insert into seat_type(name,description,relative_quality)
+values('obstructed','Pretty crappy, partially obstructed seats',5);
+insert into seat_type(name,description,relative_quality)
+values('standing','Really? That''s not a seat at all now, is it?',10);
+

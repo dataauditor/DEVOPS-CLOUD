@@ -1,0 +1,28 @@
+1.Azure Synapse Analytics:
+  - Bulut tabanli bir kurumsal veri ambari, datavarehouse (eski adi)
+  - Buyuk veri ile calisilirken kullanilir.
+  - Serverless veya dedicated olarak kendi kosullariniza gore veriyi sorgulayabilirsiniz.
+  - BI ve ML ile de calismakta.
+
+
+2.Azure HDInsight:
+- Isletmeler icin tumuyle yonetilen acik kaynakli bir analiz hizmetidir.
+- Apache Spark, Apache Hive, Kafka, ... vb frame workleri kullanabiliriz.
+
+
+3.Azure Databricks:
+- Bulut hizmetleri icin optimize edilmis bir analitik hizmetidir.
+- Apache Spark tabanli analitik hizmeti verir.
+- Icerisinde 3 farkli ortam bulunmaktadir:
+  * Databricks SQL: 
+    - Datalake SQL sorgularini calistirmak ve sorgu sonuclarini farkli perspektiflerden kesfetmek icin gorsel bir platformdur.
+    - Panolar olusturabilir,
+    - Paylasabilir,
+    - Analiz ortamini kolaylastirabilirsiniz.
+  * Databricks DataScience and Engineering: 
+    - Veri muhendisi ve bilimcileri ve ML calisanlar arasinda isbirligini saglayan bir platformdur.
+  * Databricks Mission Learning:
+    - Veri analitik hizmet platformudur.
+    - Uctan uca makine ogrenimi olusturup kullanmanizi,
+    - Uzerinde modeller gelistirmenizi saglar,
+    

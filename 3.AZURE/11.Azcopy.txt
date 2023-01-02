@@ -1,0 +1,67 @@
+1.AzCopy:
+- Azure hesabina cli olarak ulasan ayri bir uygulama. Browserdan indirilir..
+- access key kullanilmaz. Azure AD veya SAS kullanilir. File srorage da ise yalniz SAS kullanilir.
+- documentationu kullanarak kod yazilir.
+- Farkli ownerlar arasi dosya transferi yapilabilir. 
+> azcopy.exe (file) > copy (from zip file) > paste to outside
+
+
+2.Powershell:
+dir az*.exe 
+  - azcopy.exe'yi gosterir.
+.\azcopy -?
+-------------------------------------------------------------------------------------------------
+"Usage:
+  azcopy [command]
+
+Available Commands:
+  bench       Performs a performance benchmark
+  completion  Generate the autocompletion script for the specified shell
+  copy        Copies source data to a destination location
+  doc         Generates documentation for the tool in Markdown format
+  env         Shows the environment variables that you can use to configure the behavior of AzCopy.
+  help        Help about any command
+  jobs        Sub-commands related to managing jobs
+  list        List the entities in a given resource
+  login       Log in to Azure Active Directory (AD) to access Azure Storage resources.
+  logout      Log out to terminate access to Azure Storage resources.
+  make        Create a container or file share.
+  remove      Delete blobs or files from an Azure storage account
+  sync        Replicate source to the destination location"
+-------------------------------------------------------------------------------------------------
+  - inceler.
+
+
+3.Documentation:
+- https://docs.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10
+- Locale indirmeden iki storage arasinda veri transferi:
+> Transfer data - Copy blobs between Azure storage accounts > 
+  > Syntax - 
+
+
+
+4.Portal:
+- Transfer icin yeni bir container olusturuyoruz:
+> Resources > umitstorage > Containers > + Container > name: new / private > create
+
+
+5.Portal:
+- SAS olusturma:
+- Blob SAS URL'i kullaniyoruz.
+> Resources > umitstorage > Containers > default-container > ... (3 nokta) > 
+  > Generate SAS > Generate SAS token and URL > Blob SAS URL (copy)
+
+
+6.Portal:
+- Destination containeri icin SAS olusturma:
+- Blob SAS URL'i kullaniyoruz.
+- Destination containerine write yetkisi de vermeliyiz.
+> Resources > umitstorage > Containers > new > ... (3 nokta) > Permissions: read, write, create, delete, list 
+  > Generate SAS > Generate SAS token and URL > Blob SAS URL (copy)
+
+
+7.Powershell:
+- Source ve destination Blob SAS URL'ler '' icinde yapistirilir.
+.\azcopy copy 'https://umitstorage.blob.core.windows.net/default-container?sp=r&st=2022-04-26T09:13:31Z&se=2022-04-26T17:13:31Z&spr=https&sv=2020-08-04&sr=c&sig=EfnoBow%2Fp4%2BVRrFTDlCVNMEMQT4tZxAad7MBXgFFT70%3D'  'https://umitstorage.blob.core.windows.net/new?sp=racwdli&st=2022-04-26T09:19:57Z&se=2022-04-26T17:19:57Z&spr=https&sv=2020-08-04&sr=c&sig=Eb7iTToCrOGiWndoaBrcqNlm%2Fpr%2BoSP4rWMDrvLMmsg%3D'
+
+

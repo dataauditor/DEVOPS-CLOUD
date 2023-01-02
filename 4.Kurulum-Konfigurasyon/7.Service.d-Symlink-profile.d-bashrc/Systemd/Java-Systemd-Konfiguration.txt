@@ -1,0 +1,47 @@
+sudo -i
+which java               
+  # java'nin binary adresi
+  # /usr/bin/java
+cd /etc/systemd/system
+vim eyvid.service
+----------------------------------------------------------------------
+[Unit]
+Description=Manage Java service
+
+[Service]
+Environment=FLYWAY_USER=eyvi
+Environment=FLYWAY_PASSWORD=detregnermyesno
+Environment=FLYWAY_URL="jdbc:mysql://localhost:3306/eyvidb"
+WorkingDirectory=/home/ubuntu/backend/    # uygulama dosyasinin konumu
+ExecStart=/usr/bin/java -jar application-0.0.1-SNAPSHOT.jar  # file'in ismi 
+User=ubuntu
+Type=simple
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+----------------------------------------------------------------------
+sudo systemctl daemon-reload
+sudo systemctl status eyvid
+sudo systemctl enable eyvid
+sudo systemctl start eyvid
+sudo systemctl status eyvid
+
+# sudo systemctl restart eyvid
+  # compile edilmis dosya degistirilirse kullanilir.
+
+journalctl -fu eyvid
+  - eyvid (ilgili java app)'nin loglarini verir.
+
+
+
+
+
+
+ps -ef | grep java
+  - tum calisan service binary'lerinin PID'lerinin verir.
+lsof | grep 4795
+  - PID'in tum islemlerinin detayli gosterir.
+sudo systemctl list-unit-files 
+  - tum calisan service'leri gosterir.

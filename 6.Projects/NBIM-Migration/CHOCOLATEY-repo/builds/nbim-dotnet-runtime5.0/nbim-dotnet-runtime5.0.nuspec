@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>nbim-dotnet-runtime5.0</id>
+    <version>5.0.5</version>
+    <description>Microsoft .NET Runtime - 5.0.5 (x64)</description>
+    <authors>Eskil Larsen</authors>
+    <title>nbim-dotnet-runtime5.0</title>
+    <tags>nbim-dotnet-runtime5.0</tags>
+    <owners>NBIM</owners> <!-- also known as package mantainers -->
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

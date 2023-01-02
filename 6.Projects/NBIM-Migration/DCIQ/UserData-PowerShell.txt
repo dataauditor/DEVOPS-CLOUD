@@ -1,0 +1,27 @@
+--------------------------------------------------------------------------------------
+$Script = '
+<powershell>
+Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key install-media/DCIQ/NBIM.zip -LocalFile C:\Temp\NBIM.zip
+Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key install-media/DCIQ/PanduitSZReports 9.1.exe -LocalFile C:\Temp\PanduitSZReports 9.1.exe
+Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key install-media/DCIQ/QlikViewServer_Win2012andUp.exe -LocalFile C:\Temp\QlikViewServer_Win2012andUp.exe
+Copy-S3Object -BucketName nbim-p-s3-mgmt-euwe1-files2 -Key install-media/DCIQ/SQL_Svr_Standard_Edtn_2014_SP3_64Bit.ISO -LocalFile C:\Temp\SQL_Svr_Standard_Edtn_2014_SP3_64Bit.ISO"
+</powershell>
+<persist>true</persist>'
+--------------------------------------------------------------------------------------
+  - Degiskene userdatayi atiyoruz.
+  - Basinda sonunda <powershell>, </powershell> olmali.
+  - "<persist>true</persist>": Her rebootta tekrar userdatanin calismasini saglar.
+
+$UserData = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Script))
+  - Ilgili userdatayi encode eder.
+  - Userdata encode edilmis sekilde eklenir.
+
+$UserData
+-------------------------------------------------------------------------------------
+PHBvd2Vyc2hlbGw+CkNvcHktUzNPYmplY3QgLUJ1Y2tldE5hbWUgbmJpbS1wLXMzLW1nbXQtZXV3ZTEtZmlsZXMyIC1LZXkgaW5zdGFsbC1tZWRpYS9EQ0lRL05CSU0uemlwIC1Mb2NhbEZpbGUgQzpcVGVtcFxOQklNLnppcApDb3B5LVMzT2JqZWN0IC1CdWNrZXROYW1lIG5iaW0tcC1zMy1tZ210LWV1d2UxLWZpbGVzMiAtS2V5IGluc3RhbGwtbWVkaWEvRENJUS9QYW5kdWl0U1pSZXBvcnRzIDkuMS5leGUgLUxvY2FsRmlsZSBDOlxUZW1wXFBhbmR1aXRTWlJlcG9ydHMgOS4xLmV4ZQpDb3B5LVMzT2JqZWN0IC1CdWNrZXROYW1lIG5iaW0tcC1zMy1tZ210LWV1d2UxLWZpbGVzMiAtS2V5IGluc3RhbGwtbWVkaWEvRENJUS9RbGlrVmlld1NlcnZlcl9XaW4yMDEyYW5kVXAuZXhlIC1Mb2NhbEZpbGUgQzpcVGVtcFxRbGlrVmlld1NlcnZlcl9XaW4yMDEyYW5kVXAuZXhlCkNvcHktUzNPYmplY3QgLUJ1Y2tldE5hbWUgbmJpbS1wLXMzLW1nbXQtZXV3ZTEtZmlsZXMyIC1LZXkgaW5zdGFsbC1tZWRpYS9EQ0lRL1NRTF9TdnJfU3RhbmRhcmRfRWR0bl8yMDE0X1NQM182NEJpdC5JU08gLUxvY2FsRmlsZSBDOlxUZW1wXFNRTF9TdnJfU3RhbmRhcmRfRWR0bl8yMDE0X1NQM182NEJpdC5JU08iCjwvcG93ZXJzaGVsbD4KPHBlcnNpc3Q+dHJ1ZTwvcGVyc2lzdD4=
+-------------------------------------------------------------------------------------
+  - Acilan encode edilmis datayi Cfn'de Userdata:'nin altina ekleriz.
+
+
+$Script = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($UserData))
+  - Bu kodla decode edebiliriz.

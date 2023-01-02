@@ -1,0 +1,19 @@
+image: node:8.11
+pipelines:
+  default:
+    - step:
+        script:
+          - npm run test
+  branches:
+    master:
+      - step:
+          deployment: production
+          script:
+            - npm run test
+            - ./deploy.sh production
+    develop:
+      - step:
+          deployment: staging
+          script:
+            - npm run test
+            - ./deploy.sh qa

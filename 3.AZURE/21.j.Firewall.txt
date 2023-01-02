@@ -1,0 +1,144 @@
+1.Firewall:
+- Hacking'e karsi kullanilir, cross side scripting attack, sql injection attack... vb karsi kullanilir.
+- PaaS service'tir. Bir VM kurup uzerine yapilandirmiyorsunuz, kendisi bir servicetir.
+- Web sitesi icin web trafigi icin kullanilir.
+- Vnet'te "AzureFirewallSubnet" isimli bir Subnet kurularak icine tanimlanir. Subnetin ismi sabittir.
+- Farkli networkleri baglarken Azure Firewall'u merkezi olarak konumlandirabiliriz.
+- Disardan iceri ve on-rem'den Azure'a gelen trafigi Firewall uzerinden gecirebiliriz.
+- Firewall bir Vnet uzerine konumlandirilir.
+- Vnet'ler arasi trafik aktarim gorevi de gorur. Peering'ten farkli olarak tum Vnet'ler buradaki Firewall'a tanimlanip UDR izinleri Vnet bazinda ve Firewall'dan da izinler verilerek karsilikli konusabilir Vnet'ler. Ziplama noktasi olusturur.
+- Azure Firewall'u Vnet'ler, on-prem arasinda kullanmak istemeyenler icin Marketplace'te Network Virtual Appliance (NVA) cihazlari bulunuyor. Peering iki Vnet'i baglarken Firewall veya NVA bulusma noktasi gibi calisir ve Firewall'a bagli olan tum Vnetler (on-prem de) kendi arasinda konusabilir.
+- Managed cloud service'tir.
+- URL filtreleme, NAT, gelen/giden trafigi kontrol, tehdit istihbaratina dayali filtreleme, Azure Monitor ile analiz edebiliyorsunuz.
+- Vnet'e bagli Subnet'e atanir.
+- Kendi subnetini olusturur.
+- Firewall bir instance'tir.
+!!!!!!!!!!!
+- Network rules: Herbir Vnet ile baglanacagi Vnet arasinda tanimlanarak private baglanti saglar. Karsi taraftan buraya da tanimlanmali. Oncesinde herbir Vnet ile Firewall'un bulundugu Vnet-hub arasinda peering kurulur. Ayrica Internete cikis ve internetten giris kurallari tanimlanir.
+!!!!!!!!!!!
+- DNAT rules: Internetten Vnetlere olan RDP baglantilar kurulur.
+> Firewall olusturulur > Route olusturulur > Rule'lar olusturulur.
+  - Application/Network Rules:
+    > VM > firewall > internet
+  - DNAT Rules:
+    > Client > firewall with public IP > web server with private IP
+
+Firewall tier:
+- Standard:
+- Premium:
+  * Full Managed
+
+a.Olusturma: 
+> Firewalls > + Create 
+  > Subs / Rg / Name: fw-ins / Region / AZ: bos biraktik / Firewall tier: Standard
+  > Firewall management: Use a Firewall Policy to manage this firewall
+  > Firewall policy: Add new > Policy name: fw-policy
+  > Choose a virtual network: Create a new: Virtual network name fw-vn / Address Space: 10.5.0.0/16 / Subnet Address Space: 10.5.1.0/24
+  > Public IP address: Add new: Name: mypublic-ip
+  > Forced tunneling: disable (ikinci bir subnettir. Trafigin disari cikarken bu subneti kullanmasini saglar.)
+
+b.Website icin Subnet:
+- Firewall ile olusan vn'un altina firewall icin otomatik olusan AzureFirewallSubnet disinda serverlar icin yeni Subnet kuruyoruz.
+> fw-vn > + Subnet 
+  > Name: website / Subnet address range: 10.5.2.0/24 > Save
+
+
+
+2.Route Table:
+- Olusan firewall'un VN'ine baglanir.
+- Once route table olusturulur sonra website (Subnet ile associate edilir) route'ler eklenerek konfigure edilir.
+- Routelar ile subnetten cikan trafic fw'ye yonlendirilir.
+
+a.Olusturma:
+> Route tables > 
+  > subs / RG: fw-rg / Region / Name: fw-rt > create
+ 
+b.Associate:
+- website subnet ile route table associate edilir.
+> fw-rt > Subnets > + Associate 
+  > Virtual network: fw-vn / Subnet: website > ok
+
+c.Routes:
+- Any traffic leaving website subnet will go to fw-ins firewall.
+> fw-rt > Routes > + Add 
+  > Route name: firstroute / Address prefix destination: IP Addresses /  Destination IP addresses/CIDR ranges: 0.0.0.0/0 (all traffic) 
+    / Next hop type: Virtual appliance (firewall) / Next hop address: 10.5.1.4 (fw-ins private IP address) > Add
+
+
+
+3.Firewall:
+- Source olarak vn ve icindeki vm'lerin ip addresleri girilir.
+- Destination address ise internette ulasilmak istenen address.
+
+a.Firewall Policy-Application Rule Collection:
+- VM'in www.microsft.com ile iletisimi rule olarak yazilir.
+> fw-ins > Firewall Policy: fw-policy > Application rules > + Add a rule collection
+  > Name: app-rule / Rule collection type: Application (Network ve DNAT da secilebilir) / Priority: 500
+    / Rule collection Action: Allow / Rule collection group: DefaultApplicationRuleCollectionGroup 
+  > Rules > name: Allow Microsoft / Source type: IP address / Source: 10.5.2.128/25 (*, veya VM'nin private IP'si de yazilabilir.)
+  / Protocol:Port: http, https / Destination type: FQDNs : www.microsoft.com > Add
+
+b.Firewall Policy-Network Rule Collection:
+- web-vm'in source olarak ayarladigimiz ve internette ilgili adrese ulasimi icin olusturulan rule.
+- FQDNs yerine IP address'le rule yazilir.
+> fw-ins > Firewall Policy: fw-policy > Network rules > + Add a rule collection  
+  > Name: dns-rule / Rule collection type: Network / Priority: 200 
+    / Rule collection Action: Allow / Rule collection group: DefaultNetworkRuleCollectionGroup 
+  > Rules > name: Allow dns / Source type: IP address / Source: 10.0.5.0/24 / Protocol: UDP / 
+    / Destination Ports: 53 / Destination type: IP Address / Destination Address: 209.244.0.3,209.244.0.4 > Add
+
+c.Firewall Policy-DNAT Rule Collection: 
+- firewall'un public IP'si alinir:
+> fw-ins > Public IP configuration > IP Address: 
+20.231.45.42 copy (Firewall'un IP addresi)
+
+- website subnetinde olusturulan (yukarda olusturmadim) VM'in Private IP'si alinir:
+> fw-vn > Private IP Address: 10.0.5.132 copy
+
+- Evimizdeki client bilgisayarimiz ile (source, biz * dedik), firewall'un public IP'sine oradan da web instance'in private ip'sine rdp ile baglaniriz.
+> fw-ins > Firewall Policy: fw-policy > DNAT rules > + Add a rule collection
+  > Name: rdp-rule / Rule collection type: DNAT / Priority: 250
+    / Rule collection Action: ... > Rule collection group: DefaultDnatRuleCollectionGroup 
+  > Rules: > Name: rdp / Source type: IP address / Source: * (kendi adresimizi de yazabiliriz) / Protocol: TCP   
+    / Destination Ports: 3389 / Destination type: IP Address / Destination: 52.154.213.123 (fw-ins'nin public addresi) / Destination Ports: 3389 / Translated address: 10.0.5.132 (website subnetteki VM'nin private adresi) / Translated port: 3389
+  > Add > Refresh
+
+
+
+4.VM:
+- web-ins'a network rule'da tanimli dest adresleri tanitiyoruz.
+> web-ins (website subnetteki VM) > Networking > Network interface: web-ins > DNS servers > custom
+  > 209.244.0.3, 209.244.0.4 (ayri ayri girilir.) > save
+
+
+5.RDP Baglantisi ile Firewall'u Test Ediyoruz:
+- VM IP addresi yerine Firewall IP addresi ile VM'ye RDP baglantisi yapiyoruz.
+
+a.Once Firewall Public IP Address'ini aliyoruz.
+> fw-ins > Public IP Configuration > IP Address: 20.231.45.42 copy
+
+b.Remote Desktop Connection:
+> Desktop Sol alt > Remote Desktop Connection > More choices > Use different account > 
+  > VM'nin user id ve password'u ile baglanilir. > ok
+
+c.VM'e RDP Baglantisinda iken VM ile Internete Baglanma:
+> www.youtube.com > hata
+> www.google.com > hata
+> www.microsoft.com > girdi. (Application Rule Collection)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

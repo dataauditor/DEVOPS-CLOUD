@@ -1,0 +1,4 @@
+docker logs --tail 50 --follow --timestamps 67a
+  - hata veren containerin hatasini goruruz.
+
+sudo docker attach 67d

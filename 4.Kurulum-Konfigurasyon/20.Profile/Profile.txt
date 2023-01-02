@@ -1,0 +1,28 @@
+vim C:\Users\nbuce1\.aws\config
+  - Profile degistirilir. Linux'ta.
+
+code C:\Users\nbuce1\.aws\config
+  - Profile degistirilir. Windows'ta.
+
+[default]
+region = eu-west-1
+output = json
+
+[profile nbim-msci-loader-admin]
+region = eu-west-1
+sso_region = eu-west-1
+sso_start_url = https://nbim.awsapps.com/start
+sso_account_id = 404203432699
+sso_role_name = NBIMAdministratorAccess
+-----------------------------------------------------------------
+  
+$env:AWS_PROFILE='nbim-msci-loader-admin'
+  - Ilgili profil env olarak secilir.
+aws sso login
+  - sso ile ilgili env'a baglanilir.
+aws cloudformation deploy --stack-name nbuce1-testing --template-file .\deneme.yaml --capabilities CAPABILITY_NAMED_IAM 
+sam deploy --capabilities CAPABILITY_NAMED_IAM --stack-name rune-test-yolo --template-file deneme.yaml --on-failure DELETE
+
+
+aws configure 
+  - Bit profile olusturur config dosyasinda ama bu duzenlenmeli sonrasinda.

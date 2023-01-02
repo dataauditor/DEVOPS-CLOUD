@@ -1,0 +1,46 @@
+1.Azure Functions:
+- Temel altyapiyi degil, hizmetinizi calistiran olay tabanli kod.
+- Sadece bir kod calistirmak icin kullanilir. Lambda gibi.
+- Tetikleme ile calistirilir.
+
+
+
+2.Azure Logic Apps:
+- Uygulamalari entegre etmek icin gorevleri, is sureclerinio ve is akislarini otomatiklestirir ve duzenler.
+- Is akislari olusturabiliriz.
+
+
+
+3.Hands on Azure Functions:
+a.Function app Olusturma:
+> Function app
+  > RG: ...
+  > Function app name: rana
+  > Publish: Code (Docker container de secilebilir)
+  > Runtime stack: .Net  (ilgili program dili)
+  > Version: 6
+  > Region: ...
+  > Storage: create new
+  > Operating system: Windows
+  > Plan type: Consumption (Serverless)
+  > Enable Application Insights: No  (Monitoring)
+  > create
+
+b.Function app'a Function Ekleme:
+> rana
+  > Functions
+  > + Create
+  (> Development environment'ten kendi kodunuzu ekleyebilirsiniz.)
+  > Select template:
+    > HTTP trigger (her HTTP isteginde calisan govde veya sorgu dizesindeki verilere bagli olarak yanit veren bir islev.)  (Timer trigger, Queue trigger... vb de secilebilir)
+    > New function: HttpTrigger1
+    > Yetkilendirme Duzeyi: Function
+    > create  (function olustu)
+
+c.Function'a Code Ekleme:
+> rana
+  > Functions
+  > HttpTrigger1 
+    > Code + Test  (hazir bir code var istediginiz gibi degistirebiliriz)
+    > Get function URL (kopyalayip browsere yapistirarak nasil cvp verecek bakilabilir)
+    > Browserde ...==&name=ugur seklinde yazarsak ismi alip sonucu ismi de yansitacak sekilde verir.

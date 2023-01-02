@@ -1,0 +1,967 @@
+1.Genel:
+- https://docs.microsoft.com/en-us/data-migration/
+- Azure Migrate: Web serviceleri tasiriz.
+- DMS (Data Migration Service): On-prem SQL server tasinmasi icin kullanilir.
+- DMA (Data Migration Assistance): On-prem SQL serveri degerlendirmek icin kullanilir.
+- On-prem'de VM, containers veya fiziki makineler olur.
+- IaaS, VMSS, AKS, App Service, DB Service ...vb hepsine de migrate edilebilir.
+- Ihtiyaca, butceye, sureye bagli olarak asagidaki 5 yoldan biri izlenir.
+
+5 R'S:
+  * REHOST: Azure'a tasima. Burada env degisimi olmaz VM'den VM'e gibi. On-prem'den IaaS'a migrate. Application kodu degismiyor.
+  * REFACTOR: VM'deki app'i App Service'e vaya VM'deki DB'yi Azure DB'ye yuklemek gibi. Environment gelistirilir. On-prem'den PaaS'a migrate. Application kodu degismiyor.
+  * REARCHITECT: VM'den AKS, Azure DB'ye vb migrate ederken. Application kodu degisiyor.
+  * REBUILD: Bastan kurgulariz. Application kodu degisiyor.
+  * REPLACE: Share point gibi belki dogrudan bir konum yok.
+
+
+
+2.AZURE MIGRATE:
+- Spring Clean: Migrate oncesi kullanimi kalmayan app, resourcelar kaldirilir.
+a.DISCOVER:
+    - Neleri migrate edecegiz inceleriz.
+  > WHAT: 
+    - Migrate edilecek resource'lar ve Applikasyonlar dahil hersey.
+      - VMware, agentless, 
+      - Hyper-V, agentless,
+      - Baremetal, agent.
+  > PERFORMANCE:
+    - Ihtiyac duyulan CPU, VM, RAM vb miktari tespit edilir. On-prem'e gore az olur genelde. 
+  > DEPENDENCIES:
+    - DB ile VM'lerin yakin alop latency'i kisa tutmasi vb.
+  > APP VALUE:
+    - 
+
+b.ASSESS:
+  > Can it move Cloud?
+  > Right Size 
+    - from performance info. 
+    - Peak'leri de incelemeliyiz.
+    - Duration degerlendirilir scaling icin.
+  > Grouping
+    - from dependencies info.
+  > Target Service
+    - 5 R's
+
+c.MIGRATE:
+  > Plan
+    > Test Migration
+    > Migrate
+      - 5 R's vb hepsi degerlendirilir. Parca parca.
+  > Online/Offline  
+    - Downtime
+
+d.OPTIMIZE:
+  > Ongoing:
+
+https://docs.microsoft.com/en-us/azure/dms/tutorial-sql-server-to-azure-sql
+
+
+
+
+3.Hands on with Hyper-V:
+!!! https://github.com/microsoft/MCW-Line-of-business-application-migration/blob/master/Hands-on%20lab/HOL%20step-by%20step%20-%20Line-of-business%20application%20migration.md
+- Bir adet SMARTHOTELHOST VM var.
+- SMARTHOTELHOST icinde kurulu Server manager > Hyper-V icinde 2 web VM, 1 Ubuntu VM ve 1 SQL VM var.
+
+- 1 db Windows server 2016 ve 1 SQL Server 2017, 1 Application tier WS 2012R2, 1 Web tier WS 2012R2 1 web proxy hosted on ubuntuWAF VM var.
+- Overview/Ozet:
+  * Before the lab, you will have pre-deployed an on-premises infrastructure hosted in Hyper-V. 
+  * This infrastructure is hosting a multi-tier application called 'SmartHotel', using Hyper-V VMs for each of the application tiers.
+  * During the lab, you will migrate this entire application stack to Azure. 
+    - This will include assessing the on-premises application using Azure Migrate; 
+    - Assessing the database migration using Microsoft Data Migration Assistant (DMA); 
+    - Migrating the database using the Azure Database Migration Service (DMS); 
+    - And migrating the web and application tiers using Azure Migrate: Server Migration. This last step includes migration of both Windows and Linux VMs.
+- Surec:
+  * Throughout this lab, you will use Azure Migrate as your primary tool for assessment and migration.
+  * In conjunction with Azure Migrate, you will also use a range of other tools, as detailed below.
+  * To assess the Hyper-V environment, you will use Azure Migrate: Server Assessment. This includes deploying the Azure Migrate appliance on the Hyper-V host to gather information about the environment. 
+  * For deeper analysis, the Microsoft Monitoring Agent and Dependency Agent will be installed on the VMs, enabling the Azure Migrate dependency visualization.
+  * The SQL Server database will be assessed by installing the Microsoft Data Migration Assistant (DMA) on the Hyper-V host, and using it to gather information about the database. 
+  * Schema migration and data migration will then be completed using the Azure Database Migration Service (DMS).
+  * The application, web, and web proxy tiers will be migrated to Azure VMs using Azure Migrate: Server Migration. You will walk through the steps of building the Azure environment, replicating data to Azure, customizing VM settings, and performing a failover to migrate the application to Azure.
+
+
+A.0.On Hazirlik Kapsaminda On-prem Yukleme:
+- Template ile SmartHotelHost Serveri ve icinde Hyper-V yuklenir. Host icinde 4 adet VM olusur.
+- Amac Hyper-V'deki 4 adet VM'i Azure'a tasimak.
+a.On-prem'i Deploy Etme:
+https://github.com/microsoft/MCW-Line-of-business-application-migration/blob/master/Hands-on%20lab/HOL%20step-by%20step%20-%20Line-of-business%20application%20migration.md
+  > Deploy
+    > Subscription 1 Region: East US | Admin Username: demouser | Admin Password: rana12345678, | 
+    > Resource Group Base Name: SmartHotel-RG 1 Include Landing Zone: True
+    > Landing Zone Location: 
+  > Create
+  
+b.On-prem Host'u Browserden Acma:
+> SmartHotel-RGHostRG
+  > Overview
+  > Public IP address: 20.134.2.67
+Browser:
+20.134.2.67   (Applicationa girilir.)
+
+
+
+A.PROJE OLUSTURMA VE ON-PREM CIHAZLARA DEPENDENCIES & MONITORING AGENT YUKLEMESI:
+- Once Migration Appliance yuklenerek Dependencies'ler bulunur.
+- Sonra Herbir makineye Monitorung agent yuklenerek VM bazinda veriler alinir.
+a.Migration Appliance Yukleme/Konfigurasyonu:
+a.1.Migration Projesi Olusturma:
+> Azure Migrate
+  >  Get started
+    > Discover, assess and migrate  (Servers, db ve web apps icin bu secilir)
+    > create project
+      > Subs / RG: AzureMigrateRG / Project: SmartHotelMigration / Geography: Switzerland
+      > create
+
+a.2.Key ve Migrate Appliance Download: 
+> Azure Migrate
+  > Servers, databases and web apps  (devam eden kurulumdayiz halihazirda)
+    > Assessment tools: Discover: Discover
+    > Discover using appliance
+    > Are your servers virtualized?: Yes, with Hyper-V  (VMware, Physical veya baska Cloud da secilebilir)
+      > Name your appliance: SmartHotelAppl
+      > Generate key  
+      > Project key  (bir yere kopyalanir)
+      > Download Azure Migrate appliance:  .VHD file. 12GB  > Download  (AzureMigrateAppliance_v3.20.08.27.zip)
+
+a.3.On-prem VM icin RDP File Download:
+> SmartHotel-RGHostRG:
+    - Burada migrate edecegimiz resource'lar var. Vnet, VM (Hyper-V), 2xDisk 
+    - Oncelikle VM'e RDP ile baglanacagiz:
+  > SmartHotelHost  (VM)
+    > Connect
+    > RDP
+    > IP address: DNS name (IP address veya DNS name'i secebiliriz.)
+    > Port number: 3389
+    > Download RDP File   (SmartHotelHost.rdp)
+
+a.4.Remote Desktop Connection to On-prem:
+> SmartHotelHost.rdp (Yuklenen file tikla)
+  > Connect
+  > User name: demouser (VM'de kayitli olan)
+  > Password: rana12345678, (VM'de kayitli olan)
+  > Ok
+  > Yes
+
+a.5.SmartHotelHost'e Migrate Appliance Yukleme:
+- The Azure Migrate appliance needs access to the Internet to upload data to Azure.
+- It also needs access to the Hyper-V host. 
+- However, it does not need direct access to the application VMs running on the Hyper-V host. 
+- Yukarda olusturulan migrate appliance calisma bilgisayarindan host'a yuklenir.
+- Host icinde de 4 adet VM var.
+- Migrate appliance da bir VM'dir.
+> Server Manager
+  > Tools
+    > Hyper-V Manager
+        - Dort adet VM burada. 
+      > SMARTHOTELHOST
+      > Action
+      > Import Virtual Machine
+        > next
+        > Download > Temporary Storage (D) > AzureMigrate > AzureMigrateAppliance_v3.20.08.27 
+        > Select Folder  (Azure Migrate ile kendi bilgisayarimiza indirilmisti.)
+        > Locate Folder: Folder: F:\VirtualMachines\AzureMigrateAppliance.xxx next > next  (otomatik olarak ilgili adrese appliance yuklenir.)
+        > Register the virtual machine in-place (use the existing unuique ID) > next
+        > Connection: AzureMigrateSwitch  > next
+        > Finish
+
+a.6.Migrate Appliance'in Konfigurasyonu:
+- Azure verileri gonderecek Migrate Appliance VM'i SMARTHOTELHOST'da olusturulup konfigure edilir.
+- Internete baglanarak Azure'a verileri upload edebilmeli ve Hyper-V host'a da bagli olmali.
+- App VM'lere (4 adet VM'e) bagli olmasi gerekli degil.
+> Server Manager
+  > Tools
+    > Hyper-V Manager
+      > SMARTHOTELHOST
+        > Virtual Machines: AzureMigrateAppliance_v3.20.08.27  (diger VM'lerin oldugu dosyada belirdi.) 
+        > RC 
+        > Start 
+            - Migrate Appliance calistirildi.
+          > Accept
+          > User name: Administrator
+          > Password: 123
+          > Reenter password: 123
+          > Finish
+          > Connect
+          > Password: 123  (Migrate appliance'a girildi. 2dk kadar islem yapmayin sistem otursun.)
+          > Otomatik olarak appliance program acar. Acmazsa desktopta bulunan Azure Migrate Appliance cift tiklanir.
+          > I agree
+          > Refresh
+          > 2. Register with Azure Migrate: Register Hyper-V appliance by pasting the key here: Project key yapistirilir. 
+              - Azure Migrate ile proje olusturulurken alinmisti.
+            > Login
+            > Copy code & Login  ('Device code' kopyalanir)
+            > Enter code: Paste  ('Device code' yapistirilir.)
+            > Next
+            > Sign in: email veya username (azure credentials girilir.)
+            > Password: ... (azure credentials girilir.)
+            > sign in > continue  (10 dk kadar islem surebilir.)
+          > 3. Manage credentials and discovery sources
+            > Step 1: Provide Hyper-V host credentials for discovery of Hyper-V VMs: 
+            > Add credentials
+              > Friendly name: hostlogin
+              > Username: demouser
+              > Password: 123
+              > Save
+            > Step 2: Provide Hyper-V host/cluster details
+            > Add discovery source
+              > Add single item (Add multiple items. Birden fazla VM eklenebilir.)
+              > IP Address/FQDN: SmartHotelHost
+              > Map credentials: Select Friendly name: hostlogin
+              > Save
+            > Start discovery  (5-10 dk alabilir.)
+                - Discovery islemine baslar.
+
+b.Discovery:
+> Azure Migrate
+  > Servers, databases and web apps
+  > Refresh (Assesment tools: Discovered servers: 5  (2 web, 1 UbuntuWAF, 1 SQL ve 1 Migrate Appliance.))
+    > Assess (ok isaretine tikla) > Azure VM 
+      > Assesment type: Azure VM (Azure SQL, Azure App Service, Azure VMware Solution(AVS))
+      > Discovery source: Servers discovered from Azure Migrate appliance
+      > Edit > Percentile utilization: 99th (vb buradan degisiklikler yapilabilir.) > Save
+      > Next: Select servers to assess
+        > Assessment name: SmartHotelAssesment
+        > Select or create a group: Create new: > Group name: SmartHotel VMS
+        > Appliance name: SmartHotelAppl
+        > Name: smarthotelweb1, smarthotelweb2, smarthotelSQL1, UbuntuWAF  (secilirler, AzureMigrateAppliance_v3 secilmez Discovery icin)
+        > Next: Review + create assessment
+  > Servers, databases and web apps
+    > Refresh  (Groups: 1, Assesments Total: 1 bulduk)
+    > Assesment tools: Assesmets: Total: 1 (tikla)
+    > SmartHotelAssesment
+        - Ilgili VM'lerin migrate icin hazir olma durumlarini gosterir. 
+      > Azure readiness  (Eksiklik gosterenler incelenir ve genelde islem yapilmasa da migrate yapilabilir.)
+      > Ready with conditions
+        > Name: UbuntuWAF | Azure VM readiness: Unknown OS  (tikla) 
+          - Burada ikazlari aciklayan dokuman acilir.
+          - Bazi VM'lerin migrate oncesi ek islem ihtiyaci incelenir. Cozum icin dokuman acilir ve incelenir.
+          - Genelde islem yapilmasa da migrate olur.
+        > Name: UbuntuWAF (tikla)
+          > Readiness issues: Unknown OS | Migration tool: Reason: This machine is suitable for lift and shift migration to Azure.  
+            - ## OS tanimsiz dese de migrate edilebiliyor seklinde yaziyor.
+      > Overview
+        - fiyatlandirmalar, ozellikler hakkinda bilgi verir.
+        > Edit properties
+          > Target properties, VM size, performance history: 1 week, VM series: 22 selected ...vb degistirilebilir.
+            - Discovery islemini edit edebiliriz.
+          > Save
+  > Servers, databases and web apps
+    > Overview
+      > Appliances
+        > Registered appliances: 1 > Refresh services
+
+c.1.Workspace Olusturup Microsoft Monitoring Agent (MMA) Address Kopyalama:
+- Workspace olusturulur. Workspace, subscription'a baglanmak icin olusturulur.
+- Microsoft Monitoring Agent (MMA) olusturulur.
+> Azure Migrate
+  > Servers, databases and web apps
+    > Groups: 1 (tikla)
+    > SmartHotel VMS
+    > Name: smarthotelweb1 | Dependencies: Requires agent installation (tikla)
+      > Configure OMS workspace
+        > Create new: AzureMigrateWS09022022
+        > OMS workspace location: Suutheast Asia
+        > Configure
+      > Workspace key: (Bir dosyaya kopyalanir.)
+      > AzureMigrateWS09022022  (tikla) (Olusur.) 
+        > Agents management
+          > Workspace ID  (Bir dosyaya kopyalanir.)
+          > Primary key (Bir dosyaya kopyalanir.)
+    > Name: smarthotelweb1 | Dependencies: Requires agent installation
+      > Step 1: Download & install Microsoft Monitoring Agent (MMA) 
+        > Windows 64-bit > RC 
+        > Copy link address  (ilgili address kopyalanir.)
+      
+c.2.Windows VM'lere Baglanip MMA Yukleme:
+- smarthotelweb2 ve smarthotelSQL1'e de yuklenir (Bunlar Windows).
+- MMA'i herbir VM'e yukler ve Dependency mapping olustururuz.
+- VM'in tum dependencylerini map eder.
+> Server Manager
+    - SmartHotelHost'dayiz.
+  > Tools
+    > Hyper-V Manager
+      > Virtual Machines: smarthotelweb1
+        > Password: ...
+> Browser
+    - smarthotelweb1'deyiz.
+  > Kopyalanan link address'i yapistirilir. > run
+  > Microsoft Monitoring Agent Setup 
+    > next 
+    > I agree 
+    > next 
+    > Connect the agent to Azure Log Analytics 
+    > next
+      > Workspace ID: (Dependencies'ten yapistirilir.)
+      > Workspace Key: (Dependencies'ten yapistirilir.)
+      > next
+    > Install
+> Start
+  > Programs and Features
+    > Microsoft Monitoring Agent  (yuklendigini kontrol ettik.)
+
+d.1.Dependency Agent Addresi Kopyalama:
+> Azure Migrate
+  > Servers, databases and web apps
+    > Groups: 1 (tikla)
+    > SmartHotel VMS
+    > Name: smarthotelweb1 | Dependencies: Requires agent installation
+      > Step 2: Download and install dependency agent
+        > Windows 64-bit > RC 
+        > Copy link address  (ilgili address kopyalanir.)
+
+d.2.Windows VM'lere Baglanip Dependency Agent Yuklenir:
+- smarthotelweb2 ve smarthotelSQL1'e de yuklenir (Bunlar Windows).
+> Server Manager  (suan smarthotelweb1 bagli oldugu icin browserdan devam edilebilir.)
+  > Tools
+    > Hyper-V Manager
+      > Virtual Machines: smarthotelweb1
+        > Password: ...
+> Browser
+  > Kopyalanan link address'i yapistirilir. > run
+  > Dependency Agent 9.10.13 Setup 
+    > I agree 
+    > Finish
+> Start
+  > Programs and Features
+    > Microsoft Monitoring Agent  (yuklendigini kontrol ettik.)
+
+e.Ubuntu VM'e host VM uzerinden MMA ve Dependency Agent Yukleme:
+- UbuntuWAF VM'e MMA ve Dependency agent Command Prompt ile yuklenir.
+- Host (SmartHotelHost)'ta Command prompt acilip baglaniriz. 
+> smarthotelhost
+  > cmdprompt 
+ssh demouser@192.168.0.8  
+    - UbuntuWAF'a baglaniyoruz. UbuntuWAF'in IP address'i girildi.
+  > password: ...
+sudo -s
+  > password: ...
+wget https://raw.githubusercontetnt.com/Microsoft/OMS.Agent-for-Linux/master/installer/scripts/onboard_agent.sh && sh onboard_agent.sh -w <Workspace ID> -s <Workspace Key>
+  - Workspace ID, Workspace Key yukaridan alinir.
+/opt/microsoft/omsagent/bin/service_control restart <Workspace ID> 
+wget --content-disposition https://aka.ms/dependencyagentlinux -O InstallDependencyAgent-Linux64.bin
+sh InstallDependencyAgent-Linux64.bin -s
+  - Dependency agent indirilir.
+
+f.Dependencies'lerin Yuklendigini Portaldan Kontrol:
+- Dependency visualization gerceklestirilecek.
+> Azure Migrate
+  > Servers, databases and web apps
+    > Assesment tools: Dependency analysis: (Birsey secmedik. Muhtemelen sehven basildi.) > Groups: 1 (tikla)
+    > SmartHotel VMS
+      > smarthotelweb1, smarthotelweb2 ve UbuntuWAF: Dependencies (Agent): Installed  (yuklenmis.)
+      > View dependencies
+        - Birkac gun, hafta sonra daha detayli bilgi verir.
+
+
+B.MIGRATION OF VMs:
+a.Storage Account Olusturma:
+- Migration icin Storage account gerekir. Tasinacak VM'lerin Migration islemi esnasinda datasi burada tutulur.
+> Storage account
+  > create
+  > Subs | RG: AzureMigrateRG | Storage account name: migrationstorage5313 | Region: East US | Performance: Standard | Redundancy: LRS
+  > Enable soft delete for blobs (uncheck)  (digerleri default)
+  > create
+
+b.Private Endpoint Olusturma:
+- SQL Server Resource icin olusturuyoruz.
+> SmartHotel-RGRG
+  > smarthotelsqlgjxc (SQL server)
+    > Private endpoint connections
+    > + Private endpoint
+      > Subs | RG: SmartHotel-RG | Name: SmartHotel-DB-Endpoint | Region: East US
+      > Resource type: Microsoft.Sql/servers
+      > Resource: smarthotelsqlgjxc
+      > Target sub-resource: sqlServer
+      > Virtual network: SmartHotelVnet
+      > Subnet: SmartHotelVnet/SmartHotelDB (192.168.0.128/25)
+        - /25 olan bir Subnet olsun.
+      > Integrate with private DNS zone: Yes
+      > create
+  > smarthotelsqlgjxc (SQL server)
+    > SmartHotel-DB-Endpoint
+      > DNS configuration
+      > Private DNS zone: privatelink.database...  (Private DNS zone'a gorulur.)
+
+c.1.Discover'i Konfigure Etme:
+- SmartHotelHost bilgisayarindayiz.
+> Azure Migrate
+  > Servers, databases and web apps
+    > Migration tools: > Disvover
+      > Are your machines virtualized?: Yes, with Hyper-V
+      > Target region: East US  (Tasinacak VM'lerin bulundugu Region secilir.)
+      > Create resources
+    > Migration tools: > Disvover
+      > 1.Prepare Hyper-V host servers 
+        > Download (the Hyper-V replication... da gecen ustte alti cizili olan) > RC 
+        > Copy link address    
+      > 1.Prepare Hyper-V host servers 
+        > Download (Download the registration file and use it to register the Hyper-V host to this project. altindaki)
+        > SmartHotelMigration-MigrateVault-1295 isimli indirilen file kopyalanir ve masaustune kaydedilir.
+
+c.2.On-Prem SmartHotelHost'a Azure Site Recovery Provider ve Azure Recovery Services Agent Yuklenir:
+- Agent, Azure Site Recovery'i Registration icin configure ederiz. 
+> Browser
+  > Yukarda kopyalanan link address yapistirilir.
+  > Save
+  > Run
+    > Microsoft Updates: On > Next
+    > Install
+    > Register
+      > Key file > Browse > SmartHotelMigration-MigrateVault-1295 (masaustunde bulduk) > Open
+      > Next
+      > Proxy Settings: Connect directly to Azure Site Recovery without a proxy server
+      > Next
+      > Finish
+
+c.3.Register Hyper-V Hosts:
+> Azure Migrate
+  > Servers, databases and web apps
+    > Migration tools: > Disvover
+      > 2. Finalize registration
+        > "0" Connected 
+        > Refresh (Browser'dan yenilenir. Connected '1' olur.)
+  > Servers, databases and web apps
+    > Migration tools: > Disvover
+      > Are your machines virtualized?: Yes, with Hyper-V
+      > 2. Finalize registration: 1 Connected (tiklamayiz, sadece kontrol ettik.)
+      > Finalize registration  (10-15 dk alir.)
+
+d.1.Replicate VMs to Azure:
+- VM discovery ve finalizing registration sonrasi replication islemi yapilir.
+- VM'ler Azure'a replike edilir.
+> Azure Migrate
+  > Servers, databases and web apps
+    > Migration tools: Replicate 
+        - Discovered Servers: 5 olarak goruruz.
+      > Are your machines virtualized?: Yes, with Hyper-V
+      > Next
+      > Import migration settings from an assessment?: Yes, apply migration settings from an Azure Migrate assesment
+      > Select group: SmartHotel VMS
+      > Select assessment: SmartHotelAssessment
+      > smarthotelweb1,smarthotelweb2 UbuntuWAF 
+        - Tasinacak tum VM'ler secilir.
+        - SQL secilmedi zaten gorulmuyor burada.
+        - UbuntuWAF'te Unknown OS yazsada yinede seciyoruz. Aciklamada tasinabilecegi yaziyor.
+      > Next
+      > Target settings: Subs | RG: SmartHotel-RGHostRG| Replication storage account: migrationstorage5313 
+        | Virtual network: smarthotelhostvnet | Subnet: hostsubnet | Availibility options: Availibility zone
+      > Already have an eligible Windows Server License?: No
+      > Next
+        > smarthotelweb1 | Standard_F2_v2 | OS Type:Windows
+        > smarthotelweb2 | Standard_F2_v2 | OS Type:Windows
+        > UbuntuWAF      | Standard_F2_v2 | OS Type:Linux
+      > Next  (Disk ile ilgili degisiklik yapilabilir.)
+      > Next      
+      > Replicate
+
+d.2.Replice Edilmis VM'lere Static Private IP Address Atama:
+- Replica edilmis VM'lerin IP address'lerini On-prem'deki VM'lerin IP address'leri ile match ederiz.
+> Azure Migrate
+  > Servers, databases and web apps
+    > Migration tools: Overview  (3 VM replicate edilmis) 
+      > Replicating machines  (Once syncronized birkac dakika sonra Protected olana kadar bekle.)
+        > smarthotelweb1 
+          > Compute and Network
+            > Edit
+                - VM'in RG, Size, disk type vb degistirilebilir.
+              > Internal NATSwitch 
+                > Private IP address: 192.168.0.4  (kendimiz static bir address veririr. Subnet icinde olmali.)
+                > OK
+              > Save
+        > smarthotelweb2 
+          > Compute and Network
+            > Edit
+              > Internal NATSwitch (VM'in RG, Size, disk type vb degistirilebilir.)
+                > Private IP address: 192.168.0.5  (kendimiz static bir address veririr. Subnet icinde olmali.)
+                > OK
+              > Save
+        > UbuntuWAF 
+          > Compute and Network
+            > Edit
+              > Internal NATSwitch (VM'in RG, Size, disk type vb degistirilebilir.)
+                > Private IP address: 192.168.0.6  (kendimiz static bir address veririr. Subnet icinde olmali.)
+                > OK
+              > Save
+
+e.1.Migrate to Azure:
+- Gercek hayatta once test maksatli migration yapilir.
+- Migration burada yapiliyor.
+> Azure Migrate
+  > Servers, databases and web apps
+    > Migration tools: Overview 
+      > Refresh
+      > Step3: Migrate > Migrate
+        > Shutdown machines before migrating to minimaze data loss?: Yes
+        > smarthotelweb1, smarthotelweb2, UbuntuWAF (hepsi secildi, teker teker de secilebilirdi.)
+        > Migrate
+
+e.2.Migration Islemini Izleme:
+- Dilenirse takip edilebilir.
+> Azure Migrate
+  > Servers, databases and web apps
+    > Migration tools: Overview 
+    > Jobs   (3 makinenin son durumu izlenebilir. 15 dk surer.)
+
+e.3.Hedef RG'da VM'leri Kontrol Etme:
+> SmartHotel-RGRG
+  - 3 VM'de bu RG'a migrate edilmis.
+  - 3 VM icin disk ve NIC'ler de olusturulmus.
+
+
+
+C.MIGRATION OF DB:
+- Microsoft Data Migration Assistant (DMA): ile once Hyper-V'deki DB'deki SQL Server database assess edilecek ve bilgiler alinacak.
+- Azure Database Migration Service (DMS): ile sonra Schema migration ve data migration ile icra edilir.
+
+a.Register Mikrosoft Data Migration Resource Provider:
+- Ilgili service'i kullanabilmek icin register ediyoruz.
+> CloudShell > Power Shell > Create storage:
+Register-AzResourceProvider -ProviderNamespace Microsoft.DataMigration
+Get-AzResourceProvider -ProviderNamespace Microsoft.DataMigration | Select-Object ProviderNamespace, RegistrationState, ResourceTypes
+  - Register edilme durumunu kontrol ettik.
+
+b.Azure Database Migration Service Olusturma:
+> Azure Database Migration Service
+  > Create
+  > Continue to use Azure Database Migration Service to migrate SQL Server, ...
+  > Select
+    > Subs | RG: AzureMigrateRG | Migration service name: SmartHotelDBMigration | Location: East US
+    > Service mode: Azure
+    > Pricing tier: Standard  (Configure tier ile size degistirilebilir.)
+    > Networking
+      > DMSvnet/DMS (sec)
+    > create  (20 dk surebilir.)
+
+c.Assesment ve Migrate icin Tool Olusturma:
+- Assessment tool ve Migration tool olusturulur.
+> Azure Migrate
+  > Get started
+    > Databases (only): Assess and migrate databases
+    > Assessment tools: Click here  (tikla)
+    > Azure Migrate: Database Assessment
+    > Add tool
+  > Databases (only)
+      - Halihazirda otomatik buradayiz zaten.
+    > Migration tools: Click here (tikla)
+    > Azure Migrate Database Migration 
+    > Add tool
+
+d.1.On-Prem'e Data Migration Assistant Yukleme:
+> Azure Migrate
+  > Databases (only)
+    > Assessment tolls: + Assess
+      > 1:Download DMA: Download > RC
+        - Data Migration Assessment tool
+      > Copy link address
+Browser:
+- On-prem VM'de ilgili link acilir.
+> Past link
+  > Microsoft Data Migration Assistant v5.6: Download  (Dosya indirilir.)
+  > Download .NET Framework 4.8 Runtime > Install > Finish
+    - Internetten On-premde install edilir.
+  > DataMigrationAssistant indirilir.
+
+d.2.SmartHotelHost'a RDP Baglantisi Olusturma:
+> SmartHotel-RGHostRG  (Host RG: On-prem RG)
+  > SmartHotelHost  
+  > Connect 
+  > RDP
+    > IP address: DNS name | Port number: 3389
+    > Download RDP File
+
+d.3.SmartHotelHost'a DMA Install:
+> On-Prem
+  > DataMigrationAssistant 
+      - .Net Framework sonrasi refresh yapildigi icin teniden baglandik.
+    > Next
+    > Finish
+
+d.4.smarthotelSQL1'in IP Address'i Alinir:
+- Islem yapmadik. Sonra devam ediliyor.
+> Server Manager
+  > Tools
+    > Hyper-V Manager
+      > Virtual Machines: smarthotelSQL1
+> Azure'da Olusturulan SQL DB
+  > Command Prompt
+  ipconfig
+    - IPv4 Address: 192.168.0.6
+
+d.5.Yuklenen DMA'nin Config Dosyasi Konfigure Edilir:
+> Explorer
+  > This PC/Windows/Program Files/Microsoft Data Migration Assistant/Dma.exe.config
+  > RC > Open with Notepad
+------------------------------------------------------------------------------------------
+<add key="EnableAssesmentUploadToAzureMigrate" value="True"/> 
+------------------------------------------------------------------------------------------
+    - Bas ve sonundaki "<!--  -->" yorum isaretleri kaldirilip kaydedilir.
+  > File > Save
+
+d.6.On-Prem'de Yuklu Microsoft Data Migration Assistant ile Assessment Projesi Olusturulur: 
+> Microsoft Data Migration Assistant
+    - On-prem'de desktopta olusan kisa yoldan program acilir.
+  > +
+    > Project type: Assesment
+    > Project name: SmartHotelAssesment
+    > Assesment type: Database engine
+    > Source server type: SQL server
+    > Target server type: Azure SQL Database
+    > Create
+     > Check database compatibility | Check feature parity
+     > Next
+    > Connect to a server
+      > Server name: 192.168.0.6  (On-prem'deki DB'nin IP address'i)
+      > Authentication type: SQL Server Authentication
+      > Username: eyvi  (db'nin username'i)
+      > Password: 1234  (db'nin password'u)
+      > Connection properties
+        > Encrypt connection (tikla)
+        > Trust server certificate (tikla)
+      > Connect
+    > Add sources
+      > 192.168.0.6 (tikla)
+        > SmartHotel.Registration (tikla)
+      > Add
+    > Start Assessment
+    > SmartHotelAssesment
+        - Unsupported feature'lar incelenebilir.
+        - Recommendation'lara bakilabilir. Hata verse de genelde calisiyor.
+      > Upload to Azure Migrate
+      > Connect to Azure: Azure Environmet: Azure
+        > Connect
+        > Username / Password (Azure portal kullanici bilgileri)
+        > Sign in
+      > Upload to Azure Migrate
+        > Subscription: Azure Pass - Sponsorship  (kendi subscriptionunu sec)
+        > Azure Migrate Project: SmartHotelMigration  (Onceden hazirladigimiz proje secilir.)
+        > Upload  (Assesment uploaded)
+          
+d.7.Azure Portal'da Database Migration Service'in Kontrolu:
+> Azure Migrate
+  > Databases (only)
+    > Refresh
+      - Assessment tools altinda Assessed database instance 1, vb seklinde gorulur.
+    > Notifications (Yukardaki 'çan' sekli tikla.)
+      > Deployment succeded  
+        > Go to resource
+        > Azure Database Migration Service > SmartHotelDBMigration > Overview
+          - (Database migration service is created.)
+
+e.1.Azure'daki SQL Server'a Private Endpoint Olusturma:
+> SmartHotel-RGRG
+  > smarthotelsqlggjxc  (SQL serveri seceriz.)
+    > Private endpoint connections
+    > + Private endpoint
+      > Subs | RG: SmartHotel-RGRG | Name: SmartHotel-DB-for-DMS | Region: East US
+      > Virtual network: DMSvnet (onceden olusturduk.) | Subnet: DMSvnet/DMS
+      > Integrate with private DNS zone: Yes
+      > Resource group: SmartHotel-RGRG
+      > create
+
+e.2.Private Endpoint Kontrol:
+> SmartHotel-DB-for-DMS  (Private endpoint)
+  > DNS configuration  (Private endpoint olusturulmus.)
+
+e.3.Public Network Access Konfigurasyonu:
+> smarthotelsqlggjxc
+  > Security/Firewalls and virtual networks
+    > Deny public network access: uncheck  (tikli ise tiki kaldirin.)
+    > Minimum TLS Version: 1.2
+    > Connection Pokicy: Default
+    > Allow Azure services and resources to access this server: Yes
+
+f.Migration Projesi Olusturma:
+f.1.Target/Azure'daki SQL Server name Kopyalanir:
+> SmartHotel-RGRG
+  > smarthotelsqlggjxc
+    > Overview
+    > Server name: smarthotelsqlggjxc.database.windows.net  (kopyala asagiya yapistirilacak.)
+
+f.2.Azure Database Migration Service ile Migration Projesi Olusturma:
+> AzureMigrateRG
+  > SmartHotelDBMigration   
+    - Azure Database Migration Service. Onceden olusturuldu.
+  > + New Migration Project
+    > Project name: DBMigrate | Source server type: SQL Server | Target server type: Azure SQL Database | Migration activity type: Create project only
+    > Create
+  > SQL Server to Azure SQL Database Migration Project Wizard
+    > Select source:
+      > Source SQL Server instance type: 10.0.0.4
+        - On-prem'deki SQL serverin IP address'i.
+      > Authentication type: SQL Authentication
+      > User name: eyvi  (db'nin username'i)
+      > Password: 123
+      > Encrypt connection: Tikla
+      > Trust server certificate: Tikla
+    > Select databases:
+      > SmartHotel.Registration (secili olsun.)
+    > Select target: 
+      > I know my target details
+      > Target server name: smarthotelsqlggjxc.database.windows.net  (smarthotelsqlggjxc'in server name'ini asagida aldik.)
+      > Authentication type: SQL Authentication
+      > User name: demouser
+      > Password: 1234
+      > Encrypt connection: Tikla
+    > Save project
+
+g.Database Schema Migration:
+- Yalnizca Schema'yi migrate ettik, data'yi degil.
+> AzureMigrateRG
+  > SmartHotelDBMigration
+  > DBMigrate
+    > Refresh
+    > + New Activity
+    > Schema only migration   (Schema migration secilip icra edilir.)
+      > Select source
+        > Source SQL Server instance name: 10.0.0.4
+        > Authentication type: SQL Authentication
+        > User name: eyvi
+        > Password: 123
+        > Encrypt connection: Tikla
+        > Trust server certificate: Tikla
+      > Select target
+        > Target server name: smarthotelsqlggjxc.database.windows.net
+        > Authentication type: SQL Authentication
+        > User name: demouser
+        > Password: 1234
+        > Encrypt connection: Tikla
+      > Select database and schema
+        > Source Database: SmartHotel.Registration 
+        > Target Database: smarthoteldb
+        > Schema source: Generate from source
+      > Summary
+      > Activity name: SchemaMigration
+      > Start migration
+      > Refresh
+
+h.Database Data Migration:
+- Onceden migrate edilen schema'nin uzerine simdi de data'yi migrate ediyoruz.
+> AzureMigrateRG
+  > SmartHotelDBMigration
+  > DBMigrate
+    > + New Activity
+    > Data migration  (Data migration secilip icra edilir.)
+      > Select source
+        > Source SQL Server instance name: 10.0.0.4
+        > Authentication type: SQL Authentication
+        > User name: eyvi
+        > Password: 123
+        > Encrypt connection: Tikla
+        > Trust server certificate: Tikla
+      > Select databases
+        > SmartHotel.Registration
+      > Select target
+        > Target server name: smarthotelsqlggjxc.database.windows.net
+        > Authentication type: SQL Authentication
+        > User name: demouser
+        > Password: 1234
+        > Encrypt connection: Tikla
+      > Map to target databases
+        > Source Database: SmartHotel.Registration
+        > Target Database: smarthoteldb
+      > Configure migration settings
+          - 'SmartHotel.Registration 2 of 2' expand edilir ve secenekler cikar.
+        > SmartHotel.Registration: dbo.Bookings (check)  (dbo._MigrationHistory  uncheck yap.)
+      > Summary
+      > Activity name: DataMigration
+      > Start migration
+      > Refresh    
+
+
+
+
+4.Hands on Azure Data Studio ile:
+- Migrate SQL Server to an Azure SQL Managed Instance online using Azure Data Studio with DMS.
+- https://docs.microsoft.com/en-us/azure/dms/tutorial-sql-server-managed-instance-online-ads
+- https://docs.microsoft.com/en-us/azure/azure-sql/migration-guides/database/sql-server-to-sql-database-overview?view=azuresql
+- Burada online migration yapilacak ama once offline yap. Isini goruyorsa online yapma.
+- SQL Server to Azure SQL Database
+  * SQL Server on-premises.
+  * SQL Server on Azure Virtual Machines.
+  * Amazon Web Services (AWS) Elastic Compute Cloud (EC2).
+  * AWS Relational Database Service (RDS).
+  * Compute Engine in Google Cloud Platform (GCP).
+  * Cloud SQL for SQL Server in GCP.
+
+A.Azure Data Studio Yuklemesi:
+> https://docs.microsoft.com/en-us/sql/azure-data-studio/download-azure-data-studio?view=sql-server-ver16
+  > Windows: User installer 
+
+
+B.Data Migration Service'i Register Etme:
+> Subscriptions
+  > Azure Suibscription 1
+    > Resource providers
+      > Microsoft.DataMigration: Register
+      
+
+C.SQL Server 2019 Developer Yuklenir:
+> https://www.microsoft.com/en-us/sql-server/sql-server-downloads
+  > Developer: Download now
+  > 
+
+
+
+
+
+
+
+5.Hands on On-Prem:
+- Reguirements: https://docs.microsoft.com/en-us/azure/migrate/migrate-support-matrix-physical-migration#azure-vm-requirements
+  * Burasi migration oncesi check edilmeli.
+- Replication Appliance:
+  * Replicate edilecek source makineye install edilmemeli.
+  * Source Makinelerin yaninda ayri bir makineye install edilir.
+
+A.Review Requirements:
+- Once tasinacak makinelerin requirementsleri kontrol edilir yukarki linkten.
+
+
+B.Set up Replication Appliance:
+- To set up the appliance for physical server migration, you download the installer file for the appliance, and then run it on the machine you prepared. 
+- The replication appliance runs the following components:
+  * Configuration server: The configuration server coordinates communications between on-premises and Azure, and manages data replication.
+  * Process server: The process server acts as a replication gateway. It receives replication data; optimizes it with caching, compression, and encryption, and sends it to a cache storage account in Azure.
+Prepare for appliance deployment as follows:
+
+> Azure Migrate
+  > Discover, assess and migrate
+    > Subs | RG | Project name: On-prem | Region
+  > Servers, databases and web apps
+    > Migration tools: Discover
+      > Are your machines virtualized?: Physical or other (AWS, GCP, etc)
+      > Target region: Norway East
+        - Tasinilacak Azure'un regionu secilir.
+      > Create resources
+        -  This creates an Azure Site Recovery vault in the background.
+      
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6.Hands-on  (Eksik):
+- 2 VMware VM Azure'a transfer eilecek.
+
+Azure migrate:
+> Servers, databases and web apps 
+  > Create project
+    > Subs | RG | Project: mig1 | Geography: Ireland
+    > create
+
+> Servers, databases and web apps   
+  > mig1
+    > Azure Migrate: Discovery and assessment  (once resource'u degerlendirip kesfederiz)
+      > Discover   (elimizdekini inceleriz)
+        > Discover using appliance
+        > Yes, with VMware cSphere Hypervisor
+        > Name your appliance: deneme  (rastgele belirledik)
+        > Generate key
+        > .OVA file 12GB : Download   (localimize iniyor)
+
+
+VMware:
+> Cloud Content > RC
+  > Deploy OVF Template
+    > Select a name and folder > Virtual machine name: ccazmg01
+
+
+
+6.Hands-on (Eksik):
+- WebVM ve SQLVM'den olusuyor.
+- VMware'da ve contosohost1.contoso.com 
+- The VMware environment is managed by vCenter Server 6.5 (vcenter.contoso.com) running on a VM.
+- Contoso has an on-premises datacenter (contoso-datacenter) with an on-premises domain controller (contosodc1).
+- SQLVM, SQL Server running on an Azure IaaS VM'e tasinacak.
+- Both VMs will be placed in the ContosoRG resource group, which is used for production resources.
+- The application front-end VM (WEBVM) will migrate to the front-end subnet (PROD-FE-EUS2) in the production network.
+- The application database VM (SQLVM) will migrate to the database subnet (PROD-DB-EUS2) in the production network.
+
+Azure migrate:
+> Servers, databases and web apps 
+  > Create project
+    > Subs | RG | Project: mig1 | Geography: Ireland
+    > create
+
+> Servers, databases and web apps   
+  > mig1
+    > Azure Migrate: Discovery and assessment  (once resource'u degerlendirip kesfederiz)
+      > Discover   (elimizdekini inceleriz)
+        > Discover using appliance
+        > Yes, with VMware cSphere Hypervisor
+        > Name your appliance: deneme  (rastgele belirledik)
+        > Generate key
+        > .OVA file 12GB : Download   (VMware'a iniyor)
+
+> .OVA image'i VMware'de acilir.
+  > Set up yapilir.
+  > 
+
+
+
+7.Hands-on (Eksik):
+- Azure'daki 2 VM'yi (VM1 ve VM2) migrate edecegiz.
+- 
+
+Azure migrate:
+> Servers, databases and web apps 
+  > Create project
+    > Subs | RG | Project: mig1 | Geography: Ireland
+    > create
+
+> Servers, databases and web apps   
+  > mig1
+    > Azure Migrate: Discovery and assessment  (once resource'u degerlendirip kesfederiz)
+      > Discover   (elimizdekini inceleriz)
+        > Discover using appliance
+        > Physical or other
+        > Name your appliance: denemeAzuredan  (rastgele belirledik)
+        > Generate key 
+        > .zip file 50MB : Download   
+
+VM1:
+> Connect 
+  > RDP
+  > Download RDP File
+  
+RDP:
+  - VM1'e giriyoruz.
+  > username: ...   
+    - isim farkli cikabilir seceneklerden sec.
+  > password: ...
+  > .zip file localden VM1'e kopyalanir.
+  > extract .zip file
+  > AzureMigrateInstaller > RC > Run with PowerShell
+    > A  sectik
+      - Bu program VM1'i degerlendirecek.
+      - "Azure Migrate Appliance Configuration Manager" binary dosyasini masaustunde olusturacak.
+  > Azure Migrate Appliance Configuration Manager (Masaustunde kisayol olusmus) calistirilir.
+  > Verification of Azure Migrate project key: <Generate key ile olusan key yapistirilir> > Verify
+  > Login > Code kopyalanir.
+    > Ilgili hesap "byildiz2019@gmail.com" ile girilir ... 
+  > Add credentials: username: ugur | password: Mustafa11,az  
+    - migrate edilecek yum cihazlar icin eklenir bilgiler.
+
+
+

@@ -1,0 +1,109 @@
+1.Genel:
+- VM, VMSS'lerin olusturulmasinda kullanilir.
+- ARM: Azure Resource Manager 
+- template.json'da resource'lar, parameters.json'da ise variableslar tanimlanir.
+- Ilgili resource'un template'ini download, Library'e kaydedebilir veya edit edip deploy edebilirsiniz.
+- 'Azure Quickstart Templates' olarak aranilir.
+
+
+2.Mevcut VM'in Template Dosyasini Download:
+- template.json ve parameter.json indirilir.
+> RG > Deployments > CreateVm-MicrosoftWindowsServer > Template 
+  > Template > Download
+
+VSC:
+- Mevcut bir VM'nin template'ini kullanarak yeni VM olusturulabilir.
+template.json
+"networkInterfaceName"    degistirilmeli.
+"publicIPAdressName"      degistirilmeli.
+"virtualMachineName"      degistirilmeli.
+
+
+3.PowerShell with Templates:
+New-AzResourceGroupDeployment -Name exampledeployment -ResourceGroupName ExampleResourceGroup -TemplateFile <path-to-template-file> -TemplateParameterUri c:\MyTemplates\storage.parameters.json
+
+
+4.Template'i Library'a Kaydetme:
+> RG > Deployments > CreateVm-MicrosoftWindowsServer > Template 
+  > Add to library > name: deneme
+
+> Templates > deneme > deploy > Edit parameters > indirdigimiz parameters.json file'i mevcut parametreleri silip copy past yapariz. 
+  > save
+  > geri kalan parametreler doldurulur.
+  > purchase (vm olusur)
+
+
+5.Azure Bicep:
+- Resource'lari deploy etminin template'ten daha guzel bir yoludur.
+
+
+6.Bash ile template'ten VM Olusturma:
+
+Cloud Shell:
+az vm image list --output table
+  
+VSC:
+- bash'ten sectigimiz Redhat image'inin bilgilerini mevcut template.json dosyasinda degistirecegiz.
+template.json
+"publisher": "RedHat",
+"offer": "RHEL",
+"sku": "7.3",
+
+Powershell:
+- Ilgili template.json file deploy edilerek vm olusturulur.
+./deploy.ps1 -subscriptionId 7aj49+-84m-48904-94no4u9 -resourceGroupName az102rg -deploymentGroupName aztestdeploy3
+  - bu kod yanlis sanirim.
+
+
+
+7.Custom Script Extensions:
+- Mevcut calisan VM'ye sonradan script gonderir.
+https://github.com/Azure/azure-quickstart-templates
+https://gitlab.com/bruno.bakundwa/azure-quickstart-templates/-/blob/master/201-customscript-extension-azure-storage-on-ubuntu/azuredeploy.json
+------------------------------------------------------------------------
+...
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('vmName'),'/installcustomscript')]",
+      "apiVersion": "[variables('apiVersion')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.OSTCExtensions",
+        "type": "CustomScriptForLinux",
+        "typeHandlerVersion": "1.3",
+        "settings": {
+          "fileUris": [
+            "[concat(parameters('_articatsLocation'), '/scripts/hello.sh')]"
+          ],
+          "commandToExecute": "[parameters('commandToExecute')]"
+        },
+      }
+    }
+  ]
+}
+-------------------------------------------------------------------------
+
+
+
+8.Azure Quickstart Templates:
+- Her turlu resource olusturulabilir.
+> browser'da aranir
+  > Deploy a simple Windows VM  (seklinde VM template'i aranabilir)
+    > Azure Dagit
+    > Edit template  (burada degisiklikler yapilabilir.)
+    > save
+  > region / RG / Public IP name....
+  > create
+
+
+
+
+
+
+
+
+
+

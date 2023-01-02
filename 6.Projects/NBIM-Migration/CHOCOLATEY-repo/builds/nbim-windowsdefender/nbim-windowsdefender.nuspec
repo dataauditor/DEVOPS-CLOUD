@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-windowsdefender</id>
+    <version>1.0.0</version>
+    <description>Enable Windows Defender</description>
+    <authors>Vincent Signorile</authors>
+    <title>nbim-windowsdefender</title>
+    <tags>Windows Defender</tags>
+    <dependencies>
+      <dependency id="nbim-eventlog" version="0.1" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

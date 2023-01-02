@@ -1,0 +1,127 @@
+1.Genel:
+- AWS CLI'i crontab ile calistirabilmek icin HOME adresi crontab'a gosterilir. 
+- Cron sadece "/usr/bin/" klasorune erisimi var.
+- aws cli'in binary dosyasi "/usr/local/bin/aws" adresinde oldugu icin cli'in binary'sine ulasip calistiramaz.
+sudo ln -s /usr/local/bin/aws /usr/bin/aws
+  - aws binary'si ile cron'un ulasabildigi dosyaya link olusturuyoruz.
+
+
+
+
+2.Hands-on:
+- Crontab ile VM Icinde Backup Alma:
+- .my.cnf crontab ile ise yaramiyor. Script'te degiskenleri tanimlamalisin.
+a.my.cnf Klasoru Hazirlama:
+mkdir ~/.my.cnf
+---------------------------------------------------------------
+/etc/my.cnf
+/etc/mysql/my.cnf
+$MYSQL_HOME/my.cnf
+[datadir]/my.cnf
+~/.my.cnf
+---------------------------------------------------------------
+  - Herbirinde de hazirlanabilir.
+vim ~/.my.cnf
+---------------------------------------------------------------
+[mysqldump]
+protocol=tcp
+host=localhost
+port=3306
+max_allowed_packet      = 16M
+user=root
+password=<complexPassword>
+---------------------------------------------------------------
+sudo chmod 600 ~/.my.cnf
+sudo service mysql restart
+
+
+
+b.".aws" Folder'i Altinda "config" File Olmali:
+- aws cli2 yuklenir.
+mkdir /home/ubuntu/.aws/config
+sudo vim /.aws/config
+----------------------------------------------------------------
+[default]
+region = eu-north-1
+aws_access_key_id = AKIAXYZULNZAD2DIPPON
+aws_secret_access_key = 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
+----------------------------------------------------------------
+sudo vim /.aws/credentials
+----------------------------------------------------------------
+[default]
+aws_access_key_id = AKIAXYZULNZAD2DIPPON
+aws_secret_access_key = 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
+----------------------------------------------------------------
+
+
+
+c.Backup'lar icin Klasor Olusturma:	
+sudo mkdir /var/backup/db
+
+
+
+d.Script Yazma:
+cd /var/backup
+vim script.sh
+---------------------------------------------------------------- 
+#!/bin/bash
+
+# (1) set up all the mysqldump variables
+DATE=`date +"%d_%b_%Y_%H%M"`
+SQLFILE=/var/backups/db/db_backup_${DATE}.sql
+DATABASE=eyvidb
+HOME=/home/ubuntu
+USER=<db_user>
+PASSWORD=<db_user_password>
+# .my.cnf file'dan cekmedi. 
+
+# (2) in case you run this more than once a day,
+# remove the previous version of the file
+unalias rm     2> /dev/null
+rm ${SQLFILE}     2> /dev/null
+rm ${SQLFILE}.gz  2> /dev/null
+ 
+# Backup:
+mysqldump -u ${USER} -p${PASSWORD} ${DATABASE}|gzip > ${SQLFILE}.gz
+sudo chmod 777 ${SQLFILE}.gz
+#sudo find /var/backups/db/. -mtime +7 -exec rm {} \;
+aws s3 mv /var/backups/db/* s3://eyvidb-backups/staging/
+----------------------------------------------------------------
+  - 2. bolum ayni gun icinde birden fazla backup olursa eskisini siler.
+  - find code'u ile 7 gunden eski backup'lari sileriz.
+  - /var/backups/db/ klasoru bosaltilmali "mv" islemi icin. 
+
+
+
+e.Permissions:
+sudo chmod 777 /var/backups/script.sh
+sudo chmod -R 777 db
+
+
+
+f.Crontab Ayarlama:
+sudo crontab -e
+------------------------------------------------------------------
+0 1 * * * sh /var/backup/script.sh
+------------------------------------------------------------------
+  - Her gun 01:00 am'de calisir.
+
+
+
+g.Bucket'taki dosyayi geri cagirma:
+aws s3 cp s3://eyvidb-backups/staging/db_backup_16_Sep_2022_0950.sql.gz /home/ubuntu/
+
+
+
+h.Gzip'li Dosyayi Unzip Yapma:
+gzip -d db_backup_16_Sep_2022_0950.sql.gz
+gzip db_backup_16_Sep_2022_0950.sql
+  - zipleme.
+
+
+
+i.Restore Backup:
+mysql eyvidb < db_backup_16_Sep_2022_0950.sql
+
+
+

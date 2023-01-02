@@ -1,0 +1,81 @@
+Domain Name System
+- web sitesi isimlerinin IP addresslerini tutar ve yazinca sorgulayip ilgili ip adresine gider.
+- C:\Windows\System32\dns: DNS bilgileri burada tutulur.
+- ADSI Edit
+
+Forward Lookup Zones	: Ismi (web addresini) ip addresine donduren zone demek. Altindaki herbir dosya ayri bir dns zone'dur.
+Reverse Lookup Zones	: Ip addresini web adresine ceviren alan.
+Trust Point		: Farkli DNS zone'lar arasi trust iliskisi kurarak giris izni verir. Guvenli-kriptolu saglar.
+Conditional Forwarders	: Farkli DNS zone'lar arasi trust iliskisi kurarak giris izni verir.
+
+Microsoft Server
+> Tools
+  > DNS
+  > ALIDC01
+      - Sunucu
+    > Forward Lookup Zones
+      > Aliortul.LOCAL
+        - Bu bir zone'dur.
+
+nslookup alidc01
+  - Forward Lookup Zone'a gidip ip addresini verir.
+nslookup 192.168.56.10
+  - Reverse Lookup Zone'a gidip web addresini "alidc01.ALIORTUL.LOCAL" adresini verir.
+
+
+
+
+
+
+
+
+1.Yeni Forward ve Reverse Zone Olusturma:
+a.Forward Lookup Zone Olusturma:
+Microsoft Server
+> Tools
+  > DNS
+  > ALIDC01
+    > Forward Lookup Zones 
+    > RC
+    > New Zone
+      > Primary zone
+      > Store the zone in Active Directory: 
+        - AD ile entegre kurulacak.
+      > To all DNS servers running on domain controllers in this domain: ALIORTUL.LOCAL
+      > Zone name: aliortul.com
+        - yeni bir isim.
+      > Allow only secure dynamic updates
+        - AD ile entegre oldugu icin bu secilir. Otomatik olarak kayitlar entegre olur.
+      > Finish
+        - DNS/ALIDC01/Forward Lookup Zones/aliortul.com zone'u olustu.
+
+b.Reverse Lookup Zone Olusturma:
+Microsoft Server
+> Tools
+  > DNS
+  > ALIDC01
+    > Reverse Lookup Zones 
+    > RC
+    > New Zone
+      > Primary zone
+      > Store the zone in Active Directory: 
+        - AD ile entegre kurulacak.
+      > To all DNS servers running on domain controllers in this domain: ALIORTUL.LOCAL
+      > IPv4 Reverse Lookup Zone
+      > Network ID: 192.168.56
+        - Sunucunun degil network'un adresi girilir.
+      > Allow only secure dynamic updates
+        - AD ile entegre oldugu icin bu secilir. Otomatik olarak kayitlar entegre olur.
+      > Finish
+        - DNS/ALIDC01/Forward Lookup Zones/aliortul.com zone'u olustu.
+
+
+Primary zone	: Var olan sunucu uzerinden herseyi kendimizin olusturdugu zone.
+Secondary zone	: Mevcut bir dns server'a ilave ikinci bir zone olusturmak icin kullanilir. Buyuk sistemlerde redundancy ve replication icin kullaniyoruz.
+Stub zone	: Secondary zone'a benzer ama icinde yalnizca NS, SOA ve Host recordslari tutar.
+Store the zone in Active Directory: DNS kayitlarini AD'ye entegre tutar. Kendi localinde tutmaz.
+
+> ADSI Edit
+  > DC=ALIORTULDC=LOCAL
+    - AD'de dns verileri tutulacaksa DNS verileri 'C:\Windows\System32\dns' adresi yerine burada tutulur.
+

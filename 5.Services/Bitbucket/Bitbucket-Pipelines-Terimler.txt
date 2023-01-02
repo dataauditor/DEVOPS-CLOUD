@@ -1,0 +1,811 @@
+https://balajisblog.com/cheatsheet-for-bitbucket-pipelines/
+
+1.Git:
+git remote add origin https://<adres>
+git remote set-url origin https://<adres>
+  - eger localdeki repo remote'da onceden varsa kullanilir.
+git push -u origin master
+git add .
+git commit -m "w"
+git push origin master
+
+
+
+2.Pipelines:
+2.a.Pipelines:
+The pipe does a lot of work behind the scenes. They define how the pipeline should run. Pipelines are the heart of bitbucket-pipelines.yml. There should be at least one pipeline defined in bitbucket-pipelines.yml.
+
+pipelines:
+  default:
+      - step:
+          name: Install, Lint and Build Functions
+          caches:
+            - node
+          script:
+            - cd functions
+            - npm install
+            - npm run lint
+            - npm run build
+
+
+2.b.Definitions
+Definitions contain pre-defined items that will be used elsewhere in the pipelines. Reusable steps, services, global level caches, YAML anchors usually goes here.
+
+definitions:
+  caches:
+    node: ./node-modules
+  services:
+    docker:
+      memory: 2048
+  steps:
+    - step: &install-lint-build
+        name: Install, Lint, Build
+        caches:
+          - node
+        script:
+          - npm install
+          - npm run lint
+          - npm run build
+
+
+2.c.Steps
+Steps contain instructions that will be executed by the pipelines during push/tag/merge. We will define steps in definitions that will re-used in the section of the pipeline
+
+definitions:
+  services:
+    docker:
+      memory: 2048
+  steps:
+    - step: &install-lint-build
+        name: Install, Lint, Build
+        caches:
+          - node
+        script:
+          - npm install
+          - npm run lint
+          - npm run build
+pipelines:
+  default:
+    - step: 
+        <<: *install-lint-build
+
+
+2.d.Services
+Services spin up a new Docker container from faster builds. In-order to have additional containers we need define service in definition. These spin up localhost for database services like MySQL, redis, Postgres.
+------------------------------------------------------------------
+definitions:
+  services:
+    redis:
+      image: redis:3.2
+    mysql:
+      image: mysql:5.7
+      variables:
+        MYSQL_DATABASE: my-db
+        MYSQL_ROOT_PASSWORD: $password
+------------------------------------------------------------------
+Services can also be defined at step level
+------------------------------------------------------------------
+default:
+    - step:
+        image: node
+        script:
+          - npm install
+          - npm test
+        services:
+          - redis
+------------------------------------------------------------------
+
+
+2.e.Caches
+Caches enhance the process to run faster. Downloading dependencies from the internet each time consumes more build time. Caches help to fix this. The resources mentioned in caches are download and kept in memory for future pipelines
+------------------------------------------------------------------
+definitions:
+  caches:
+    bundler: vendor/bundle
+pipelines:
+  default:
+   - step:
+      caches:
+        - npm
+      script:
+        - npm install
+------------------------------------------------------------------
+Caches are defined in global level or step level.
+
+bitbucket-pipelines.yml
+------------------------------------------------------------------        
+pipelines:
+  default:
+    - step:
+        caches:
+          - node
+        script:
+          - npm install
+------------------------------------------------------------------
+There are some pre-defined caches available from bitbucket out-of-the box
+------------------------------------------------------------------
+caches:
+  - docker
+------------------------------------------------------------------
+
+
+2.f.Step
+Step defines the build execution unit. Steps are executed in the order that they appear in the file. A single pipeline can have up to 100 steps. Each step in the pipeline runs the commands configured in script.
+
+Each step can be configured to:
+
+Use a different Docker image.
+Configure max-time.
+Use specific caches and services.
+Produce artifacts that subsequent steps can consume.
+You can have a clone section here.
+------------------------------------------------------------------
+ - step:
+    name: Build
+    caches:
+      - node
+      - sonar
+    script:
+      - npm install
+      - CI=false npm run build
+------------------------------------------------------------------
+
+
+2.g.Name
+Name defines step name to make it easier to identify from the UI.
+------------------------------------------------------------------
+definitions:
+  steps:
+    - step: &npm-build
+        name: npm build
+        caches:
+          - node
+        script: 
+          - cd functions
+          - npm install
+------------------------------------------------------------------
+
+
+2.e.Script
+The script contains the actual commands that have to be run on each step. They are executed in a sequence order
+------------------------------------------------------------------
+- step:
+    name: Install
+    script:
+      - npm install
+------------------------------------------------------------------
+
+
+2.f.Default
+Default contains a set of steps that run by default on every push. It contains a pipeline definition for all branches.
+------------------------------------------------------------------
+pipelines:
+  default:
+    - step:
+        name: Install
+        caches:
+          - node
+        script:
+          - npm install
+------------------------------------------------------------------
+
+
+2.g.Branches
+Branches define the branch level steps that will run on each merge on the specified branch. Example: When a pull request raised from feature/routes is merged to develop, the steps mentioned for the develop branch will run.
+------------------------------------------------------------------
+branches:
+    develop:
+      - step:
+        name: Build
+        caches:
+          - node
+        script:
+          - npm install
+          - CI=false npm run build
+------------------------------------------------------------------
+
+
+2.h.Tags
+Tag defines all tag-specific build pipelines. When a tag is created, a pipeline is triggered.
+------------------------------------------------------------------
+pipelines:
+  tags:
+    develop:
+      - step:
+          script:
+            - echo "A tag triggered build"
+------------------------------------------------------------------
+
+
+2.i.Pull-requests
+A special pipeline that only runs on pull requests initiated. It merges the destination branch into your working branch before it runs. If the merge fails, the pipeline stops.
+
+Pull request pipelines run in addition to any branch and default pipelines that are defined, so if the definitions overlap you may get 2 pipelines running at the same time.
+------------------------------------------------------------------
+pipelines:
+  pull-requests:
+    '**': #this runs as default for any branch not elsewhere defined
+      - step:
+          script:
+            - ...
+    feature/*: #any branch with a feature prefix
+      - step:
+          script:
+            - ...
+branches:    #these will run on every push of the branch
+    staging:
+      - step:
+          script:
+            - ...
+------------------------------------------------------------------
+
+
+2.j.custom
+Custom pipelines define manually triggered pipelines. This pipeline is triggered using only bitbucket UI.
+------------------------------------------------------------------
+image: node:10.15.0
+    
+pipelines:
+  custom: # Pipelines that are triggered manually
+    sonar: # The name that is displayed in the list in the Bitbucket Cloud GUI
+      - step:
+          script:
+            - echo "Manual triggers for Sonar are awesome!"
+    deployment-to-prod: # Another display name
+      - step:
+          script:
+            - echo "Manual triggers for deployments are awesome!"
+  branches:  # Pipelines that run automatically on a commit to a branch
+    staging:
+      - step:
+          script:
+            - echo "Auto pipelines are cool too."
+------------------------------------------------------------------
+
+
+2.k.Pipe
+Pipes is a simple and easy way to configure a pipeline. They are especially powerful when you want to work with third-party tools. Just paste the pipe into the YAML file, supply a few key pieces of information, and the rest is done for you.
+------------------------------------------------------------------
+definitions:
+  steps:
+    - step: &build-test-sonarcloud
+        name: Build, test and analyze on SonarCloud
+        caches:
+          - node
+          - sonar
+        script:
+          - npm install --quiet
+          - npm run test:ci
+          - pipe: sonarsource/sonarcloud-scan:1.0.1
+            variables:
+              SONAR_TOKEN: ${SONAR_TOKEN}
+              EXTRA_ARGS: '-Dsonar.sources=src -Dsonar.tests=src -Dsonar.test.inclusions="**/*.test.js" -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info'
+------------------------------------------------------------------
+The above example has a step called build-test-sonarcloud. This will run sonar cloud to generate test reports. Here ${SONAR_TOKEN} is a repository variable.
+
+
+2.l.Variables
+Variables store values that will be used at run time while running pipelines. It is also used to store values like username, version etc., As of now, variables can be only used in custom pipelines and in pipes only.
+------------------------------------------------------------------
+pipelines:
+  custom:
+    custom-name-and-region: #name of this pipeline
+      - variables:          #list variable names under here
+          - name: Username
+          - name: Region
+      - step: 
+          script:
+            - echo "User name is $Username"
+            - echo "and they are in $Region"
+- step: 
+    name: Check the Quality Gate on SonarCloud
+    caches:
+      - sonar
+    script:
+      - pipe: sonarsource/sonarcloud-quality-gate:0.1.2
+        variables:
+          SONAR_TOKEN: ${SONAR_TOKEN}
+          SONAR_QUALITY_GATE_TIMEOUT: 600
+------------------------------------------------------------------
+
+
+2.m.Parallel
+By default, the steps in the bitbucket pipeline run in a sequence. Though running parallel steps are also possible. Parallel build helps in saving build time. To run parallel steps use parallel in the steps. Each step can accommodate 100 steps irrespective of series or parallel steps.
+------------------------------------------------------------------
+pipelines:
+  default:
+    - step: # non-parallel step
+        name: Build
+        script:
+          - ./build.sh
+    - parallel: # these 2 steps will run in parallel
+        - step:
+            name: Integration 1
+            script:
+              - ./integration-tests.sh --batch 1
+        - step:
+            name: Integration 2
+            script:
+              - ./integration-tests.sh --batch 2
+    - step:          # non-parallel step
+        script:
+          - ./deploy.sh
+------------------------------------------------------------------
+
+
+2.n.Trigger
+All the steps in a pipeline are triggered automatically. Triggering a pipeline manually is also possible. The trigger types are manual and automatic. If the trigger type is not defined, the step defaults to running automatically.
+
+The first step cannot be manual. If you want to have a whole pipeline only run from a manual trigger then use a custom pipeline.
+------------------------------------------------------------------
+pipelines:
+  default:
+    - step:
+        name: Build and test
+        image: node:10.15.0
+        script:
+          - npm install
+          - npm test
+          - npm run build
+    - step: 
+        name: Deploy to Firebase
+        caches:
+          - node
+        script: 
+          - cd functions
+          - npm install
+          - cd ..
+          - npm -g config set user root
+          - npm install -g firebase-tools@9.11.0
+          - firebase deploy $ARGUMENTS --token=$FIREBASE_TOKEN --project $PROJECT_ID --non-interactive
+        trigger: manual
+------------------------------------------------------------------
+
+
+2.o.After-script
+This is a clean-up script that runs after every step. This script will run though the step has failed.
+------------------------------------------------------------------
+pipelines:
+  default:
+    - step:
+        name: Build and test
+        script:
+          - npm install
+          - npm test
+        after-script:
+          - echo "after script has run!"
+------------------------------------------------------------------
+
+
+2.p.Artifacts
+Artifacts are the files that are generated as output of the steps. Example: test reports, APK files, JAR files etc., Artifacts can be shared with the following step or exported after a step completes.
+--------------------------------------------------------------------------
+- step:
+    name: Build Code
+    caches:
+      - gradle
+      - gradlewrapper
+      - flutter
+    script:
+      - flutter pub get
+      - flutter build apk
+    artifacts:
+      - build/app/outputs/flutter-apk/app-dev-release.apk
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+pipelines:
+  default:
+    - step:
+        name: Build and test
+        image: node:10.15.0
+        caches:
+          - node
+        script:
+          - npm install
+          - npm test
+          - npm run build
+        artifacts: # artifacts to be passed to each future step.
+          - dist/**
+          - reports/*.txt
+    - step:
+        name: Integration test
+        image: node:10.15.0
+        caches:
+          - node
+        script:
+          - cat reports/tests.txt # using the artifacts from the previous step
+          - npm run integration-test
+--------------------------------------------------------------------------
+Artifacts can be downloaded from Artifacts tab from the pipeline build. Artifacts generated will be available for a period of 14 days. Read more about artifacts here.
+
+
+
+2.r.Size
+size specifies the memory allocated to a pipeline or a step. We can modify the size of a step or a pipeline.
+----------------------------------------------------------------------------
+definitions:
+  services:
+    docker:
+      memory: 2048 # memory for entire pipeline
+pipelines:
+  default:
+    - step:
+        script:
+          - echo "All good things..."
+    - step:
+        size: 2x # Double resources available for this step.
+        script:
+          - echo "Come to those who wait."
+----------------------------------------------------------------------------
+Regular build steps have 4GB(4096MB) memory allocated.
+Giving 2x to the step increases the memory from 4GB → 8GB.
+Build container is given with 1024MB of the total memory.
+Each service container gets 1024 MB memory by default, however, it can be configured to use between 128 MB and the step maximum 3072(1x)/7128 MB(2x). Note: 1x → 4096MB.Build container memory = 1024MB. 4096 – 1024 = 3072 which is the step maximum. 2x → 8192MB. Build Container memory = 1024MB. 8192 – 1024 = 7128 which is the step maximum.
+The Docker-in-Docker daemon used for Docker operations in Pipelines is treated as a service container, and so has a default memory limit of 1024 MB. This can also be adjusted to any value between 128 MB and 3072/7128 MB by changing the memory setting on the built-in docker service in the definitions section.
+----------------------------------------------------------------------------
+default:
+   - step:
+       services:
+         - redis
+         - mysql
+         - docker
+       script:
+         - echo "This step is only allowed to consume 2048 MB of memory"
+         - echo "Services are consuming the rest. docker 512 MB, redis 512 MB, mysql 1024 MB"
+definitions:
+  services:
+    redis:
+      image: redis:3.2
+      memory: 512
+    docker:
+      memory: 512  # reduce memory for docker-in-docker from 1GB to 512MB
+    mysql:
+      image: mysql:5.7
+      # memory: 1024  # default value
+      variables:
+        MYSQL_DATABASE: my-db  
+        MYSQL_ROOT_PASSWORD: $password
+----------------------------------------------------------------------------
+In the above example, the default size is 1x which is 4GB(4096MB). The services declared Redis, docker, MySQL is using 512MB, 512MB, 1024MB respectively. This is equivalent to 2048MB. The services alone use 2048MB. The remaining space left is 2048MB(4096 – 2048). Therefore, the memory allocated for services(2048MB) is not greater than 3072MB. The build container needs 1024MB. But the available space is 2048MB which is more than sufficient.
+
+
+2.s.Deployment
+One of the elegant features of bitbucket is deploying the code to respective environments. Any development requires test, staging and production environments. It is possible with deployments.
+
+To run deployment in pipeline,
+
+Enable the deployments from the left sidebar.
+Create environments as per the wish. test, staging, production are the default ones.
+Create environment variables if needed any.
+----------------------------------------------------------------------------
+- step:
+    name: Deploy to test
+    image: aws-cli:1.0
+    deployment: test
+    script:
+      - python deploy.py test
+- step:
+    name: Deploy to test
+    image: aws-cli:1.0
+    deployment: staging
+    script:
+      - python deploy.py test
+----------------------------------------------------------------------------
+
+
+2.t.Options
+Options contains the global settings for pipeline. Ex: max-time(50), size(2x), memory(4096), docker(true).
+----------------------------------------------------------------------------
+definitions:
+  options:
+    docker: true
+----------------------------------------------------------------------------
+
+
+
+2.u.Max-time
+max-time refers to the maximum time of a step can run. It will be in minutes starting 0 to 120(mins).
+----------------------------------------------------------------------------
+options:
+  max-time: 60
+pipelines:
+  default:
+    - step:
+        name: Sleeping step
+        script:
+          - sleep 120m # This step will timeout after 60 minutes
+    - step:
+        name: quick step
+        max-time: 5
+        script:
+          - sleep 120m #this step will timeout after 5 minutes
+----------------------------------------------------------------------------
+
+
+2.v.Oidc
+Enables the use of OpenID Connect with Pipelines and your resource server. The oidc value must be set to true to set up and configure OpenID Connect.
+----------------------------------------------------------------------------
+image: amazon/aws-cli
+
+pipelines:
+  default:
+    - step:
+        oidc: true
+----------------------------------------------------------------------------
+
+
+
+2.x.Clone
+Clone includes the settings when the repository is being cloned into the container. Settings include:
+
+LFS – Support for Git LFS(Large File Storage). Read more about LFS here.
+depth – the depth of the Git clone.
+enabled setting to enable/disable git clones.
+LFS and depth(GIT only)
+LFS – LFS enables the download of LFS files in your clone. It defaults to false if not specified.
+
+depth – Depth defines the depth of Git clones for all pipelines. Depth takes a value greater than 0. Defaults to 50 if not specified. To clone to full depth use depth: full
+
+These features are supported only for Git repositories.
+----------------------------------------------------------------------------
+clone:
+  lfs: true
+  depth: 5       # include the last five commits
+  
+pipelines:
+  default:
+    - step:
+        name: Cloning
+        script:
+          - echo "Clone all the things!"
+----------------------------------------------------------------------------
+Enabled
+Enable/disable git clones.
+----------------------------------------------------------------------------
+pipelines:
+  default:
+    - step:
+        name: No clone
+        clone:
+          enabled: false
+        script:
+          - echo "I don't need to clone in this step!"
+----------------------------------------------------------------------------
+
+
+2.y.Yaml-anchor
+Yaml-anchors helps in avoiding repetition of sections in bitbucket-pipelines.yml. They help in maintainability and in having a clean file as well.
+
+There are 2 parts to yaml-anchors:
+
+The anchor ‘&’ which defines a chunk of configuration
+The alias ‘*’ used to refer to that chunk elsewhere
+When we have a step which is getting repeated multiple times then use ‘&’ and ‘*’.
+
+& – defines the step as a pointer
+
+* – refers to the step declared by &
+----------------------------------------------------------------------------
+definitions: 
+  steps:
+    - step: &build-test
+        name: Build and test
+        script:
+          - npm run test
+          - npm run build
+        artifacts:
+          - target/**
+
+pipelines:
+  branches:
+    develop:
+      - step: *build-test
+    main:
+      - step: *build-test
+----------------------------------------------------------------------------
+We can use ‘&’ when we use the step directly without changing it. If we wish to include some changes then we should use ‘<<:’.
+----------------------------------------------------------------------------
+pipelines:
+  branches:
+    develop:
+      - step: *build-test
+    main:
+      - step: 
+          <<: *build-test
+          name: Testing on Main
+----------------------------------------------------------------------------
+
+
+
+
+3.bitbucket-pipelines.yml:
+---------------------------------------------------------------------------------
+definitions: 
+  steps:
+    - step: &test-vizdom-services
+        name: "Vizdom services unit Tests"
+        image: mcr.microsoft.com/dotnet/core/sdk:3.1
+        script:     
+            - cd ./vizdom/vizdom.services.Tests
+            - dotnet test vizdom.services.Tests.csproj    
+
+
+pipelines:
+  custom:
+    DEV-AWS-api-deploy:  
+      - step: *test-vizdom-services        
+      - step:
+          name: "Vizdom Webapi unit Tests"
+          image: mcr.microsoft.com/dotnet/core/sdk:3.1
+          script:
+              - export ASPNETCORE_ENVIRONMENT=Dev       
+              - cd ./vizdom/vizdom.webapi.tests
+              - dotnet test vizdom.webapi.tests.csproj    
+      - step:
+          deployment: DEV-API
+          name: "API: Build > Zip > Upload > Deploy"
+          image: mcr.microsoft.com/dotnet/core/sdk:3.1
+          script:
+              - apt-get update
+              - apt-get install zip -y
+              - mkdir -p ~/deployment/release_dll
+              - cd ./vizdom/vizdom.webapi
+              - cp -r ../shared_settings ~/deployment              
+              - dotnet publish vizdom.webapi.csproj -c Release -o ~/deployment/release_dll
+              - cp Dockerfile ~/deployment/
+              - cp -r deployment_scripts ~/deployment
+              - cp deployment_scripts/appspec_dev.yml ~/deployment/appspec.yml
+              - cd ~/deployment
+              - zip -r $BITBUCKET_CLONE_DIR/dev-webapi-$BITBUCKET_BUILD_NUMBER.zip .
+              - cd $BITBUCKET_CLONE_DIR
+              - pipe: atlassian/aws-code-deploy:0.5.3
+                variables:
+                  AWS_DEFAULT_REGION: 'us-east-1'
+                  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                  COMMAND: 'upload'
+                  APPLICATION_NAME: 'ss-webapi'
+                  ZIP_FILE: 'dev-webapi-$BITBUCKET_BUILD_NUMBER.zip'
+                  S3_BUCKET: 'ss-codedeploy-repo'
+                  VERSION_LABEL: 'dev-webapi-$BITBUCKET_BUILD_NUMBER.zip'
+              - pipe: atlassian/aws-code-deploy:0.5.3
+                variables:
+                  AWS_DEFAULT_REGION: 'us-east-1'
+                  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                  COMMAND: 'deploy'
+                  APPLICATION_NAME: 'ss-webapi'
+                  DEPLOYMENT_GROUP: 'dev-single-instance'
+                  WAIT: 'false'
+                  S3_BUCKET: 'ss-codedeploy-repo'
+                  VERSION_LABEL: 'dev-webapi-$BITBUCKET_BUILD_NUMBER.zip'
+---------------------------------------------------------------------------------
+
+
+
+4.bitbucket-pipelines.yml
+---------------------------------------------------------------------------------
+image: maven:3.5.0-jdk-8
+pipelines:
+  default:
+    - step:
+        name: Build and test
+        max-time: 20
+        caches:
+          - maven
+        script:
+          - mvn -s .ci/settings.xml clean verify
+  branches:
+    master:
+      - step:
+          name: Build and test
+          max-time: 20
+          caches:
+            - maven
+          script:
+            - mvn -s .ci/settings.xml clean verify
+          artifacts:
+            - target/**
+      - step:
+          name: Deploy to Artifactory
+          max-time: 20
+          caches:
+            - maven
+          script:
+            - mvn -s .ci/settings.xml deploy
+  # Manually triggered via Bitbucket UI
+  custom:
+    release-major-version:
+      - step:
+          max-time: 10
+          caches:
+            - maven
+          script:
+            - ./.ci/version.sh major
+    release-minor-version:
+      - step:
+          max-time: 10
+          caches:
+            - maven
+          script:
+            - ./.ci/version.sh minor
+    release-patch:
+      - step:
+          max-time: 10
+          caches:
+            - maven
+          script:
+            - ./.ci/version.sh patch
+---------------------------------------------------------------------------------
+
+
+5.Nodejs:
+npm init -y && npm i express
+  - Run this command in your command line. We will be initializing the node project and install the express framework to build our api.
+npm i -D jest supertest
+  - We also need to make some sample tests for our api. Install these packages to use for our testing.
+mkdir test
+bitbucket-pipelines.yml 2:
+---------------------------------------------------------------------------------
+image: atlassian/default-image:2
+
+pipelines:
+  default:
+    - step:
+        name: "Install"
+        image: node:12.13.0
+        caches:
+          - node
+        script:
+          - npm install
+    - parallel:
+        - step:
+            name: "Test"
+            image: node:12.13.0
+            caches:
+              - node
+            script:
+              - npm test
+        - step:
+            name: "Build zip"
+            script:
+              - apt-get update && apt-get install -y zip
+              - zip -r application.zip . -x "node_modules/**"
+            artifacts:
+              - application.zip
+    - step:
+        name: "Deployment to Production"
+        deployment: production
+        script:
+          - pipe: atlassian/aws-elasticbeanstalk-deploy:1.0.2
+            variables:
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              AWS_DEFAULT_REGION: $AWS_REGION
+              APPLICATION_NAME: $APPLICATION_NAME
+              ENVIRONMENT_NAME: $ENVIRONMENT_NAME
+              ZIP_FILE: "application.zip"
+---------------------------------------------------------------------------------
+
+
+6.Image Cekme:
+Docker-Hub privat repository'den:
+---------------------------------------------------------------------------------
+image:
+  name: account-name/openjdk:8
+  username: $DOCKER_HUB_USERNAME
+  password: $DOCKER_HUB_PASSWORD
+  email: $DOCKER_HUB_EMAIL
+---------------------------------------------------------------------------------
+ECR'dan:
+---------------------------------------------------------------------------------
+image:
+  name: <aws_account_id>.dkr.ecr.<region>.amazonaws.com/openjdk:8
+  aws: 
+    access-key: $AWS_ACCESS_KEY
+    secret-key: $AWS_SECRET_KEY
+---------------------------------------------------------------------------------
+
+
+
+

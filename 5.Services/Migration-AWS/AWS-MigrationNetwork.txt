@@ -1,0 +1,2 @@
+VPN veya Direct connect kurulabilir.
+Direct connect uzerine VPN ayrica kurulabilir.

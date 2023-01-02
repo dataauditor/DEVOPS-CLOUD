@@ -1,0 +1,76 @@
+1.Virtual Machine Scale Sets (VMSS):
+- Load balancer, scaling (auto scaling) ve arkasinda multi VM olusturulmasi.
+- Maksimum 100 VM olusturulabilir bir placement groupta.
+> + New > Virtual Machine Scale Sets > + create
+  > subs / rg / Virtual machine scale set name: scaleset / Region / Zones
+  > Uniform / Standard / Image: ubuntu / ssh / username / premium > virtual network / 
+  / nic 
+  > Use a load balancer: tikleme (varsa mevcut lb'yi kullanir. Tiklemeyince kendisi olusturacak)
+  / Initial instance count: 2 
+  > Scaling policy: Custom / Minimum number of instances: 1 / Maximum number of instances: 3
+  / CPU threshold (%): 75 / Duration in minutes: 10 / ...
+  / Boot diagnostics: disable 
+  > Enable application health monitoring: Enabled 
+  / Application health monitor: Apploication health extension / Protocol: HTTP / Port: 80 / path: /
+  > Enable automatic repairs: sec (ilgili makineyi kapatir)
+  > Enable scaling beyond 100 instances: secilirse farkli placement grouplar olusturularak 100'den fazla VM olusturulabilir.
+  > Spreading algorithm: Fixed
+  > create
+
+
+2.Hands-on:
+Yeni RG Olusturma:
+> Resource groups > + create > Resource Froup: VMScale-Set-RG > Region > create
+ 
+VM Olusturma:
+> Resource Groups > VMScale-Set-RG > + create > Virtual machine > create 
+  > Subs / VMScale-Set-RG / Virtual machine name: myvm / Region / 
+  > Image: Windows Server 2016 Datacenter > Size / Username: aztestuser / Password: 123456Qwerty
+  > Allow selected ports: 3389
+  > Load balancing options: None
+  > Boot diagnostics: Disable
+  > create
+
+Connect VM with RDP:
+- RDP uzerinden VM'ye baglanilir.
+> myvm > connect > RDP > Download RDP File 
+  > Ilgili dosyayi ac > connect > Use a different account: aztestuser Password: 123456Qwerty > ok
+
+Remote VM:
+> cmd > Run as administrator 
+cd %windir%\system32\sysprep
+sysprep
+> System Cleanup Action: Enter System Out-of-Box Experience > Generelize (sec) > Shutdown Options: Shutdown > ok
+  - vm'yi stop ettik.
+
+Image Olusturma:
+- Mevcut vm'den image olusturulur.
+- VM silinir.
+- Ilgili image RG altinda olusur.
+> myvm > Capture > Automatically delete this vm after creating the image 
+  > Name: myvm-image-11 > RG: VMScale-Set-RG > Type vm name: myvm > create
+
+VMSS Olusturma:
+- Kendi image'imizden 2 vm ile LB ve scaling ozelligi olan vmss olusturuyoruz.
+> Virtual machine scale sets > + create > Sub / RG / Virtual machine scale set name: myvmss / Region  
+  > See all images > My images > myvm-image-11 > Size: ayni size'i ver / username / password
+  > virtual network > Load balancing (tikleme)
+  > Initial instance count: 2
+  > Scaling policy: Custom / Minimum / Maximu / threshold 
+  > create
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

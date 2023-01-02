@@ -1,0 +1,280 @@
+code C:\Users\nbuce1\.aws\config
+$env:AWS_PROFILE='nbim-msci-loader-admin'
+aws sso login
+sam deploy --capabilities CAPABILITY_NAMED_IAM --stack-name rune-test-yolo --template-file deneme.yaml --on-failure DELETE
+aws cloudformation deploy --stack-name nbuce1-testing --template-file .\cloudformation\ec2-cfn.yaml --capabilities CAPABILITY_NAMED_IAM 
+aws cloudformation delete-stack --stack-name nbuce1-testing 
+
+
+
+
+1."!ImportValue": Baska Stackteki Resource'u Refere Etme:
+- Refere edilecek resource'a Tag verilir ve Value degeri isim olur.
+- Diger Stackteki resource da bu ismi #!ImportValue ile ceker.
+- #securitygroup, #sg, #output
+
+Stack1:
+Resources:
+  appSecurityGroupmsciloader:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: No desc set
+      Tags:
+        - Key: Name
+          Value: "p-sg-eu-west-1-msci_loader_sg-msci_loader"
+      VpcId: "vpc-045eae34e9fc40318"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 7006
+          ToPort: 7006
+          CidrIp: 10.177.0.0/16
+          Description: access for 10.177.0.0/16
+Outputs:
+  appSecurityGroupmsciloaderoutput:
+    Description: port 7006
+    Value: !GetAtt appSecurityGroupmsciloader.GroupId
+    Export:
+      Name: mysg	
+
+Stack2:
+  LCmscil:
+    Type: "AWS::AutoScaling::LaunchConfiguration"
+    Properties:
+      ImageId: ami-05c7ac646b21f7a05
+      InstanceType: "t3.medium"
+      SecurityGroups:
+        - !ImportValue mysg
+        - !ImportValue nbuce1-sg-SecurityGrGenel
+      UserData: 
+        Fn::Base64:  !Sub |
+          <powershell>
+---------------------------------------------------------------------------------------
+  - Importvalue degeri, portaldaki CloudFormation'dan Stack1 (nbuce1-sg)'in Output'undan alinir. 
+
+
+
+
+2.Parameter Olusturma:
+- Name, oldugu gibi Parameter altinda olusur. Value de degerini verir.
+- #parameter
+
+  QualysActivationID:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Qualys Cloud Agent Activation Id
+      Type: String 
+      Name: "qualys_cloudagent_activationid"
+      Value: '1ca749b7-48b0-41a0-bed6-1be9749a77be'
+---------------------------------------------------------------------------------------
+
+
+
+
+
+3.Parameter Store'dan Parameter Cekme:
+- Systems Manager Parameter Store'a yazili olan parametreler "resolve" ile cekilir.
+
+  ASGYOLO:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: ASGYOLO
+      VPCZoneIdentifier:
+        - '{{resolve:ssm:/nbim-ssm-parameter/networking/private-vpc-1/subnet-1}}'
+        - '{{resolve:ssm:/nbim-ssm-parameter/networking/private-vpc-1/subnet-2}}'
+        - '{{resolve:ssm:/nbim-ssm-parameter/networking/private-vpc-1/subnet-3}}'
+      LaunchTemplate:
+----------------------------------------------------------------------------------------- 
+
+
+
+
+3.!Ref - Mevcut Stackteki Resource'u Refere Etme:
+- Stack icindeki Resource'a verilen yukardaki isim verilerek cekilir.
+- "#profile-#role-#policy" ornegi asagida kullanildi. #!Ref
+
+  msciloaderaccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+           Version: '2012-10-17'
+          Statement:
+            - Sid: LimitedSSMAccess
+              Effect: Allow
+              Action:
+                - ssm:*
+              Resource:
+                - !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/msci_loader/*
+  CommonAppAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+         Version: '2012-10-17'
+        Statement:
+          - Action:
+              - ssm:GetParameters
+              - ssm:GetParameter
+            Resource: "*"
+  msciloaderaccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: msci_loader-access
+      MaxSessionDuration: 14400
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: ec2.amazonaws.com
+      ManagedPolicyArns:
+        - !Ref msciloaderaccessPolicy
+        - !Ref CommonAppAccess
+  msciloaderaccessProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      InstanceProfileName: msci_loader-access
+      Roles: 
+        - !Ref msciloaderaccessRole
+-------------------------------------------------------------------------------------
+
+
+
+
+4.!Sub - Onceden Kurulu Resource'u Refere Etme veya Icinde Degisken Barindiran Isim Cagirma:
+- Iceride kullanilan degiskene "$" atamayi unutma. #!Sub
+- Parametre'yi yalniz !Ref ile cekmedigimiz zaman kullanilir.
+
+Parameters: 
+  Env:
+    Type: String
+    Default: "dev"
+  AppName:
+    Type: String
+    Default: "eei-workstation"
+Resources:
+  CommonAppAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Action:
+                - ssm:GetParameters
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/AmazonCloudWatch-linux
+                - !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/AmazonCloudWatch-windows
+              Effect: Allow
+              Sid: LimitedSSMAccess
+  EEIWorkstationSGIP:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "InstanceProfile-${AppName}-${Env}"
+      Roles:
+        - !ImportValue EEIWorkstationRole
+-------------------------------------------------------------------------------------
+
+Parameters:
+  VpcId: 
+    Type: String 
+    Description: NBIM vpc id 
+    Default: 'vpc-045eae34e9fc40318'
+  env: 
+    Type: String
+
+Resources:
+  IMDSv2LaunchTemplate: # Require Instance Metadata Service Version 2
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+        LaunchTemplateName: IMDSV2
+        LaunchTemplateData:
+          MetadataOptions:
+            HttpEndpoint: enabled
+            HttpPutResponseHopLimit: 1
+            HttpTokens: required
+        TagSpecifications:
+          - ResourceType: launch-template    
+            Tags:
+              - Key: Name
+                Value: !Sub "nbim-${env}-euwe1-dciqtemp"
+              - Key: env 
+                Value: !Ref env 
+              - Key: easyriskid
+                Value: !Ref easyriskid
+----------------------------------------------------------------------------------------
+
+
+
+
+
+5.!GetAtt
+- Ilgili logicname'in properties'lerinden biri secilirken kullanilir.
+- Hosted zone ile domain name "dciq.a.nb.im" olarak alinmis ve burada yalnizca subdomain olusturuyoruz private ip address'ine.
+- #dns #record #domainname #hosted zone
+
+  dnsrecordweb:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: Z06509311IBF9I5HK5CQD
+      Name: web.dciq.a.nb.im
+      ResourceRecords:
+        - !GetAtt Ec2Instancedciq01.PrivateIp
+      TTL: 300
+      Type: A
+-------------------------------------------------------------------------------------
+
+
+
+
+
+6.Dogrudan Isim Ile Cagirma:
+  Ec2Instancedciq01:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      LaunchTemplate: 
+        LaunchTemplateName: IMDSV2
+        Version: !GetAtt IMDSv2LaunchTemplate.LatestVersionNumber
+      ImageId: 'ami-025f0f6496db28860'
+      KeyName: !Ref DciqKeyPair
+      InstanceType: "t3.xlarge"
+#      PrivateIpAddress: '10.147.24.5'
+      BlockDeviceMappings: 
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp2
+            DeleteOnTermination: true
+            Encrypted: true
+      SubnetId: 'subnet-07c937e0a43cb1f64'
+#      SubnetId: !ImportValue p-stack-eu-west-1-mgmt-subaprivate
+      SecurityGroupIds: 
+        - !Ref appSecurityGroupdciqaccess
+
+  Ec2Instancedciq02:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      LaunchTemplate: 
+        LaunchTemplateName: IMDSV2
+        Version: !GetAtt IMDSv2LaunchTemplate.LatestVersionNumber
+      ImageId: 'ami-07b6664729c340ebb'
+      KeyName: !Ref DciqKeyPair
+      InstanceType: "t3.xlarge"
+#      PrivateIpAddress: '10.147.24.19'
+      BlockDeviceMappings: 
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp2
+            DeleteOnTermination: true
+            Encrypted: true
+      SubnetId: 'subnet-07c937e0a43cb1f64'
+#      SubnetId: !ImportValue p-stack-eu-west-1-mgmt-subaprivate
+      SecurityGroupIds: 
+        - !Ref appSecurityGroupdciqaccess
+-------------------------------------------------------------------------------------------------
+
+
+
+
+

@@ -1,0 +1,82 @@
+https://learn.microsoft.com/en-us/azure/active-directory/saas-apps/aws-multi-accounts-tutorial#configure-azure-ad-sso
+
+1.Single-Sign On Configuration:
+Azure Portal:
+> Azure AD
+  > Enterprise applications
+  > All applications
+  > + New Application
+    > Amazon Web Services (AWS)
+    > Amazon Web Services (AWS)
+    > Create
+  > AWS Single-Account Access
+    > Properties
+    > Object ID: 8199ddb6-ead2-48dd-95f8-3265439c3fbe - copy
+
+
+2.Configure Azure AD SSO:
+> Azure AD
+  > Enterprise applications
+  > AWS Single-Account Access
+    > Single sign-on
+    > SAML/WS-Fed
+    > Basic SAML Configuration: Edit > Save
+    > Attributes & Claims 
+      > Edit
+      > Add a new claim
+        > Name: 365-aws 
+        > ...
+
+
+> Azure AD
+  > Enterprise applications
+  > AWS Single-Account Access
+    > Single sign-on
+    > SAML Certificates
+    > Federaation Metadata XML - Download
+
+
+> AWS IAM
+  > Identity Providers
+
+
+> AWS IAM
+  > Roles
+  > Create Role
+  > SAML 2.0 federation
+    > SAML 2.0–based provider: eyvi-365-connection
+    > Allow programmatic and AWS Management Console access
+    > Attribute: SAML 2.0 provider
+    > next
+  > Add permissions
+    > AdmoinistratorAccess
+    > Next 
+  > Name, review, and create
+    > Role name: aws-admin
+    > Create role
+
+> AWS IAM
+  > Dashboard
+  > Account ID: 534296358464 - copy
+
+
+> Azure Portal
+  > Groups
+  > New Group
+  > Group type: Microsoft 365
+  > Group name: Azure-group
+  > Group email address: Azure-group@yok729.onmicrosoft.com
+  > Create
+
+
+> Azure Portal
+  > Groups
+  > Azure-group
+  > Object id: 171c223e-f3e9-404e-b3af-81761b68363f - copy
+
+
+
+
+
+
+

@@ -1,0 +1,202 @@
+A.Genel:
+- Burada Asil amac:
+  * Ilk once npm ile build islemi yapilir frontend kodu compile edilir.
+  npm run build
+  * root olarak tanimlanan adrese npm ile gonderilir. Bu versiyonda /var/www adresi altinda bir dosya tanimlanir.
+  sudo cp -r /home/ubuntu/eyvi-client/build/. /var/www/eyvi
+  * /etc/nginx/sites-enabled  veya  /etc/nginx/nginx.conf dosyasi altinda bir dosya olusturulur:
+  sudo vim /etc/nginx/sites-enabled/tutorial
+-------------------------------------------------------------------------------
+server {
+       listen 81;
+       listen [::]:81;
+
+       server_name 87.123.4.56;
+
+       root /var/www/eyvi;
+       index index.html;
+
+       location / {
+               try_files $uri /index.html;
+#               try_files $uri $uri/ =404;
+       }
+}
+-------------------------------------------------------------------------------
+  * sudo systemctl restart nginx
+
+
+
+
+
+
+B.80 Portu:
+
+1.nginx 1.19.0 icin gecerlidir.
+
+a.NGINX Kodlar:
+nginx -v
+  - versiyon
+nginx -t
+  - configuration file syntax
+nginx -T
+  - Display current configuration
+nginx -s reload
+  - Reload NGINX
+
+
+
+b.Configuration File:
+- Main File:
+  * /etc/nginx/nginx.conf
+- Includes
+  * /etc/nginx/conf.d/*.conf
+
+
+
+c.
+- https://techexpert.tips/nginx/nginx-proxy-configuration/
+cd /etc/nginx/
+cat nginx.conf
+cd conf.d
+cat default.conf
+------------------------------------
+server {
+       listen 80;
+       server_name localhost;
+
+       location / {
+               root  /usr/share/nginx/html;
+               index   index.html    index.htm;
+       }
+}
+--------------------------------------
+  - root: index dosyasinin adresi.
+  - index veya index.html veya index.htm dosyasinindan hangisi varsa onu calistirir.
+curl localhost
+  - default webpage'i goruruz.
+  - "/usr/share/nginx/html" konumdaki index dosyasini gosterir.
+cat web.conf
+-----------------------------------------
+server {
+       listen 9001;
+
+       location / {
+#               root  /usr/share/nginx/html;
+#               index   index.html    index.htm;
+                return 200 "You have reached Application 1\n";
+       }
+}
+
+server {
+       listen 9002;
+
+       location / {
+                return 200 "You have reached Application 2\n";
+       }
+}
+-----------------------------------------
+  - Baska web server veya hostlar icin farkli root ve html file tanimlanabilir.
+  - Burada sadece uyari var ama istenirse default.conf'taki gibi configure edilebilir.
+curl localhost:9001
+  - "You have reached Application 1" mesajini aliriz.
+
+
+
+2.nginx 1.18.0 icin gecerlidir.
+apt-get update
+apt-get install nginx openssl
+
+a.1.Alternatif 1:
+sudo vim /etc/nginx/sites-enabled/eyvi
+-------------------------------------------------------------------------------
+server {
+       listen 81;
+       listen [::]:81;
+
+       server_name 87.123.4.56;
+
+       root /var/www/eyvi;
+       index index.html;
+
+       location / {
+               try_files $uri /index.html;
+#               try_files $uri $uri/ =404;
+       }
+}
+-------------------------------------------------------------------------------
+  - 80 ve 81 portlari nginx icindir. Ikisinden birini kullanabiliriz.
+
+
+a.2.Alternatif 2:
+vi /etc/nginx/sites-available/default
+--------------------------------------------
+server {
+        listen 80 default_server;
+        listen [::]:80 default_server;
+        root /var/www/html;
+        index index.html index.htm index.nginx-debian.html;
+        server_name _;
+        location / {
+#               try_files $uri $uri/ =404;
+               try_files $uri /index.html;
+        }
+}
+--------------------------------------------
+
+b.Root'un Belirlenmesi:
+sudo mkdir /var/www/eyvi
+sudo cp -r /home/ubuntu/eyvi-client/build/. /var/www/eyvi
+  - npm ile olusturulan build dosyasinin icrerigi buraya aktarilir.
+service nginx restart
+service nginx stop
+service nginx start
+
+
+
+
+C.443 Portu:
+a.OpenSSL ile SSL Certificate:
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
+  - SSL keyi olusturduk.
+
+
+b.SSL Certificate Conf File:
+vim /etc/nginx/snippets/self-signed.conf
+------------------------------------------------------------------------
+ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
+ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+------------------------------------------------------------------------
+  - NGINX'te SSL key ve self-signed'i refere eden bir conf file olusturduk.
+sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+  - Ikinci bir key olusturduk.
+vim /etc/nginx/sites-enabled/client-config
+sudo vim /etc/nginx/sites-enabled/eyvi
+---------------------------------------------------------------------------
+server {
+       listen 80;
+#       listen [::]:80;
+       listen 443; # ssl http2 default_server;
+
+       server_name 16.170.108.70;
+
+       root /var/www/eyvi;
+       index index.html;
+
+       location / {
+               try_files $uri $uri/ =404;
+       }
+
+       listen [::]:443 ssl http2 default_server;
+       include /etc/nginx/snippets/self-signed.conf;
+
+}
+---------------------------------------------------------------------------
+service nginx restart
+
+
+
+
+D.3000 Portu:
+npm i -g serve
+   - repoda
+sudo serve -s /home/ubuntu/frontend -n

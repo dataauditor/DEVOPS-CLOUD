@@ -1,0 +1,548 @@
+1.Genel:
+- Azure'un bulut tabanli kimlik ve erisim yonetimi sistemidir.
+  - Kimlik dogrulama (user'lar resourceælara erismek icin oturum acar.)
+  - SSO (Single Sign On) - Tek oturum acma
+  - Uygulama yonetimi,
+  - B2B (Isletmeden isletmeye)
+  - B2C (Isletmeden Musteriye) kimlik hizmetleri,
+  - Cihaz yonetimi.
+- MFA 
+- Conditional Access (Kosullu Erisim)
+  - Sadece belirli user'lar su uygulamaya erisebilir.
+  - IP araligi belirlenebilir user'lar icin.
+  - OS versiyonu belirlenerek user'lar sinirlandirilabilir.
+Azure AD ile Windows AD ayni degildir.
+Azure AD, Windows AD'nin cloud'a implement edilen versiyonu degildir.
+Azure AD ile Windows AD senkronize edilebilir.
+Azure AD daha cok web apps'lara odaklidir.
+Bir AAD baska AAD'ye baglanamaz.
+Bir tenant'taki subscription'u (aboneligi) baska tenant'a tasiyabiliriz.
+
+a.Kimlik Dogrulama:
+- Bir kaynaga erisim arayan kisi/hizmeti tanimlar.
+- Mestu erisim kimlik bilgilerini ister.
+
+b.Yetkilendirme:
+- Kimligi dogrulanmis bir kisinin veya hizmetin erisim duzeyini belirler.
+- Hangi verilere erisebilceklerini ve neler yapabilceklerini tanimlar.
+
+
+2.Basic Concepts of Accounts & Subscriptions:
+- Account
+- Tenant
+- Subscription
+- Resource Group
+
+a.Account:
+- A person or a program
+- Person: Joe Smith - joe@gmail.com
+  - User name, password, multi-factor authentication
+- App-Managed Identity
+  - Represents a program or service
+
+b.Tenant:
+- A representation of an organization
+- Usually represented by a public domain name: example.com
+- Will be assigned a domain if not specified: example.onmicrosoft.com
+- A dedicated instance of Azure Active Directory
+- Every Azure Account is part of at least one tenant.
+- Bir domainname ile yalniz bir AD kullanabilirsiniz.
+- Not every tenant needs to have a subscription.
+- Tenants can have more than one subscription. development ve production icin dusunulebilir.
+- More than one account can be the owner in a tenant.
+- Tenantlar uzerinde user'lar olusturulmakta ve bu user'lara Subscription'lar uzerinde yetki verilerek resource'lara erisim imkani verilmekte.
+- Resource olusturulamamkta.
+- Directory olarak sistemde gorulmekte.
+
+c.Subscription:
+- Aboneliktir.
+- An agreement with Microsoft to use Azure services, and how you're going to pay for that.
+- All Azure resource usage gets billed to the payment method of the subscription
+  - free subscriptions
+  - pay as you go
+  - enterprise agreements
+- Resouce'lar burada olusturulmakta.
+
+d.Resource Groups:
+- A way of organizing resources in a subscription
+- A folder structure
+- All resources must belong to only one resource group
+- Resource groups can be deleted (which deletes resources inside)
+- A way to seperating out projects, keeping unrelated things seperate
+
+
+
+3.Tenant Olusturma:
+- Yeni tenant altinda subscription olmaz. Yalniz bir account olusur.
+> Azure Active Directory > Manage tenants > create > Azure Active Directory > 
+  > Organization name: Bspoke / Initial domain name: bspoke / Country: Norway > create
+ 
+
+Tenant Degistirme:
+> Azure Active Directory > Manage tenants > bspoke (calisilacak tenant) > switch 
+Alternatif tenant degistirme yontemi:
+> Ayarlar > Ilgili Tenant > bspoke - switch 
+
+
+
+4.Subscription'u Baska Tenant'a Tasima:
+- Global admin oldugumuz tenant'lar arasinda tasiyabiliriz.
+- Tum resource'lar birlikte tasinir. Tasima esnasinda kisa bir kesinti olabilir.
+> Subscription
+  > Change directory
+  > From: mevcut tenant secilir.
+  > To: Gonderilecek tenant secilir.
+
+
+
+5.Custom Domain'i Tenant'a Register Etme:
+- Company domainini eklememizi saglar.
+Once:
+- domain tanimlama yapilir.
+> Azure Active Directory 
+  > Custom domain names 
+    > + add custom domain 
+      > Custom domain name: getcloudskills.com
+      > Add domain
+      > TXT veya MX Record olmali domainin bizim oldugunu gosteren.
+      > Olusan TXT ve MX degerlerini domainname'i  satin aldigimiz siteye yazariz.
+      > Verify (ilgili siteye TXT ve MX degerlerini isleyip Verify tusuna basariz)
+
+
+Sonra:
+- ilgili domain olusturdugumuz siteye gidip istenen verileri girerek txt record olustururuz. 
+> domain'i manage ederiz > txt record olustururuz > domain=@ / Destination: MS=ms12743881 / TTL: 3600 > create
+
+Sonunda:
+- verify tusuna basip tanitiriz.
+> Azure Active Directory > Custom domain names > + add custom domain > getcloudskills.com
+  > add domain > TXT veya MX Record olmali domainin bizim oldugunu gosteren.
+  > verify
+
+Daha sonra:
+- Ilgili domain, primary domain yapilir.
+> Azure Active Directory > Custom domain names > getcloudskills.com > Make primary
+
+User Olusturma:
+- yeni domain kulanarak olusturma imkani.
+> Azure Active Directory > Users > + New User > create user 
+  > User name: ugur.ceylan@getcloudskills.com / Name: ugur / ... > create
+
+
+
+5.Users:
+- User olusturup bir gruba dahil ettik.
+- create / invite secenekleri var.
+- Iki tur user var. Normal ve guest user.
+
+Users:
+> Azure Active Directory > Users > userlar (type: member - external olmadigini gosterir)
+  > Assigned roles > Global administrator (sinirsiz yetkim var) 
+
+User Olusturma:
+> Azure Active Directory > Users > + New User > create user 
+  > User name: ugur.ceylan / Name: ugur / ... > create
+
+> Azure Active Directory > User > + New user > Create user > User name: joe.green / name: Joe Green
+  > Groups > Developers > select > create
+
+Guest User:
+- create / invite secenekleri var.
+- invite yapinca ilgili kisi mesaj alir.
+- Disardan kullanici eklenirse parola ile ilgili birsey yapamayiz kendi parolasi ile giris yapar.
+> Azure Active Directory > User > + New guest user > invite user > email: joe.green@gmail.com / name: joe green > create
+
+Rol Atama:
+> Azure Active Directory > Users > ugur
+  > Assigned roles
+    > + Add assignments
+
+Reset password:
+> Azure Active Directory > Users > ugur 
+  > Profile
+    > Reset password
+
+Lisans Atama:
+> Azure Active Directory > Users > ugur 
+  > Licenses
+    > + Assignments
+    > atamak istedigimiz lisansi seceriz. (AAD ile entegre edilmis lisanslariniz varsa atayabilirsiniz.)
+
+Devices:
+> Azure Active Directory > Users > ugur 
+  > Devices
+    - AAD ile bagli cihazlarini gorebiliriz.
+
+Uygulama Erisimi:
+- Kullanicilarin hangi application'lara erisimini istiyorsak seceriz.
+> Azure Active Directory > Users > ugur 
+  > Applications
+    - (AAD ile entegre edilmis uygulamalar varsa atayabilirsiniz.)
+
+MFA Atama:
+- Telefon, email vb bilgilerini girebiliriz. MFA tanimlayabiliriz.
+> Azure Active Directory > Users > ugur
+  > Authentication methods
+    > Require re-register MFA ...
+
+
+
+6.Groups:
+- Dynamic groups: Onune dev, test vb tag ekleyerek ilgili userlari group'a otomatik ceker.
+- Assigned: Dogrudan biz user'i gruba atariz.
+> Azure Active Directory > Groups > + New group 
+  > Group type: Security / Group name: Developers / Membership type: Assigned > user eklenebilir 
+  > create
+  
+Group'a User Ekleme:
+> Azure Active Directory > Groups > Developers
+  > Members
+    > + Add members
+
+Group'a Rol Atama:
+> Azure Active Directory > Groups > Developers
+  > Roles and administrators
+    > 
+
+
+
+7.Administrative units:
+- Bolgesel, bolumsel duzeyde gruplara ayirmada kullanilir. Kanada bolgesi, Sales department vb.
+- Daha sonra ilgili userlar bu bolgeye ve istenen yetkilerle atanabilir.
+- Premium ozelliktir. Ucretli.
+> Azure Active Directory > Administrative units > name: Canada > create
+
+
+
+8.Password reset:
+- Self-service password reset: sifre resetleme seceneklerini sunar.
+> Azure Active Directory > Password reset > 
+
+
+
+9.Devices:
+- Cihazlarin Azure AD'ye baglanmasini yapar. Ornegin local bilgisayarimin.
+- Disable yaparak ilgili cihazi cikarabiliriz.
+> Azure Active Directory > Devices > Device settings > Users may register their devices with Azure AD: All
+  - userlarin azure AD'ye cihaz register etmesine izin verilir.
+
+Start Menu:
+> connect to work or school > connect > (Azure AD'de tanimli email adresini yaz) umit.ceylan@bspoke.no
+  > password: Mustafa11,b > Sign in > Done
+
+Azure portal:
+> Azure Active Directory > Users > umit.ceylan@bspoke.no > devices > azure ad'ye tanimli cihazlarimi gorurum.
+> Azure Active Directory > Devices > Azure AD'ye tanimli cihazlari gorurum.
+
+
+
+10.Bulk operations:
+- Toplu user olusturma/davetiye/silme islemleri icin kullanilir.
+- ".csv" file seklinde bir dosya ile kullanici verileri girilerek toplu user tanimlanabilir.
+- Ilgili file'da userlarin isimleri, email adresleri olmali.
+> Azure Active Directory > User > Bulk operations 
+  > Bulk create
+    > download 
+      > indirilen ilgili .csv dosyasi doldurularak daha sonra Download user ile .csv dosyasi AAD'ye yuklenir.
+
+
+
+11.RBAC (Role Based Access Control) - Roles and administrators:
+- Bir tur authorization yontemi.
+- Role'ler ile policy'leri tanimlariz.
+- Istedigimiz kisi/gruba rol/roller atariz.
+- Iki turlu rol tanimlanir. Biri roles and administrators ile biri users uzerinden teker teker.
+> Azure Active Directory > Roles and administrators > Helpdesk administrator 
+  > + Add assignment > joe green > add
+
+User uzerinden role atama:
+> Azure Active Directory > User > ugur > Assigned roles > + Add assignment 
+  > Billing administrator > Add
+
+Device'i Secerek User'a Access Role Tanimlama:
+> Resource groups > umit-rg > umitVnet > Access control (IAM) > ugur > + Add > Add a role assignment 
+  > contributor > select members > ugur > select > assign
+
+Global administrator:
+- AAD'de sinirsiz yetkisi vardir ama Azure'da yoktur cunki tenanttadir yetkisi Subscription'a ozel izin gerekli.
+- Azure'daki resourcelarda yetkili olabilmek icin Subscription'larda yetki verilmeli.
+
+
+
+12.Enterprise Application:
+- Ilgili Application'lara kisileri yetkilendirme.
+> Azure Active Directory > Enterprise Application > Slack > Assign users and groups > Roles and administrators 
+  
+
+
+13.Custom Role Tanimlama:
+- Iki turlu custom tanimlanir. User'a ve resource'a.
+> Azure Active Directory > 
+
+Resource'a Access Role Tanimlama:
+- Clonlayabilir, samdan gidebilir veya bastan yazabilirsiniz.
+> Azure Active Directory > Roles and administrators > umit-rg > Access control 
+  > Create a custom role > add > role name: Update and Read / Clone a role / Role to clone: Cognitive Services Contributor / 
+
+
+
+14.Subscriptions:
+- Bir baskasini kendi subscriptionunuzda yetkilendirmek.
+> Subscriptions > umit.ceylan@bspoke.no > Access control > Add a role assignment 
+  > Role: Contributor / Select: ugur > save
+
+
+
+15.Licences:
+- Elimizdeki lisanslari user'lara atarak kullaniriz.
+> AAD > Licenses > All products 
+  - Ilgili user'lara atariz.
+
+
+
+16.Azure AD Connect:
+- Local AD ile Azure AD'nin senkronizasyonu icin kullanilir. 
+> Local Makineye 'Azure AD Connect' kurulur.
+- Daha sonra Azure Portaldan:
+> AAD > Azure AD Connect
+  > Download Azure AD Connect (Local'e indirilir.)
+
+
+
+17.Azure AD Join:
+- Client olarak AAD ile on-premise kaynaklarini ve SaaS kaynaklarina erisimi saglar.
+- Azure tarafindan yonetilen SaaS uygulamalariniz ve hizmetleriniz icin Coklu Oturum Acma hizmeti.
+- User'larin birden fazla cihazi (telefon, laptop, tablet) olabilir. Bunlari Azure AD Join kullanarak AAD ile entegre edebiliriz. 
+- User'in ayarlarini farkli bilgisayarlarda da kullanabilmesini saglayabiliriz.
+- Microsoft Store'u kurumsal bir store haline getirebiliriz.
+- Windows Hello'yu aktif hale getirebiliriz.
+- Yalnizca uyumlu cihazlarla uygulamalara erisimi kisitlayabiliriz.
+- Sirket ici kaynaklara sorunsuz erisim saglar.
+- Cloud first or cloud-only AD
+- When you do not have an on-prem AD
+- When you do not want to put certain temporary users in your corp AD
+- For remote branches with limited on-prem infrastructure
+
+
+
+18.Azure AD Connect:
+- Localdeki AD yapisi ile AAD'yi entegre etmek icin kullanilir.
+- Localde bulunan domaine dahil herhangi bir makine veya domain controller uzerine yapilandirarak olusturulur.
+- Localdeki username ve password'lar AAD ile entegre oluyor.
+- Tek tek AAD'de user olusturmak yerine localdeki userlar AAD tarafindan da taninir.
+- Hem Azure'da hem de 3. taraf SaaS uygulamalarini kullanabilirler.
+- Sirket ici dizinlerinizi AAD ile tumlestirir.
+- AAD ile tumlesik Office 365, Azure ve SaaS uygulamalari icin kullanicilariniz icin ortak bir kimlik saglar.
+- Hibrit kimligi etkinlestirmek icin birkac kimlik dogrulama secenegi vardir.
+
+Server Manager (Local AD):
+- Local bilgisayardan actik.
+> Tools
+  - AD ile AAD'yi entegre edebilmek icin Domain and trust yapilir.
+  > Active Directory Domains and Trusts
+    > devcloud.local (bu sekilde buraya eklenmis olmali. Onceden yapmis sanirim)
+
+microsoft.com > Microsoft Azure Active Directory Connect
+  > Download (domaine dahil local bir indiriyoruz)
+    > Install 
+      > Use express settings 
+      > (Connect to Azure AD) Username: onder@devcloud.com (Global admin birisinin hesabi tanitilir) / Password: ... 
+      > (Connect to AD DS) Username: DEVCLOUD.LOCAL\adminonder  /  Password: ...
+      > (Azure AD sign-in) devcloud.local ile devcloud.com (verified) match oldugunu gosterir.
+      > (Configure) install  
+        - Kurulum tamamlanmistir.
+
+AAD:
+> Overview
+  > Azure AD Connect - Enabled (seklinde gorulur.)
+  > Users  (localdeki kullanicilar gelmis.)
+
+
+
+19.Azure AD Connect with PowerShell:
+- Localdeki domaine dahil local bilgisayarda PowerShell acilir.
+
+Start-ADSyncSyncCycle -PolicyType Initial
+  - Tamamini senkronize eder.
+Start-ADSyncSyncCycle -PolicyType Delta
+  - Sadece degisiklikleri senkronize eder.
+
+
+
+20.Azure AD ile Karma Kimlik:
+- Single sign-on ozelligi saglar. Iki yolu var: PHS ve PTA. Ikisi de kullanilabilir.
+- Azure AD Connect ile Local AD ve AAD entegrasyonunu gerceklestirdikten sonra yapilir.
+Password Hash Synchronization (PHS): 
+  - Kullanici hesaplari icin parola karmasinin sifrelenmis bir surumunu esitler.
+  - Local AD ve AAD entegrasyonu sonrasi parolalarin AAD'de tutulmasidir.
+Pass-through authentication (PTA): 
+  - Sirket ici etki alani denetliyecileriyle kullanici adi ve parolanin kimligini dogrular.
+  - Bir agent yuklemek suretiyle parolalarin Local AD'de tutulmasidir.
+AD FS: 
+  - Talep tabanli kimlik dogrulama kullanan bir kimlik federasyonu cozumunun Microsoft uygulamasidir.
+  - 3. bir secenek olarak kullanilabilr ama pek kullanilmaz. Cok daha fazla secenek sunar.
+
+
+
+21.Single Sign-On:
+- Farkli internet sitelerine (Facebook, gittigidiyor.com  vb.) AAD kimligi ile giris imkani veren hizmet.
+- Tek bir oturum acma yontemi secmek, uygulamnin kimlik dogrulama icin nasil yapilandirildigina baglidir.
+- Bulut uygulamalari, coklu oturum acma icin OpenID Connect, OAuth, SAML, parola tabanli, baglantili veya devre disi birakilmis yontemleri kullanabilir.
+- Sirket ici uygulamalar, coklu oturum acma icin parola tabanli, tumlesik Windows Kimlik Dogrulamasi, ustbilgi tabanli, baglantili veya devre disi birakilmis yontemleri kullanabilir. Sirket ici secenekler, uygulamalar Uygulama Proxy'si icin yapilandirildiginda calisir. 
+
+
+
+22.Self Servis PArola Sifirlama (SSPR):
+- Parolalarin unutuldugu veya sureli olmasi arzu edildigi durumlarda parola degisim islemlerini otomatiklestirir.
+- Self Servis Parola Sifirlamayi kimlerin kullanabilecegini belirleyin.
+- Gerekli kimlik dogrulama yontemlerinin sayisini ve mevcut yontemleri secin (e-posta, telefon, sorular).
+- Kullanicilarin SSPR'ye kaydolmasini isteyebilirsiniz (MFA ile ayni isle.).
+
+
+
+23.Password Writeback:
+- AAD'de yapilan parola degisikligi Local AD'ye de yansir, senkronizasyon sorunlarini bitirir.
+- AAD'yi Local AD'ye parola yazacak sekilde yapilandirmak icin kullanilir.
+- Azure AD Connect'in bilesenidir.
+- Premium AAD ile kullanilir.
+- Sirket ici SSPR kullanma ihtiyacini ortadan kaldirir.
+
+
+
+24.AAD Connect Health:
+- Cok fazla kullanici varsa kullanilir.
+- Sirket ici kimlik altyapisinin izlenmesine yardimci olarak ortamin guvenirliligini saglar.
+- Artirilmis guvenlik 
+- Tum kritik AD FS sistem sorunlari ile ilgili uyarilar,
+- Basitlestirilmis dagitim ve yonetim,
+- Zengin kullanim metrikleri,
+- Gelismis yonetici deneyimi.
+AAD:
+  > AAD Connect
+  > Health and Analytics
+  > Azure AD Connect Health
+    > Quick start 
+      > Download Azure AD Connect Health Agent for AD DS (Ilgili agentlar indirilerek yapilir.)
+
+
+
+25.Azure AD B2B (Business to Business):
+- Disardaki kullanicilarin sizin AAD ile entegre ettiginiz uygulamaya ulasmasi icin kullanilir.
+- Tek tek bu kullanicilara hesap acmak yerine guest hesap olarak davet etme imkani verir.
+
+
+
+26.Azure AD B2C (Business To Customer):
+- Isletmeden kullaniciya kimlik sagliyor. Kullanicilarin kaydolma, oturum acma ve profillerini degistirme sayfalarini ozellestirebiliyoruz. Customize edilmis sayfalar, user flowlar olusturabiliyoruz. (Kullanici once sunu sonra parola vb getirsin, MFA girsin, oturum acsin vb seklinde.)
+- Bunun icin Tenant type: Azure Active Directory (B2C) secerek tenant olusturmak gerekiyor.
+
+a.Olusturma:
+> Create a resource
+  > Azure Active Directory B2C
+  > Create
+  > Create a new Azure AD B2C Tenant  (Mevcut Subscription ile de baglama imkani vardi)
+    > Organization name: Bspoke
+    > Initial domain name: bspoke
+    > Country: Ireland
+    > Subs: mevcut subscriptonlardan biri secilir.
+    > RG: deneme
+    > Create
+
+b.Uygulama Kaydi Olusturma:
+> Azure AD B2C
+  > App registrations
+    > + New registration
+      > Name: webapp1
+      > Accounts in any identity provider or organizational directory
+      > Redirect URI: Web | https://jwt.ms (uygulamanin adresi girilir.)
+      > Register
+    > Certificates & secrets
+      > + New client secret
+        > Description: clientscript1
+        > Expires: 6 months
+        > Value      (kopyala)
+        > Secret ID  (kopyala)
+    > Authentication  (web uygulamasi oldugu icin yapilir ve flow, policy olusturulabilir bundan sonra)
+      > Access tokens (sec)
+      > ID tokens (sec)
+      > save
+  > User flows
+    > New User flow
+      > Sign up and sign in
+      > Recommend
+      > Create
+        > Name: B2c_1_signupsignin1
+        > Identity providers: Email signup (sec)
+        > MFA: (default)
+        > Conditional access: (default)
+        > User attributes and token claims  (toplamak istedigimiz verileri seceriz)
+          > Country     : x  x
+          > Display Name: x  x
+          > Postal Code : x  x
+          > create
+  > B2C_1_signupsignin1  (test ediyoruz)
+    > Run userflow
+    > Ilgili uygulama secilir ve Run userflow
+      > Sign up
+        > email address: byildiz@gmail.com
+        > NEw password: 123
+        > Country: Norway
+        > Display name: umit
+        > Postal code: 0281
+        > Create
+
+
+
+27.Conditional Access:
+- Kosullar belirlenerek kullanicilar, gruplar belirttiginiz uygulamalara erisebilir.
+- IP araligi, browser, OS, zaman araligi, MFA vb istiyorum denebilir.
+- AAD Premium ile calisir.
+> Azure AD Conditional Access
+  > + New policy
+    > kosullari burada siralariz.
+
+
+
+28.MFA:
+- MFA'i user bazinda veya toplu olarak aktif edebilirsiniz. Bunun dogrulamasi icinde asagidaki usuller secilir.
+- Dogrulama yontemleri: 
+  * Microsoft Kimlik Dogrulayici uygulamasi
+  * OATH donanim
+  * SMS
+  * Sesli arama
+> Multifactor Authenticaton
+  > 
+
+> AAD
+  > Users
+    > ugur
+      > Authentication method
+        > Reguire re-register MFA
+
+
+
+29.AAD Kimlik Korumasi:
+- Kimlige dayali risklerin algilanmasi ve duzeltilmesini otomatiklestirir.
+- Azure portalinda sunulan verileri kullanarak riskleri arastirabiliriz.
+- Daha fazla analiz icin risk algilama verilerini ucuncu taraf yardimci programlara aktarabilir.
+    Risk Algilama Turu:           Aciklama:      
+  * Atipik seyahat: Kullanicinin alisilmadik lokasyonda oturum acma islemini kotrol edebiliriz.
+  * Anonim IP adresi: Anonim bir IP adresinden oturum acilmasi.
+  * Tanidik olmayan oturum acma ozellikleri: Belirtilen kullanici icin yakin zamanda gorulmeyen ozelliklerle oturum acilmasi.
+  * Kotu amacli yazilim baglantili IP adresi: Kotu amacli yazilim baglantili bir IP adresinden oturum acilmasi,
+  * Sizan kimlik bilgileri: Kullanicinin gecerli kimlik bilgilerinin sizdirildigini gosterir.
+  * Azure AD threat intelligence: Microsoft'un dahili ve harici tehdit istihbarat kaynaklari bilinen bir saldiri modeli belirler.
+
+
+
+30.AAD Governence and Compliance:
+- Subscriptionlarin (Aboneliklerin) Yapilandirilmasi.
+- Azure Policy'lerin Yapilandirilmasi.
+- RBAC Yapilandirilmasi.
+- Azure AD Erisim Incelemeleri.
+- Azure Blueprints.
+
+
+
+
+

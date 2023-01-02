@@ -1,0 +1,16 @@
+1.Genel:
+a.Hazirlik:
+AWS Application Discovery Service
+  > migrate edilecek resourcelarda inceleme yapar.
+  
+b.Migration:
+> Once VPN, Direct Connect kurulur veya dogrudan internetten migrate edilir.
+> Servers          ->  AWS Server Migration Service    ->  EC2 Instances
+> Database         ->  AWS Database Migration Service  ->  Amazon RDS
+> NAS/File Server  ->  AWS Data Sync                   ->  EFS / Amazon S3
+
+
+2.Hands on:
+- VM ware calisiyor.
+> AWS Application Discovery Service
+  > 

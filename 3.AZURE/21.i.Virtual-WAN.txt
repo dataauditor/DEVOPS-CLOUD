@@ -1,0 +1,19 @@
+1.Genel:
+- S2S, P2S ve ExpressRoute'u bir araya getirir.
+- Birden fazla mevkide on-premises cihazlarin birbirleri ile iletisimi icin Azure'da Virtual Hub olusturulur.
+- On-premise officeler bulutu hub gibi kullanarak birbirleri ile konusurlar.
+- Site to Site VPN kullanilir.
+- Globaldir. RG olmasa da RG belirtilir.
+- Olusturulan Hub'lar ucrete tabi olup, pahalidir.
+- Tum baglantilari birlestirir ve yonetim olarak kolaylik saglar.
+- ISP ile de calisilarak konfigure edilir.
+
+
+2.Virtual WAN:
+
+a.Olusturma:
+> Virtual WANS > + create > Subs / RG: create new: wan-rg / Loc / Name: ugur-wan
+  > Type: standard > create
+
+b.
+> ugur-wan > Hubs > + New Hub ...

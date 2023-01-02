@@ -1,0 +1,22 @@
+1.Cost Management + Billing:
+- Maliyet analizleri yapilir. 
+- Bolge, resource, resource group, tag, ... filtreli maliyet analizi yapilabilir.
+- Tag'larin kullanimi cok faydali oluyor.
+- Forecast da yapilabilir. Ay sonu muhtemel su kadar maliyet cikacak.
+- Butce olusturup belirlenen sinirlarda uyarilar gonderebilirsiniz.
+- Azure automation'u entegre ederek kisitlamalar da uygulayabilirsiniz.
+- Cost analys'de filtreleyerek masraflar incelenebilir. 
+- Tag filtresi icin resource'larda "Name: billingcode" "Value: herhangi birsey" yazilmali.
+> Cost Management + Billing > Umit Ceylan (subscription seciyoruz) > Cost analysis 
+  > Group by: Location (farkli filtreler ile harcamalari daha iyi analiz edebilirsiniz)
+  
+
+
+
+2.App Services:
+- billingcode seklinde taglayarak cost analys'de incelenebilir.
+> App Services > wordpress app (ilgili app) > Tags > Name: billingcode / Value: a101-9009
+
+
+
+

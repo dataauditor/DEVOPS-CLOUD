@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-ctx-office</id>
+    <version>0.01</version>
+    <description>Install and configure Microsoft office components required for Citrix VDAs.</description>
+    <authors>NaveenG naveen.gujar@nbim.com</authors>
+    <title>nbim-ctx-office</title>
+    <tags>office</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

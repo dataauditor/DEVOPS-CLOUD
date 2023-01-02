@@ -1,0 +1,31 @@
+1.Move Resource:
+- Resource bir RG'den baska bir RG veya Subscription veya Region'a tasinabilir. 
+- Resource'u bir RG'den tasimak.
+- Baska RG'a tasirken tek bir resource gonderebiliriz.
+- Baska Subscription veya Region'a tasirken resource'lari bagimliliklari ile beraber tasimaliyiz.
+- Ornegin disk, nic, sg ...vb olmadan baska Subscription veya Region'a tasinamaz.
+- Birden fazla resource'u secip birlikte de tasiyabiliriz.
+> Resource Groups > umit-rg > umitVnet > Move > Move to another resource group > 
+  > Gonderilecek RG secilir > ok
+
+
+
+2.Resource ID:
+- 
+> Resource Groups > umit-rg > umitVnet > Properties 
+  > Resource ID: /subscriptions/af2c3318-c49d-4b0f-9fb2-c33be71c5a5e/resourceGroups/umit-rg/providers/Microsoft.Network/virtualNetworks/umitVnet
+
+
+
+
+3.Kota:
+- Azure'un uyguladigi kota miktarlarini inceleyebiliriz.
+- Kotayi artirmak icin:
+> Subscriptions
+  > Ilgili Subscription
+  > Usage + quotas
+  > <Artirmak istenilen Resource secilir>
+  > Request quota increase
+    > Enter a new limit
+    > New limit: 20
+    > Submit

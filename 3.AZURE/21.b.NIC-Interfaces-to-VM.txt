@@ -1,0 +1,25 @@
+1.Genel:
+- Network ile ilgili degisiklikler oncesi VM durdurulmalidir. 
+- NIC'ler farkli Vnet'lerde olusturulamaz.
+- Tek VM'e birden cok NIC baglama. Iki IP adresi demektir.
+
+
+2.Mevcut Vnet'e Bagli NIC'leri Gorme:
+- Mevcut Vnet'e bagli network interface'leri gorebiliriz.
+> umitVnet > Connected devices 
+
+
+3.Mevcut Vnet'te Yeni Subnet Olusturma:
+- Once Vnet'e yeni CIDR ekliyoruz sonra olusturdugumuz CIDR blogunun tamamini Subnet'e CRDR olarak tanimliyoruz.
+> umitVnet > Address space (Halihazirda 10.0.16.0/24 mevcut) > Add additional address space: 10.16.16.0/24
+  > save
+
+> umitVnet > Subnets > + Subnet > Name: secondsubnet > Subnet address range: 10.16.16.0/24
+  > save
+
+
+4.VM'e 2'ci NIC Baglama:
+> my-vm > Stop
+> my-vm > Networking (halihazirda bir NIC'e bagli) > Attach network interface > create network interface 
+  > Name: aznetwork / Subnet: secondsubnet / Private IP address assignment: Dynamic
+  > create > ok

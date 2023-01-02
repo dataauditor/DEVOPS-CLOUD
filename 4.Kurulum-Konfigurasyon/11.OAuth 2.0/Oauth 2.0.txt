@@ -1,0 +1,209 @@
+1.Genel:
+- Farkli sekillerde kurgulanabiøir.
+- Uygulamalara ulasimda recognation saglayan bir sistem.
+- Eskiden "HTTP Basic Auth" kullanici isim ve sifresi ilgili herbir uygulamada kaydedilirdi.
+- Authorization Server ve API Server birbirinden ayri calisiyor. (1. versiyonda birlikteydi)
+- Rest API'lere ulasimda kullanilir.
+- "HTTP Basic Auth", MFA eklenmesi durumunda cok fazla is yuku gerektiriyor.
+- OAUTH: Tum uygulamalar kullaniciyi giris yapabilecegi bir Oauth sunucusuna gonderir, kullanici girisini tamamladiktan sonra uygulamaya yonlendirilir. Uygulamaya yalnizca token bilgisi kalir.
+- Amac Authorization Server'dan token'i alip Resource server'a ulasmaktir.
+
+- OAUTH: PenID ve OAUTH olarak ikiye ayrilir:
+  * OAUTH: Authentication. Accessing APIs. API uzerinde erisim saglar fakat hangi kullanicinin eristigini bilmez. Access token (kullanici datasi mevcut degil) kullanir. Tanima.
+  * OpenID: Authorization. Identifying Users. Eger uygulama uzerinde kullanici bilgisi isteniyorsa kullanilir. ID token kullanir. Yetkilendirme.
+
+Authorization code grant flow:
+> Client
+  > Application  ->  Get request for auth code  ->  Azure AD (Authorize Endpoint)
+  > Azure AD (Authorize Endpoint)  ->  auth code  ->  Application
+  > Application  ->  Post request for token  ->  Azure AD (Token Endpoint)
+  > Azure AD (Token Endpoint)  ->  access token  ->  Application
+  > Application  ->  Get request for user profile (with access token as header)  ->  MS Graph (/me Endpoint)  
+  > MS Graph (/me Endpoint)  ->  user profile  ->  Application
+  
+
+Ornek:asQ	1|
+Client: Twitter mobil uygulamasi
+Resource Owner: Twitter hesabinin sahibi ben
+Resource server: Twitter server
+Authorization server: ADD  (Resource server ile Authorization server ayni server olabilir)
+
+
+                    		AUTHORIZATION SERVER			    					RESOURCE SERVER
+Client    	Application       Azure AD (Authorize Endpoint)     Azure AD (Token Endpoint)		MS Graph (/me Endpoint)
+	->	1. Get request for auth code ->  |
+		|   <-      auth code		   |
+  		| 			Post request for token  ->			   |
+		|   <- 		access token				         |
+		|        Get request for user profile (with access token as header)  ->				  |
+		|   <-   user profile												  |
+
+
+
+2.OAUTH2 Rolleri:
+Resource Owner: User
+User Agent: Device
+Client: Application
+Authorization Server: Kullanici girisini bu entity uzerinden tamamlar. Uygulamaya token iletir.
+Resource Server: API
+
+
+3.OAUTH Akislari:
+Authorization Code: Sunucu tabanli calisan uygulamalar icin yetki verme islemi.
+Resource Owner Password Credentials: Kullanici adi ve sifre gibi bilgilerinin dogrudan gonderilerek yetki alma islemi. Guvensizdir.
+Implicit: Public client turu uygulamalarda kullanilir.
+Client Credentials: Kullanici bilgilerini gerektirmeyen makineler arasi haberlesme gibi uygulamalarda tercih edilebilir.
+
+
+
+
+4.Hands on:
+> AAD
+  > App registrations
+    > + New registration
+      > Name: my test app (ekranda gozukecek app ismi yaz.)
+      > Accounts in any organizational directory 
+      > Redirect URI   (optional)
+        > Web: http://localhost:31544  (veya "http://localhost"  seklinde yazilir.)
+      > Register     (App register edildi)
+
+> AAD
+  > App registrations
+    > my test app
+      >> Overview
+        > Application (client) ID  (kopyala)
+      >> Certificates & secrets
+        > + New client secret
+          > Description: Dev secret
+          > Expires: In 2 years
+          > Add
+          > Daha sonra olusan Value kopyalanir bir kenara. Tekrar goremezsin.
+      >> API permissions  (Burasi kurulumla ilgili degil yalnizca verilere ulasip bilgi almak icin kurulabilir) (optional)
+        > + Add a permission
+          > Microsoft Graph
+            > Delegated permissions (app'te user mevcut) (Applications permissions da var)
+              > Calendars 
+                > Calendars.Read (user'larin calendar'lari okunabilir)
+                > Add permission
+        > Grant admin consent for contoso
+          > Yes
+      >> Expose an API
+        > Set
+          > save
+        > + Add a Scope
+          > Scope name: 
+          > Admins and users
+          > Enabled
+          > Add scope
+        > + Add a client application
+          > Client ID: (Yukarda kopyaladigin "Application IP"yi yapistir.)
+          > Authorized scopes: tikle
+          > Add application
+      >> Branding
+        - Applicationun ismini degistirebilir ve logo ekleyebilirsiniz.    
+      >> Authentication
+        > Web:  https://localhost
+
+> AAD
+  > App registrations
+    > my test app
+
+> ReadyAPI
+  > open a REST request
+  > Auth
+  > + Add Authorization Profile
+    > Oauth 2.0 (Azure)
+    > Get Access Token
+  > Client Credentials Grant  (Burayi doldururken AAD'den alinan veriler girilir.)
+    > Client identification: The application ID of your client application. See the Overview page of your application in the Azure Active Directory.
+    > Client Secret: The client secret you created earlier. If you do not have it yet, create it on the Certificates & Secrets page of your application in the Azure Active Directory.
+    > Resource: The Application ID URI of the protected web service. To get it, see the Overview page of your API application in the Azure Active Directory.
+    > Access Token URL: The URL to which ReadyAPI requests an access token. This URL looks as follows: "https://login.microsoftonline.com/<your tenant id>/oauth2/token"  To get it, open your Azure Active Directory and click Endpoint.
+    > Get Access Token
+
+
+
+
+5.Hands on:
+a.Resource App'i Configure:
+> AAD
+  > App registrations
+    > + New registration
+      > Name:Resource
+      > Account in this organizational directory
+      > Register
+
+> AAD
+  > App registrations
+    > Resource
+      >> App roles
+        > + Creayte app role
+          > Display name: FileUpload
+            > Allowed member types: Applications
+            > Value: FileUpload
+            > Do you want to enable this app role: tikle
+            > Apply
+      >> Overview
+        > Application ID URI  (kopyala)
+
+
+b.Client App'i Configure:
+- Client1 app'a Resource app'ina giris yetkisi tanimliyoruz.
+- Istedigimiz kadar client kurabiliriz asagidaki gibi.
+> AAD
+  > App registrations
+    > + New registration
+      > Name:Client1
+      > Account in this organizational directory
+      > Register
+
+> AAD
+  > App registrations
+    > Client1
+      >> API permissions
+        > Add a permission
+          > My APIs
+            > Resource
+              > Permissions: FileUpload (tikla) (Client1'e yalnizca upload the files yetkisi verdik)
+              > Add permissions
+        > Grant admin consent for MSDN  (Global admin veya owner olmalisin)
+          > yes  (yesil tik olusmali)
+      >> Certificates & secrets
+        > New client secret
+          > Description: client1
+          > Expires: 2 years       
+          > Add
+          > Secret ID (kopyala muhakkak)
+      >> Overview
+        > Application (client) ID  (kopyala)
+        > Endpoints
+          > Oauth 2.0 token endpoint (v2) (kopyala)  
+ 
+
+Postman:
+> POST: "Oauth 2.0 token endpoint (v2)" (Client1'den yapistir)
+> grant_type: client_credentials (default)
+> client_id: "Application (client) ID" (Client1'den yapistir)
+> client_secret: "Secret ID"  (Client1'den yapistir)
+> scope: "Application ID URI"/.default  (Resource'tan yapistir sonuna "/.default" ekle)
+> Send
+> token  (kopyala)
+
+https://jwt.ms
+- Burada tokan uzerinden rolleri vb inceleyebiliriz.
+> token'i yapistir.
+
+
+Ayri Bir Usul:
+https://www.youtube.com/watch?v=Ri_FuX_SQPQ
+Postman:
+> GET: "   (Resource'un Endpoint'i yapistir)
+> Authorization
+  > Type: OAuth 2.0
+  > Token name: DemoToken
+  > Coolback URL: https:/localhost
+  > ...
+  > Send
+  > Available Token: DemoToken  (sec)
+
+

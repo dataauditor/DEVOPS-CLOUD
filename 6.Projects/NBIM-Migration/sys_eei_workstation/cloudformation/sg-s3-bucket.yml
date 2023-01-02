@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  Env:
+    Type: String
+    Default: "dev"
+  VpcId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/networking/private-vpc-1
+  Subnet1:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/networking/private-vpc-1/subnet-1
+  Subnet2:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/networking/private-vpc-1/subnet-2
+  Subnet3:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/networking/private-vpc-1/subnet-3
+  NbimUserPrefixList:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /eei-workstation/networking/prefixlist/userprefixlist
+  NbimOfficePrefixList:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /eei-workstation/networking/prefixlist/officeprefixlist
+  NbimDirectoryId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/mad/directoryid
+  NbimDirectoryName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /nbim-ssm-parameter/mad/directoryname
+
+Resources:
+  StateManagerS3:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "nbim-eei-workstation-automation-logs-${AWS::Region}-${AWS::AccountId}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  SampleBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StateManagerS3
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 's3:GetObject'
+            Effect: Allow
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref StateManagerS3
+                - /*
+            Principal: !Ref EEIWorkstationRole
+
+  WriteRpmLogsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:*Object
+            Resource:
+              - !Sub "arn:aws:s3:::nbim-eei-workstation-automation-logs-${AWS::Region}-${AWS::AccountId}/*"
+
+  EEIWorkstationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - !Ref WriteRpmLogsPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonSSMDirectoryServiceAccess
+        - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
+      RoleName: "eei-workstation"
+      MaxSessionDuration: 14400
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: ec2.amazonaws.com
+
+  EEIWorkstationSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allowed RDP access to workstation
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          SourcePrefixListId: !Ref NbimUserPrefixList
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          SourcePrefixListId: !Ref NbimOfficePrefixList
+        - IpProtocol: udp
+          FromPort: 3389
+          ToPort: 3389
+          SourcePrefixListId: !Ref NbimUserPrefixList
+        - IpProtocol: udp
+          FromPort: 3389
+          ToPort: 3389
+          SourcePrefixListId: !Ref NbimOfficePrefixList
+
+
+Outputs:
+  S3LogBucket:
+    Description: Arn for bucket used for storing association logs
+    Value: !Ref StateManagerS3
+    Export:
+      Name: S3LogBucket
+  EEIWorkstationRole:
+    Description: IamPolicy for ec2
+    Value: !Ref EEIWorkstationRole
+    Export:
+      Name: EEIWorkstationRole
+  EEIWorkstationSG:
+    Description: SG for EC2
+    Value: !Ref EEIWorkstationSG
+    Export:
+      Name: EEIWorkstationSG
+
+
+

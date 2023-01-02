@@ -1,0 +1,4 @@
+1.Genel:
+  - On-prem'deki hizmeti minimum uygulama ve veritabani degisimi ile cloud'a tasir.
+  - Managed service (guncelleme, yama, otomatik yedeklemeler).
+  - Azure Hybrid Benefit'i kullanarak mevcut SQL lisansinizi azure cloud'da da (ikisinden birinde ya on-prem ya azure) kullanabilirsiniz.

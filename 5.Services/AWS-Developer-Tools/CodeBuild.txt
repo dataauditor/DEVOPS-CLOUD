@@ -1,0 +1,65 @@
+1.CodeBuild:
+
+> Build > Project name: MyWebAppCodeBuild >  
+  > Source provider: Bitbucket > Repository: Repository in my Bitbucket account
+  > Bitbucket repository: https://umitceylan11@bitbucket.org/eyvi_project/eyvi-akvakultur.git
+  > Source version: refs/heads/master
+  > Environment image: Managed image (custom image de secilebilir)
+  > Operating system: Ubuntu
+  > Runtime(s): Standard
+  > Image: standard:5.0
+  > New service role > Role name: codebuild-dede-service-role
+  > Additional configuration > Timeout > Hours: 0 / Minutes: 15
+  > Buildspec > Use a buildspec file
+  > Artifacts: 
+
+
+2.Hands-on:
+
+a.S3 Bucket:
+- 2 adet versioningi acik bucket kurduk.
+
+b.buildspec.yml
+------------------------------------------------------------------------------
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto11
+  pre_build:
+    commands:
+      - echo Nothing to do in the pre_build phase...
+  build:
+    commands:
+      - echo Build started on `date`
+      - mvn install
+  post_build:
+    commands:
+      - echo Build completed on `date`
+artifacts:
+  files:
+    - target/messageUtil-1.0.jar
+------------------------------------------------------------------------------
+  - jar file ismi degistirilir.
+
+
+c.Source codu Ziple:
+- Using your operating system's zip utility, create a file named MessageUtil.zip that includes:
+  - MessageUtil.java, 
+  - TestMessageUtil.java, 
+  - pom.xml, 
+  - buildspec.yml.
+
+
+d.
+
+
+
+
+
+
+
+
+
+

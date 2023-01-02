@@ -1,0 +1,286 @@
+A.Hands-on:
+- S3'teki text dosyasinda yazan mesajlari gunluk olarak Lambda ile cekeriz.
+- Lambda ile S3'ten cektigimiz mesajlari SNS ile sms mesaji olarak gondeririz.
+- Lambda'yi cronjob ile tetiklemek icin Trigger olarak EventBridge kullaniyoruz.
+- Lambda kutuphanesinde olmayan "requests" programini locale indirip Lambda'nin Layer'ina ekliyoruz.
+- IAM role Lambda ile function kurulurken otomatik tanimlansa da sonradan SNS'e girmek icin policy ekliyoruz.
+
+1.Lambda:
+a.Fuction Olusturma:
+> Functions
+  > Create function
+  > Author from scratch 
+    > Function name: sms_from_text
+    > Runtime: Python 3.8
+    > Architecture: x86_64
+    > Create function
+
+
+
+b.Sam Fonksiyonun Testi:
+> Fuctions
+  > sms_from_text
+  > Test
+    > Test event action: Create new event
+    > Event name: test (degisiklik yapmadik)
+    > Save
+    > Test (samda mevcut olan key value degerlerini veriyor. Calisti.)
+
+c.Yuklu Olmayan Programlari (requests) Lamda Layer Kutuphanesine Yukleme:
+  - Otomatik yuklu olmayan programlari Layer ile yukleriz.
+  - Once belli bir klasore ilgili programi yukleriz.
+  - Daha sonra zip'leriz.
+> Bash:
+mkdir request_sms && cd request_sms
+mkdir python && cd python
+pip3 install requests -t ./
+  - "-t": target mevcut konuma. 
+cd ..
+zip -r python.zip .
+  - Icine requests programi install edilen python klasorunu zip dosyasi yapiyoruz.
+
+> Layers
+  > Create layer
+    > Name: request_sms
+    > Upload a .zip file
+    > x86_64
+    > Compatible runtimes: Python 3.8
+    > Upload
+      > <ilgili path>/request_sms/python.zip
+      > Open
+    > Create
+
+> Layers
+  > refresh
+  > request_sms
+    - Ilgili kutuphaneyi goruyoruz. Icinde requests programi var.
+
+
+
+d.Bucket Kurup Icine Source File Eklenir:
+- S3 public oldugu icin Lambda'ya pilicy tanimlamiyoruz.
+> S3
+  > Create Bucket
+    > Name: awsbc2-final
+    > Create
+
+> S3
+  > awsbc2-final
+  > Actions
+    > Make public using ACL
+  > Upload
+  > sms.txt - check
+    - Icinde gunluk olarak ilgili kisiye iletilecek mesajlarin listesi var.
+  > Copy URL
+    - Ilgili sms.txt file'ina ulasilacak adresi verir.
+
+
+
+e.Function:
+> Fuctions
+  > sms_from_text
+----------------------------------------------------------------------
+import json
+import requests
+import boto3
+import os
+
+def get_sms():
+  with open('tmp/sms.txt', 'r+', encoding='utf-8') as f:
+  firstline = f.readline()
+  data = f.read()
+  f.seek(0)
+  f.write(data)
+  f.truncate()
+  return firstline
+
+def get_data():
+  r = requests.get('https://awsnc2-final.s3.eu-central-1.amazonaws.com/sms.txt')
+  r.encoding = 'utf-g'
+  f = open('tmp/sms.txt', 'w', encoding='utf-8')
+  f.write(r.text)
+  f.close()
+
+def lambda_handler(event, context):
+  if not as os.path.exists('tmp/sms.txt'):
+    get_data()
+
+  sms = get_sms()
+  print(sms)  
+
+  # TODO implement
+  return {
+    'statusCode': 200,
+    'body': json.dumps('Hello from Lambda!')
+  }
+----------------------------------------------------------------------
+    - "get_data" fonksiyonu S3'ten sms.txt file'ini alip Lambda icinde /tmp altina kaydeder.  
+    - Lambda'da yazma iznimizin oldugu tek adres /tmp klasorudur.
+    - 'sms.txt' dosyasi bir kere alinmali o yuzden if not ile 1. fonksiyonu sarta bagladik.
+    - Ilgili code daha sonra guncelleniyor.
+
+
+
+f.Deployment:
+> Functions
+  > sms_from_text
+  > Deploy
+
+
+
+g.Mevcut Olmayan Kutuphanelerin Layer'a Eklenmesi:
+> Functions
+  > sms_from_text
+  > Layers
+  > Add a Layer
+    > Layer source: Custom Layers
+    > Choose: request_sms
+    > Version: 1
+    > Add
+
+
+
+h.Test Edilmesi:
+- Deploy ettikten sonra calisir.
+> Functions
+  > sms_from_text
+  > Test
+  > Test
+
+
+
+
+2.SNS:
+a.SNS Konfigurasyonu:
+> Text messaging (SMS)
+  > Edit SMS Sandbox
+    - Korumali test ortamda calismayi saglar.
+    - "Exit SMS SandBox": Sandbox'tan cikmaya yarar.
+    - Suan Sandbox'ta islem yapiyoruz.
+  > Add phone number
+    > Phone number: +4792507565
+    > Verification message language: English
+    > Add phone number
+  > Verify phone number
+    > Phone number: +4792507565
+    > Verification code: 1234 
+    > Verify phone number
+      - Sandbox icinde yalnizca bu numaraya gonderebiliriz.
+      - Sandbox disinda istedigimiz numaraya gonderebiliriz. 
+      
+
+
+
+3.Lambda:
+a.Function Mesaj Gonderebilien:
+> Fuctions
+  > sms_from_text
+-------------------------------------------------------------------------
+import json
+import requests
+import boto3
+import os
+
+def send_sms(message):
+  sns_client = boto3.client("sns",region_name="eu-central-1")
+  phone = '+4792507565'
+  sns_client.set_sms_attributes(
+    attributes={
+      'DefaultSMSType': 'Transactional',
+      'DeliveryStatusSuccessSamplingRate': '100',
+      'DefaultSenderID': 'umit'
+    }
+  )
+  response = sns_client.publish(
+    PhoneNumber=phone,
+    Message=message
+  )
+  print(response)
+
+def get_sms():
+  with open('tmp/sms.txt', 'r+', encoding='utf-8') as f:
+  firstline = f.readline()
+  data = f.read()
+  f.seek(0)
+  f.write(data)
+  f.truncate()
+  return firstline
+
+def get_data():
+  r = requests.get('https://awsnc2-final.s3.eu-central-1.amazonaws.com/sms.txt')
+  r.encoding = 'utf-g'
+  f = open('tmp/sms.txt', 'w', encoding='utf-8')
+  f.write(r.text)
+  f.close()
+
+def lambda_handler(event, context):
+  if not as os.path.exists('tmp/sms.txt'):
+    get_data()
+
+  message = get_sms()
+  print(message)  
+  send_sms(message)
+
+  # TODO implement
+  return {
+    'statusCode': 200,
+    'body': json.dumps('Hello from Lambda!')
+  }
+-------------------------------------------------------------------------------
+  - boto3'de client olusturma fonksiyonunu kullandik.
+  - Mesaj'in karsi tarafta gonderici adi olarak gorulur.
+  - Lambda'daki tek verilebilecek path tmp klasorudur.
+
+
+
+b.1.Role'un Edit Edilmesi:
+- Mevcut Role'e SNS'e erisim yetkisi tanimlayacagiz.
+> Fuctions
+  > sms_from_text
+  > Configuration
+  > Role name: sms_from_scratch-role-mm4dde6n (tikla)
+
+
+
+b.2.IAM Role'e Configuration Uzerinden Otomatik Ulasim:
+- Lambda'ya SNS policy'si ekledik.
+> Roles
+  > sms_from_scratch-role-mm4dde6n
+  > Permissions policies: AWSLambdaBasicExecutionRole-078cdf28-a6aa-47ed-9eeb-d847dcd5fb50  - tikla
+    > Edit policy
+    > Visual editor
+    > Add additional permissions
+    > Service: Choose a service: SNS
+      > Expand all
+        > Publish
+        > SetSMSAttributes
+    > Resources: All resources
+    > Review policy
+ 
+
+   
+c.Functionun Deploy ve Test Edilmesi:
+> Fuctions
+  > sms_from_text
+  > Deploy
+  > Test
+    - Her test'e bastigimizda ilk mesaji sms ile gonderir ve ilk satiri siler.
+    - Her defasinda yeni mesaj gonderir. Liste bitince gonderim olmaz.
+
+
+
+d.Hergun Ayni Saatte Lambda'yi Tetikleme:
+> Fuctions
+  > sms_from_text
+  > + Add trigger
+  > Select a source: EventBridge
+      - Chronjob olarak calisir ayni zamanda.
+    > Rule: Create a new rule
+    > Rule name: send_sms
+    > Rule type: Schedule expression
+    > Schedule expression: cron(00 05 * * ? *)
+      - Her sabah 08:00 tr saatiyle.
+      - rate(1 minute) her dk test icin kullaniyoruz. 
+    > Add
+
+  

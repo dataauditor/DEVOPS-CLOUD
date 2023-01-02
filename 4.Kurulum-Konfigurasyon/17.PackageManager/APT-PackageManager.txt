@@ -1,0 +1,256 @@
+A.Genel:
+- apt repository
+
+
+1.Formati:
+<name>-<version>-<release>.<arch>.rpm 
+bdsync-0.11.1-1.x86_64.rpm
+bdsync-0.11.1-1.el8.x86_64.rpm
+
+
+2.Directory Structure:
+- File Tree Icinde: 
+  * BUILD: is used during the build process of the RPM package. This is where the temporary files are stored, moved around, etc.
+  * RPMS: holds RPM packages built for different architectures and noarch if specified in .spec file or during the build.
+  * SOURCES: holds sources. This can be a simple script, a complex C project that needs to be compiled, a pre-compiled program, etc. Usually, the sources are compressed as .tar.gz or .tgz files.
+  * SPECS: contains the .spec files. The .spec file defines how a package is built. More on that later.
+  * SRPMS: holds the .src.rpm packages. A Source RPM package doesn't belong to an architecture or distribution. The actual .rpm package build is based on the .src.rpm package.
+
+
+3.Debian Package Olusturma Sureci:
+apt package hazirlama:
+> Package folder'i olusturuyoruz versiyon name vererek.
+  > Ilgili dosya altinda /usr/bin dosyasi olusturulur.
+  > Package'e konulacak program compile gerektiriyorsa compile edilerek binary dosyasi olusturulur.
+  > Binary dosyasi /usr/bin/. altina atilir.
+  > Package dosyasi altinda /debian/control file olusturulur ve ozellikleri yazilir.
+  > Package dosyasi build edilir.
+  > Ilgili package'i kullanmak icin install edilir.
+
+
+
+
+
+B.Hands-on:
+sudo apt-get install -y dpkg-dev gpg
+  - package islemleri icin indirdik.
+sudo apt-get update -y
+sudo apt install gcc
+  - "C+" compile islemi indirdik.
+
+
+1.On Hazirlik:
+a.Script Hazirlama:
+mkdir -p ~/example/hello-world-program
+------------------------------------------------
+cat << EOF >> hello.sh
+> #!/bin/sh
+> echo "Hello world"
+> EOF
+------------------------------------------------
+echo '#include <stdio.h>
+int main() {
+    printf("hello packaged world\n");
+    return 0;
+}' > ~/example/hello-world-program/hello.c
+------------------------------------------------
+
+
+b.Ilgili Kodun Compile Edilmesi:
+cd ~/example/hello-world-program
+gcc -o hello-world hello.c
+  - hello-world: compile edilmis binary dosyasi.
+
+
+
+
+2.deb Package Olusturma:
+
+a.usr/bin Klasoru Olusturup Binary'i Icine Atma:
+mkdir -p ~/example/hello-world_0.0.1-1_amd64
+  - Ilgili package icin versiyon ismini yaziyoruz dosya isminde.
+cd ~/example/hello-world_0.0.1-1_amd64
+mkdir -p usr/bin
+cp ~/example/hello-world-program/hello-world  usr/bin/.
+  - compile edilmis binary'i "/home/ubuntu/example/hello-world_0.0.1-1_amd64/usr/bin" path'ine attik.
+
+
+b.DEBIAN Klasoru Olusturma:
+- Control file burada olusturulur.
+mkdir -p ~/example/hello-world_0.0.1-1_amd64/DEBIAN
+------------------------------------------------------
+echo "Package: hello-world
+Version: 0.0.1
+Maintainer: umitceylan9311@gmail.com
+Depends: libc6
+Architecture: amd64
+Homepage: http://umitdevopsaws.com
+Description: A program that prints hello" \
+> ~/example/hello-world_0.0.1-1_amd64/DEBIAN/control
+-------------------------------------------------------
+  - "Architecture": hepsine uyuyorsa "all" yazilir.
+
+
+c."deb" Package Olusturma:
+dpkg --build ~/example/hello-world_0.0.1-1_amd64
+  - example klasoru altinda package olusur.
+
+dpkg-deb --info ~/example/hello-world_0.0.1-1_amd64.deb
+  - Ilgili package'i inceleriz.
+dpkg-deb --contents ~/example/hello-world_0.0.1-1_amd64.deb
+  - Icerigini verir.
+ 
+
+d.Installation:
+  - "-f" kullanilir.
+sudo apt-get install -f ~/example/hello-world_0.0.1-1_amd64.deb
+which hello-world
+  - Package'de verdigimiz path'e uygun sekilde /usr/bin/hello-world konumuna yukler.
+
+
+e.Calistirma:
+hello-world
+
+
+f.Farkli Bilgisayarlarda Kullanma:
+ssh-keygen
+> copy id_rsa 
+  > past aktarilacak VM /..sh/known_hosts
+    - authorized_keys de olabilir.
+scp hello-world_0.0.1-1_amd64.deb ubuntu@16.170.119.29:/home/ubuntu
+  - deb package manager gonderildi.
+sudo apt-get install -f ~/hello-world_0.0.1-1_amd64.deb
+hello-world
+  - Calisiyor.
+
+
+g.Silme:
+sudo apt-get remove hello-world
+
+
+
+
+3.apt Repository Olusturma:
+- Birden fazla deb package'ini ekleyebiliriz.
+
+a.Mevcut Tum deb Package'leri Bir Folder'a Kopyalanir.
+  - Yukarda oldugu gibi birden cok deb package yapilabilir.
+  - Buyuk repository hazirlarken subdirectory'ler kullanilabilir.
+mkdir -p ~/example/apt-repo/pool/main/
+  - deb package'leri tutucak bir klasor olusturduk.
+cp ~/example/hello-world_0.0.1-1_amd64.deb ~/example/apt-repo/pool/main/.
+
+
+b.Repository'deki Package'leri Gosterir Zip'li Packages File'i Olusturma:
+  - Farkli architecturelar icin farkli klasor olusturulabilir.
+mkdir -p ~/example/apt-repo/dists/stable/main/binary-amd64
+  - Tum deb package'leri yuklendikten sonra, create a directory to contain a list of all available packages and corresponding metadata.
+cd ~/example/apt-repo
+dpkg-scanpackages --arch amd64 pool/ > dists/stable/main/binary-amd64/Packages
+  - We will generate a Packages file, which will contain a list of all available packages in this repository with dpkg-scanpackages program.
+cat dists/stable/main/binary-amd64/Packages | gzip -9 > dists/stable/main/binary-amd64/Packages.gz
+  - Ilgili Packages file'i sikistirilir. Apt sikistirilmis dosyalari tercih eder.
+
+
+c.Release File Olusturma:
+- 3 adet hash ornegi uzerine. Yukardaki ile uyumsuz.
+- "apt-ftparchive" kodu ile de olusturulabiliyor. Biz burada script kullanacagiz.
+cd ~/example/apt-repo/dists/stable
+~/example/generate-release.sh > Release
+--------------------------------------------------------------------------
+echo '#!/bin/sh
+set -e
+
+do_hash() {
+    HASH_NAME=$1
+    HASH_CMD=$2
+    echo "${HASH_NAME}:"
+    for f in $(find -type f); do
+        f=$(echo $f | cut -c3-) # remove ./ prefix
+        if [ "$f" = "Release" ]; then
+            continue
+        fi
+        echo " $(${HASH_CMD} ${f}  | cut -d" " -f1) $(wc -c $f)"
+    done
+}
+
+cat << EOF
+Origin: Example Repository
+Label: Example
+Suite: stable
+Codename: stable
+Version: 1.0
+Architectures: amd64 arm64 arm7
+Components: main
+Description: An example software repository
+Date: $(date -Ru)
+EOF
+do_hash "MD5Sum" "md5sum"
+do_hash "SHA1" "sha1sum"
+do_hash "SHA256" "sha256sum"
+' > ~/example/generate-release.sh && chmod +x ~/example/generate-release.sh
+--------------------------------------------------------------------------
+  - md5, sha1, and sha256 hashes icin script yazdik.
+cd ~/example
+python3 -m http.server
+  - Test yapilir.
+
+
+d.Apt Repositoey Konfigure Edilir:
+echo "deb [arch=amd64] http://127.0.0.1:8000/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/example.list
+
+
+e.Kendi Repository'miz Remote'dan Install Edilir.
+sudo apt-get update --allow-insecure-repositories
+sudo apt-get install hello-world
+
+
+
+
+
+4.Guvenlik Ayarlari:
+
+a.Yeni Public/Private PGP Key Pair Olusturma:
+-------------------------------------------------------------------------------
+echo "%echo Generating an example PGP key
+Key-Type: RSA
+Key-Length: 4096
+Name-Real: example
+Name-Email: example@example.com
+Expire-Date: 0
+%no-ask-passphrase
+%no-protection
+%commit" > /tmp/example-pgp-key.batch
+-------------------------------------------------------------------------------
+export GNUPGHOME="$(mktemp -d ~/example/pgpkeys-XXXXXX)"
+gpg --no-tty --batch --gen-key /tmp/example-pgp-key.batch
+ls "$GNUPGHOME/private-keys-v1.d"
+gpg --list-keys
+  - We can view all of our loaded keys.
+gpg --armor --export example > ~/example/pgp-key.public
+  - public key'e aktariyoruz.
+cat ~/example/pgp-key.public | gpg --list-packets
+  - only a single key was exported'i verify ediyoruz.
+gpg --armor --export-secret-keys example > ~/example/pgp-key.private
+  - export the private key so we can back it up somewhere safe.
+export GNUPGHOME="$(mktemp -d ~/example/pgpkeys-XXXXXX)"
+gpg --list-keys
+  - empty oldugunu kontrol ederiz.
+cat ~/example/pgp-key.private | gpg --import
+  - import our backed up private key
+cat ~/example/apt-repo/dists/stable/Release | gpg --default-key example -abs > ~/example/apt-repo/dists/stable/Release.gpg
+cat ~/example/apt-repo/dists/stable/Release | gpg --default-key example -abs --clearsign > ~/example/apt-repo/dists/stable/InRelease
+echo "deb [arch=amd64 signed-by=$HOME/example/pgp-key.public] http://127.0.0.1:8000/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/example.list
+cd ~/example
+python3 -m http.server
+sudo apt-get clean
+sudo apt-get update
+sudo apt-get install hello-world
+curl http://127.0.0.1:8000/pgp-key.private
+
+
+
+
+
+
+

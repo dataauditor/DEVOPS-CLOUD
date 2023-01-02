@@ -1,0 +1,4 @@
+---
+- s3://nbim-s3-euwe1-software-packages-chocolatey/files/windows-defender/WindowsDefenderATPOnboardingScript.cmd
+- s3://nbim-s3-euwe1-software-packages-chocolatey/files/windows-defender/WindowsDefender2016ATPOnboardingScript.cmd
+- s3://nbim-s3-euwe1-software-packages-chocolatey/files/windows-defender/md4ws.msi
