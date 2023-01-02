@@ -1,0 +1,48 @@
+1.CloudFront:
+- Servis 3 bolumden olusur: Origin (kaynakla ilgili veriler), Default cache behaivour (cachleme mekanizmasinin configurasyonu), Settings (cloudfront'un user'a donuk ayarlari)
+- S3, ELB, Mediastore container ve Madia package container kaynak olabilir.
+- Functions associationslar, edge locationslarda; lambda functionlar, regional edge cachelerde calistiriliyor.
+- istenen domainname girilir.
+- Originname olarak tiklayinca S3 ismi secilecek olursa bucketin adresi gelir. Bu yuzden Static web serverin URL'si, "https://" olmadan originname'e kopyalanir.
+- Invalidation uzerinden cachleme durdurulur ve guncellenen origin'deki yeni dosya cachelenerek distribute edilir.
+
+2.Certifikate SSL:
+- AWS tarafindan saglanan bir hizmettir ve HTTPS adresi kullanilmasina izin verir.
+
+3.Certifika alarak CloudFront ile Bucketleri yayin yapmak uzere Route 53 ile record olusturma projesi:
+- domainname tum subdomainleri kapsasin diye *.umitdevopsaws.com seklinde girilir.
+
+Certificate Olusturma:
+- Certifika alacaksaniz Route53'de bir CNAME record olusturmalisiniz. Sertifika islemini confirm edince asagi ucgene tiklayarak (veya Route53'e kendiniz girerek) record olusturmalisiniz.
+> Certificate Manager > provision certificates > request certifikate > domainname (*.umitdevopsaws.com) gir > DNS validation > confirm and request
+> Asagi oka tikla > create record in Route53 > create (CNAME olusmus oldu)
+
+
+S3:
+> create bucket > name:www.umitdevopsaws > izinleri verdik > Properties > Static web hosting > enable > index.html > Permission > bucket policy > edit 
+> bucket sec > html ve jpeg dosyalarini upload tap
+> endpoint'i "https://" olmadan kopyala  
+
+CloudFront:
+> create cloudfront distribution > originname: S3 static web server'den kopyaladigin endpoint'i yapistir. > Protocol: HTTP only 
+> Origin path (bucket icinde ayri bir folderin icinden calisilacaksa tanitilir: "/images" seklinde)> Viever protocol policy: Redirect to HTTPS 
+> Allowed HTTP method: GET, HEAD (static oldugundan) > Restrict viewer access: yes > Cache policy: Caching optimized (policyler olusturulabiliyor.) 
+> Price class: use all edge locations > Alternate domain name (CNAME): domainname (www.umitdevopsaws.com) 
+> Custom SSL certifikate: *.umitdevopsaws.com... seklinde cikan sertifika secilir. > create distribution
+> When it is deployed, copy the "Domain name" of the distribution.
+ 
+Route53:
+> Domainname > hosted zone > create record > simple routing > Alias to CloudFront distribution endpoint > us-east-1 > yaptigini sec > create record
+> Browsere https://www.umitdevopsaws.com yazarak sertifikanin calisip calismadigini kontrol et.
+
+S3:
+> demo.jpg dosyasi upload et.
+
+Invalidations:
+- Buckettaki dosya degistirilirse bekleme suresi dolmadan CloudFront'un cache'ini yenileme yolu.
+> distributionu sec > invalidations > create invalidation > Add item > /demo.jpg yaz > create invalidation
+
+Geo Restrictions:
+- Ulke bazinda allow/block list imkani ile ulke bazinda farkli distributionlar yapilabilir.
+> CloudFront > distributionu sec > Restriction > Geo Restriction > Edit > Enable Geo Restriction: yes > Restriction type: Black list > Countries: US > yes edit
+> browserde US'dan siteye girilemez.

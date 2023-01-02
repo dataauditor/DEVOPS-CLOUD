@@ -1,0 +1,68 @@
+                      Linux Environment Variables
+
+- Herbir kullaniciya baskalarindan soyutlanmis bir ortam saglar. Herbirkullanici hesabi. 
+>Environment variable: degistirilebilir degisken, (x, y)
+  - ~ : home directory
+>cd = cd ~
+>env : environment variables gosterir.
+>printenv : env den farki istenen variable ile de kullanilabilir.
+>printenv HOME  : environmentteki variable'i gosterir.
+>way = clarus : shell degiskeni/varibale tanimlanir.
+>export way = clarus : environment degiskeni/variable tanimlanir/degistirilir.
+  - environment ve shell variable reboot edilince kaybolur.
+  - shell ve env degiskenleri kullanici bazindadir.
+>path variable tanimlanir.
+export PATH=$PATH:/usr/local/deneme
+export PATH=/usr/local/deneme:$PATH 
+  - ilgili adres PATH'e eklenir.
+sudo mv ./kubectl /usr/local/bin
+  - Bu sekilde PATH'de tanimli bir adrese de executable file atilarak calistirilabilir.
+>set : environment ve shell variablesi birlikte gosterir. 
+>sudo su : administrator alunur.
+>useradd user1 : yeni kullanici ekleme. Izinler verilmeli. Rootdayken yapilir.
+>passwd user1 : kullanici eklenince sifresi tanimlanir.
+>su user1 : kullanici degistirilir.
+>su - user1 : kullanici environmenti ile degisir.
+>exit : kullanicidan cikilir.
+>rm -r folder : folder siler.
+>unset way : variableleri siler.
+>echo "hello World" : ekrana yazi yazdirir. 
+>env | grep way : environment icinde way arar. 
+>chmod -x test.sh : izinler iptal
+>chmod +x test.sh
+>vim test.sh : .sh dosyasi sonuc gosterir.
+>./test/test.sh : bulundugun konumdan itibaren konum verince acilir.
+>./test.sh : ls ile goruluyorsa (altindaysa) adini yazarak calisir.
+>~/test/test.sh  : home adresi verirsek istedigimiz konumdan calistirabiliriz.
+
+>MYVAR=my value              # hata verir
+>MYVAR=myvalue               # ya bitisik yazilir
+>MYVAR="my value"            # ayri ayri yazilacaksa tirnakla kapatilir.                      
+>MYNAME=james 
+>MYVAR="my name is $MYNAME"
+>echo "he says that $MYVAR"
+>MYVAR="hello \$MYNAME"      # "\" isareti $ isaretini islevsiz birakir string olarak yazar.
+
+- export PS1="\[\e[;35m\][\u@\h \W]\$ \[\e[m\]" : Terminali renklendirmek için bu kodu girebilirsiniz. Daha da kalıcı olmasını istiyorsanız ec-2'nin home sayfası altında bulunan /.bashrc dosyasının içerisine bu kodu kopyalayın.
+
+
+2.Hands-on:
+>username=umit
+>vim hi.sh
+-----------------------
+#!/bin/bash
+Hi $username ve $1 
+-----------------------
+>sh hi v
+>chmod +x hi.sh
+>./hi.sh mehmet              # Hi ve mehmet. 
+>export username=$username
+>export username=umit        # yukari ile ayni islevi gorur.
+>./hi.sh mehmet              # Hi umit ve mehmet. Env variable olarak tanimladiktan sonra script tarafindan username goruldu.
+
+
+
+
+1.37
+
+

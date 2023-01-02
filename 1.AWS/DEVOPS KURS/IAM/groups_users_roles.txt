@@ -1,0 +1,11 @@
+1.User Olusturma:
+  - Users > Add users > Access type: Prog/Console > Attach existing policies directly (Create policy: ozellestirmek istenirse) > policyler ekle > create
+
+2.Grup olusturma:
+  - User Grups > create groups > isim ver/ilgili userlari ekle > policies ekle > create
+
+3.Mevcut Gruba User ekleme:
+  - User Groups > ilgili grubu sec > Add user
+
+4.Mevcut grubun policilerini degistirme:
+  - User groups > ilgili grubu sec > Permissions > Add permissions > polici sec > save

@@ -1,0 +1,129 @@
+1.Amazon RDS'in calistirdigi SQL'ler:
+  - MySQL
+  - Mariadb
+  - PostgreSQL
+
+2.Mariadb'ye baglanma:
+  ec2 ac > visual sc'den ssh baglan > 
+    sudo yum update -y                     : guncelleme
+    sudo yum install mariadb-server -y     : mariadb yukle
+    sudo systemctl start mariadb           : baslat
+    sudo systemctl enable mariadb          : 
+    sudo systemctl status mariadb           
+    mysql -u root                          : "-u": user root: root user hesabina gir. 'admin' de olabiliyor bazen 'root' yerine..
+    SHOW DATABASES;                        : kurulu gelen databases 4 tane mevcut.
+    USE mysql;                             : SHOW DATABASES ile gozuken 4 database'den mysql databaseine baglanti kurduk.
+    SHOW TABLES;                           : hazir table'lari gosterir. 'user' tablosu burada.
+    SELECT Host, User, Password FROM user; : user klasoru icindeki kolumlari gosterir.
+    mysql ip-172-31-80-111.ec2.internal -u root: baska sekilde girilir. yukarda verilen IP ile girdik.
+    Ctrl + c
+    sudo mysql_secure_installation         : sifre girilir. kurulum yapilir. tum sorular: y
+    mysql -u root -p                       : sifre ile db'ye girme talebi.
+    USE mysql;                             : mysql db'ye girdik.
+    CREATE USER clarususer IDENTIFIED BY 'clarus1234';    : "clarususer" isimli yeni kullanici tanimladik. Sifresi de 'clarus1234'.    
+    Ctrl + c
+    mysql -u clarususer -p                 : clarususer user'i ile giriyoruz. Sifreyi de clarus1234 yazacagiz.
+    SHOW DATABASES;                        : Tek bir db var.
+    Ctrl + c
+    mysql -u root -p
+    CREATE DATABASE clarusdb;              : yeni db olusturduk.
+    SHOW DATABASES;                        : yeni db'yi gorduk.
+    GRANT ALL ON clarusdb.* TO clarususer IDENTIFIED BY 'clarus1234' WITH GRANT OPTION; : bir db'ye bir user'i yetkilendirme.
+    FLUSH PRIVILEGES;                      : Yetkilendirme.
+    ctrl + c
+    mysql -u clarususer -p                 : isim ve sifre ile giris. sifre yok.
+    SHOW DATABASES;                        : clarusdb ile 2 db olmus.
+    USE clarusdb;
+    SHOW TABLES;
+
+3.Tablo olusturma:
+mysql -u clarususer -p
+USE clarusdb;
+----------------------------------------------------------------------    
+CREATE TABLE `offices` (
+  `office_id` int(11) NOT NULL,
+  `address` varchar(50) NOT NULL,
+  `city` varchar(50) NOT NULL,
+  `state` varchar(50) NOT NULL,
+  PRIMARY KEY (`office_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    SHOW TABLES;
+----------------------------------------------------------------------    
+  - offices tablosu olustu.
+----------------------------------------------------------------------    
+INSERT INTO `offices` VALUES (1,'03 Reinke Trail','Cincinnati','OH');
+INSERT INTO `offices` VALUES (2,'5507 Becker Terrace','New York City','NY');
+INSERT INTO `offices` VALUES (3,'54 Northland Court','Richmond','VA');
+INSERT INTO `offices` VALUES (4,'08 South Crossing','Cincinnati','OH');
+INSERT INTO `offices` VALUES (5,'553 Maple Drive','Minneapolis','MN');
+INSERT INTO `offices` VALUES (6,'23 North Plaza','Aurora','CO');
+INSERT INTO `offices` VALUES (7,'9658 Wayridge Court','Boise','ID');
+INSERT INTO `offices` VALUES (8,'9 Grayhawk Trail','New York City','NY');
+INSERT INTO `offices` VALUES (9,'16862 Westend Hill','Knoxville','TN');
+INSERT INTO `offices` VALUES (10,'4 Bluestem Parkway','Savannah','GA');
+----------------------------------------------------------------------    
+  - Tabloya veri aktarma.
+SELECT * FROM clarusdb.offices;
+ctrl + c
+----------------------------------------------------------------------    
+CREATE TABLE `employees` (
+  `employee_id` int(11) NOT NULL,
+  `first_name` varchar(50) NOT NULL,
+  `last_name` varchar(50) NOT NULL,
+  `job_title` varchar(50) NOT NULL,
+  `salary` int(11) NOT NULL,
+  `reports_to` int(11) DEFAULT NULL,
+  `office_id` int(11) NOT NULL,
+  PRIMARY KEY (`employee_id`),
+  KEY `fk_employees_offices_idx` (`office_id`),
+  CONSTRAINT `fk_employees_offices` FOREIGN KEY (`office_id`) REFERENCES `offices` (`office_id`) ON UPDATE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+----------------------------------------------------------------------    
+  - employees tablosu olusturduk.
+----------------------------------------------------------------------    
+INSERT INTO `employees` VALUES (37270,'Yovonnda','Magrannell','Executive Secretary',63996,NULL,10);
+INSERT INTO `employees` VALUES (33391,'Darcy','Nortunen','Account Executive',62871,37270,1);
+INSERT INTO `employees` VALUES (37851,'Sayer','Matterson','Statistician III',98926,37270,1);
+INSERT INTO `employees` VALUES (40448,'Mindy','Crissil','Staff Scientist',94860,37270,1);
+INSERT INTO `employees` VALUES (56274,'Keriann','Alloisi','VP Marketing',110150,37270,1);
+INSERT INTO `employees` VALUES (63196,'Alaster','Scutchin','Assistant Professor',32179,37270,2);
+INSERT INTO `employees` VALUES (67009,'North','de Clerc','VP Product Management',114257,37270,2);
+INSERT INTO `employees` VALUES (67370,'Elladine','Rising','Social Worker',96767,37270,2);
+INSERT INTO `employees` VALUES (68249,'Nisse','Voysey','Financial Advisor',52832,37270,2);
+INSERT INTO `employees` VALUES (72540,'Guthrey','Iacopetti','Office Assistant I',117690,37270,3);
+INSERT INTO `employees` VALUES (72913,'Kass','Hefferan','Computer Systems Analyst IV',96401,37270,3);
+INSERT INTO `employees` VALUES (75900,'Virge','Goodrum','Information Systems Manager',54578,37270,3);
+INSERT INTO `employees` VALUES (76196,'Mirilla','Janowski','Cost Accountant',119241,37270,3);
+INSERT INTO `employees` VALUES (80529,'Lynde','Aronson','Junior Executive',77182,37270,4);
+INSERT INTO `employees` VALUES (80679,'Mildrid','Sokale','Geologist II',67987,37270,4);
+INSERT INTO `employees` VALUES (84791,'Hazel','Tarbert','General Manager',93760,37270,4);
+INSERT INTO `employees` VALUES (95213,'Cole','Kesterton','Pharmacist',86119,37270,4);
+INSERT INTO `employees` VALUES (96513,'Theresa','Binney','Food Chemist',47354,37270,5);
+INSERT INTO `employees` VALUES (98374,'Estrellita','Daleman','Staff Accountant IV',70187,37270,5);
+INSERT INTO `employees` VALUES (115357,'Ivy','Fearey','Structural Engineer',92710,37270,5);
+----------------------------------------------------------------------    
+SHOW TABLES;
+SELECT * FROM clarusdb.employees;
+SELECT first_name, last_name, salary, city, state FROM employees INNER JOIN offices ON employees.office_id=offices.office_id WHERE employees.salary > 100000;
+EXIT;
+
+
+3.Client EC2 ile Mariadb yuklu EC2'ya baglanti:
+- Bir Ubuntu EC2 actik. Client'in 22 ve 3306 portu acik olmali. SSH ile Ubuntu makineye baglandik. 
+sudo apt update && sudo apt upgrade -y  : ubuntu makine update edilir.
+sudo apt-get install mariadb-client -y  : sql-client yuklenir.
+mysql -h ec2-3-85-239-60.compute-1.amazonaws.com -P 3306 -u clarususer -p  : 3306 portundan baglandim. 22 calismadi.
+mysql -h <ec2-3-94-163-77.compute-1.amazonaws.com> -u clarususer -p        : Mariadb EC2'a dns-endpointi uzerinden baglandik.
+service iptables stop                                            : Hata verirse Maridb'de bu calistirilabilir.
+SHOW DATABASES;
+USE clarusdb;
+SHOW TABLES;
+SELECT * FROM employees;
+SELECT * FROM offices;
+SELECT first_name, last_name, salary, city, state FROM employees INNER JOIN offices ON employees.office_id=offices.office_id WHERE employees.salary > 100000;
+EXIT;
+   
+    
+4.Mariadb instance'e MySQL Workbench ile de ulasilabilir.
+    root'u uzaktan kullanima kapatsak bile diger kullanicilar baglanabilir.
+    Hostname: ec2 instance DNS adresi
+    username: db'deki tanimli userlardan herhangi biri ve sifresi

@@ -1,0 +1,59 @@
+1.Database:
+  - Bash'ten SQL ile RDS'e ulasilir. RDS'in icine konsoldan ulasilamaz.
+  - DB Instance identifier: kasanin ismi
+  - Initial database name: database'in ismi
+  - Availibility Zone secmeye gerek yok genelde.
+  - Region basina 40 tane retain automated backup (database'i silerken sorulan backup) ve 100 manuel snapshot alinabilir.
+  - Bir region'da 40 database tutulabilir. 
+    - 40 'i MySQL, Aurora, MariaDb, PostreSQL olabilir.
+    - lisansi sizinse 40 Oracle. 
+    - lisansiniz varsa da 10 Microsoft SQL database kurulabilir.
+  - Backup retentionda duration icinde yedekleme bitmezse yedeklemeye devam eder. Patch'i gunceller.
+  - Maintenance: haftalik yapilir. Bu surede RDS calismaz. Multi AZ'deki secondary'den calismaya devam edilir.
+  - 
+
+2.Baglanma:
+>sudo apt update -y
+>sudo apt upgrade -y
+sudo apt-get install mariadb-client -y
+
+mysql -h database-1.c9mvnnwhwlma.us-east-1.rds.amazonaws.com -u admin -p
+USE clarusway;   : tablo secme
+USE mysql;       : tablo secme
+SELECT Host, User, authentication_string FROM user;
+CREATE TABLE `offices` (
+  `office_id` int(11) NOT NULL,
+  `address` varchar(50) NOT NULL,
+  `city` varchar(50) NOT NULL,
+  `state` varchar(50) NOT NULL,
+  PRIMARY KEY (`office_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+3.Snapshot:
+Snapshots > Db secilir/isim verilir > take snapshot
+
+
+
+3.Dumping:
+  - Bir databasedeki datayi mevcut RDS uzerine almaz yeni bir rds olusur ve boylece yeni bir endpoint olusur.
+  - RDS'in ismi yenilenir.
+  - Snappshots > bir snapshot > restore snapshot > burstable/include previous generation classes, t2.micro/ create
+  - yeni endpointle girilir.
+
+
+4.Point in Time Recovery:
+  - Gunluk backuplarin disinda 5 dk ara ile transaction loglar kaydedilir.
+  - yeni bir endpoint olusur. ilgili applicationlar tekrar baglanir.
+  - db > Actions > Restore to point in time > gun saat dk sn secilir. > isim > burstable > include > execute
+  - 
+
+5.Dumping:
+  - Snapshot veya Point in time Recovery ile db'yi guncellersek yenilenen endpoint'i calisan application vb tanimlamamiz gerek
+  - Hatali islem yapilmis db halihazirda calismakta ve applerle etkilesim halinde.
+  - Yeni db'den saglam tablolari alip MySQL Cliente oradan da eski hatali db'ye aktaracagiz.
+  - Terminal:
+    >mysqldump endpoint(restoreddb) -u admin -p clarusway > backup.sql : yeni makineden saglam data backup isimli dosya olarak clienta aliriz.
+    >mysql endpoint(eskihatalidb) -u admin -p clarusway < backup.sql : mysql'de olusan datayi hatali data uzerine yaz.
+    >USE clarusway;               : database'e geldik.
+    >SELECT * FROM employees;     : tabloyu kontrol ettik.

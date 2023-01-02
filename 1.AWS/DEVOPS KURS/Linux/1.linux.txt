@@ -1,0 +1,264 @@
+                    LINUX
+
+Dosya komutlari:
+mkdir folder                      : folder olusturma.
+touch file.txt                    : file olusturma.
+mv f1.txt folder                  : dosya/klasor tasima.
+mv f1.txt file2.txt               : rename yapar.
+cp f2.txt file1.txt               : kopyalar ve iki dosya olusur.
+cp f1.txt ~/Desktop/f2.txt        : baska konuma kopyalama.
+cp ~/Desktop/f2.txt ~/Music/f3.txt: farkli konumlar arasi dosya kopyalama.
+cp -r folder1 /ubuntu/Nors        : folder kopyalama (-r: icerik dahil)
+rm file1.txt                      : file siler, folder silmez.
+rm /tmp/file1*                    : file ismindeki tum dosyalar silinir.
+rmdir folder                      : bos folder siler.
+rm -r folder                      : dolu/bos folder siler.
+cat file.txt                      : icerigi gosterir.
+less file.txt                     : icerigi gosterir, ancak hepsini acmaz.
+q                                 : dosyada cikilir.
+sudo chmod -R 777 ./              : ilgili konumdaki tum foldere izin veriyor.
+chmod 754 file.txt                : permission degisikligi. (rwxr-xr--)
+chmod 400 demo.pem                : permission okuma izni verir.
+chmod +x file.txt                 : execuitable yapar.
+chmod -x file.txt                 : unexecuitable yapar. 
+wc apple.txt                      : satir, kelime, karakter sayisini verir.
+wc -l apple.txt                   : satir sayisini verir.
+wc -w apple.txt                   : kelime sayisini verir.
+wc -m apple.txt                   : karakter sayisini verir.
+wc -l /etc/passwd                 : kullanici sayisini verir.
+
+Dosya acma/okuma:
+cat file.txt     : file'i acar.
+tac file.txt     : tersten acar.
+head -2 file.txt : ilk 2 satiri acar.
+tail file.txt    : son 10 satiri acar.
+sort file.txt    : icerigi harf/rakam sirasinda getirir.
+sort -r file.txt : icerigi ters sirayla getirir.
+sort -f file.txt : intensive sorting.
+sort fil1 > fil2 : yeni sirali bir dosya olusturur.
+uniq fil2.txt    : duplicate satirlar teklenir. oncesinde sorted edilmis olmali.
+uniq -d file2.txt: duplicated satirlari gosterir.
+sort fil | uniq  : once sort edip sonra unik degerleri gosterir.
+uniq -d file2.txt: duplike olan kelimeleri gosterir.
+
+Dosyaya yazi/icerik ekleme:
+echo text > file1.txt  : file1.txt'ye text yazdik.
+echo "text" > file2.txt: file2.txt'ye text yazdik.
+cat file1.txt file2.txt: her iki dosyayi da acar sirayla.
+cat file1 file2 > file3: bir veya bircok dosyayi baska dosyaya kaydedebiliriz.
+cat > yeni.txt         : yeni dosya olusturup icine orada yazilabilir. ctrl + d ile cikilir.
+cat <<EOF> file.txt    : dosya olusturur. yazinin sonuna "EOF" eklenirse Enter tiklaninca kaydedip kapanir.
+tac file1 | tee temp   : file1'i ters cevirip tee ile dosyaya kaydettik.
+
+
+Filtreleme/arama/translate/silme/karsilastirma komutlari: 
+find /home/username/Documents -iname “ugur*” -type f  : "f" buyuk/kucuk duyarsiz olarak dosya ara.
+locate -ei deneme.txt	: Buyuk kucuk duyarsiz olarak arar.
+find .                  : mevcut konumdaki tum gizli dosyalari getirir.
+find -name fil.*        : kucuk-buyuk hassasiyetli arama yap.
+find Fold -iname *txt   : kucuk-buyuk hassasiyeti olmadan istenen konumda arama yap.
+grep ugur fil.txt       : istenen konumda file ici arama yapar.
+grep -in ugur fil.txt   : -in: satir numaralarini da verir.
+grep -iRl ugur /home    : dosya ve konumlarini gosterir.
+grep -c ugur fil.txt    : icinde ugur gecen ifade sayisini verir. (ugurum, ugurlar)
+grep -wc ugur fil.txt   : icinde eklentisiz ugur gecen ifade sayisini verir.
+grep -v ugur fil.txt    : icinde ugur gecmeyen satirlari gosterir.
+grep -A 3 ugur fil.txt  : sonrasindaki "A": after 3 satiri da gosterir.
+grep -B 3 ugur fil.txt  : oncesindeki "B": before 3 satiri da gosterir.
+ls -R | grep .txt       : ls ile secilen isimlerde arama yapar.
+man find | grep size    : find komutunun outputu grep'in inputu.
+ls | tee file | find *.txt: liste halindeki dosya isimlerini bir dosyaya kaydedip .txt dosyalarini gosterir.
+ls -l | cut -d' ' -f3   : satir bazinda ucuncu boslugun oncesindeki kelimeleri gosterir.
+cut -d: f1,3 /etc/passwd: ":" oncesi "1" ve "3" kelimeyi gosterir. d delimeter, f field.
+cut -d: f2-4 /etc/passwd | tail 3: ":" oncesi 2-4 arasi yazilari gosterir son 3 satirin. 
+cat fil | tr ae QA      : fil.txt dosyasi icinde a > Q'ya, e > A'ya degistirir.
+cat fil | tr '\n' ' '   : tum satirlari tek satir seklinde yazar.
+cat fil | tr -d aeoui   : sesli harfleri siler.
+cat fil | tr [a-z] [A-Z]: tum harfleri buyuk yazar.
+comm fil1 fil2          : iki dosya arasinda ayni ve farkli degerleri gosterir. Oncesinde sorted yapilmali.
+
+Kopyalama/Transfer:
+>scp -r ec2-user@12.3.23.5:text.txt /home/local/directory : duraksamadan, disaridan mevcut konuma secure kopyalama. 
+>scp -r text.txt your_username@hostname:/some/local/directory : duraksamadan, mevcut konumdan instance'a kopyalama.
+>scp -r text.txt your_username@hostname: /some/local/directory/\{a,b,c\} : Copies Multiple files from remote host to current directory.
+>scp -i ~/oliver.pem README.md tf-draw.png ec2-user@34.230.31.114:/home/ec2-user  : 
+>curl -o hello.zip ftp://speedtest/1MB.zip : "-o", saveler tanimlanan dosyaya. Ilgili remote adresten kopyalayip mevcut konumdaki hello.zip'a yapistirir.
+>cp -r folder1 /ubuntu/Nors        : folder kopyalama (-r: icerik dahil)
+
+Locate komutu:
+apt-get install mlocate : yuklenir.
+updatedb                : her aramadan once son dosya degisimleri guncellenir.
+locate apple.txt        : tum bilgisayardaki dosyalarda arar konum verir.
+locate .txt | grep apple: .txt uzantili dosyalarda apple ismini arar.
+
+Kullanici/grup islemleri:
+sudo su               : root user olunur.
+exit                  : rootdan cikilir.
+sudo su user1         : kullanici degisimi. home directory degismez.
+sudo su - user1       : kullanici degisimi. home directory de degisir.
+useradd user1         : kullanici ekleme. root hesabi ile calistir.
+useradd -m d /home/walter -c "walter clarus" walter: kullanici ekleme.
+passwd user1          : sifre girilir, degistirilir. root hesabi ile calisir.
+tail -1 /etc/passwd   : olusan kullanici gozukur.
+adduser ugur          : hesap ekler daha iyi ve detayli.
+userdel -r ugur       : hesabi siler.
+usermod -c "eng" ugur : hesapta degisim yapar.
+su user1              : kullanici degistirir.
+grouppadd aws         : grup olusturulur.
+usermod -a -G aws ugur: aws grubuna ugur kullanicini ekleme.
+groupmod -n linux     : grup ismini degistirme.
+groupdel linux        : grubu silme.
+gpasswd -d ugur       : gruptan kullanici silinir.
+cat /etc/passwd       : env bilgileri ile kullanici ve grouplari gorebilirsiniz.
+tail -5 /etc/passwd   : kullanici ve gruplari dogrudan gorebilirsiniz.
+id user1              : tum bilgilerini verir.
+
+
+Baglanti/ariza arama komutlari:
+ping 127.0.0.1    : 1.Loopback adresi ile TCP/IP'nin calistigini gosterir. Aksi halde TCP/IP protocolu yeniden yuklenir.
+ping 172.16.10.2  : 2.Localhostun IP adresini girerek NIC'in calisip calismadigi kontrol edilir.
+ping 172.16.10.1  : 3.Default gateway (router)'e ping atarak local lan ile irtibat kontrol edilir. calismazsa fiziki bir network problemi vardir.
+ping 54.9.234.11  : 4.Remote hostu pingleyerek DNS'in calisip calismadigi, remote ilgili adresin calistigi kontrol edilir.
+ctrl + c          : ping kodunu durdurur.
+ifconfig          : IP address, local IP, mask vb bilgileri verir.
+iwconfig          : wi-fi baglantisi var mi diye sorgular.
+whoami            : user, group vb bilgileri gosterir.
+uname -a          : os hakkinda bilgi veir.
+top               : task manager/system monitor vb bilgiler verir.
+df                : available/unavailable disk space bilgisi verir.
+who               : sisteme kimlerin log oldugunu/aktif oldugunu gosterir.
+w                 : sistemde kim ne yapiyor gosterir.
+id                : mevcut hesabin userid'sini, gruplarini gosterir.
+id user1          : ilgili  hesabin userid'sini, gruplarini gosterir.
+route print       : Tum IP routing table'i gosterir.
+tracert           : ping attiginda ya da nete girdihinde yavaslama varsa guzergahtaki hangi routerda asiri yuklenme vb problemi bulabilriz.
+lsusb             : 
+ 
+Genel komutlar:
+ctrl + l        : ekrani yukari cikarir.
+clear           : ekrani temizler.
+ctrl + c        : calisan programi durdurur.
+echo test       : ekrana yazdirir.
+
+Gezinme komutlari: 
+cd /          : root directorye gider.
+cd ~          : home directorye gider.
+cd            : home directorye gider.
+cd Folder/Test: Ilgili directorye gider.
+
+Kurulum:
+sudi -i                : asil user'da da degisiklik yapacak sekilde root'a gacmek.
+sudo su                : root yetkisi alma.
+sudo yum update        : updateleri yapar (debian kutupdanesinden).
+sudo apt update        : updateleri listeler (Ubuntu kutuphanesinden).
+sudo apt upgrade       : updateleri yapar (Ubuntu).
+sudo yum install git   : git'i yukler.
+sudo yum install git -y: takilma olmadan yukle. (apt)
+git --version          : git yuklumu ve vesiyonu nedir.
+sudo yum remove git    : uninstall.
+sudo yum autoremove git -y: dependencies dahil takilma olmadan programi siler. (apt)
+sudo yum info git         : program hakkinda bilgi verir.
+sudo yum list git         : available programlari gosterir. belirli bir program yazilmazsa tum pr gosterir.
+sudo yum list installed   : yuklu programlari gosterir.
+sudo yum --showduplicates list git: available versiyonlari gosterir.
+sudo apt-get install Filezilla: Filezilla hazirda varsa indirir.
+sudo apt-get remove Filezilla : Filezilla'yi siler.
+sudo amazon-linux-extras install nginx1.12 : nginx yukleme.
+sudo yum install wget -y
+
+
+Bilgi alma komutlari:
+man ls       : manueli gosterir. (b: onceki sayfa)    
+man 1 ls     : manuelin 1. sayfasina gider.
+? ls         : manueli gosterir.
+info ls      : man'dan daha kapsamli. s ile search yapilabilir.
+apropos list : tum kullanilabilir komutlari getirir manuelin icindeyken.
+which mongod : ilgili uygulamanin adresini gosterir.
+
+Environment variables:
+env	           : environment variables gosterir.
+printenv HOME    : ilgili variable'i gosterir.
+echo $HOME       : ilgili variable'i gosterir.
+set              : hem environment variables, hem shell variables, hem de shell functions gosterir.
+Clarus=way       : shell variable tanimlama.
+unset Clarus     : variable'ye atanmis degeri siler.
+export ilk=rana  : environment variable tanimlama/degisiklik yapma.
+exit             : hesaptan cikilir.
+set | grep Clarus: variable aratma. way bulur.
+env | grep kiz   : variable aratma. rana bulur.
+./test.sh        : execute eder. mevcut doyadaysa.
+chmod +x test.sh : executable yapar.
+export PATH=$PATH:/home/ec2-user/fold: farkli konumda execiutable dosyayi calistirmak icin PATH'e yolunu tanittik. PATH mevcut konumda yoksa kayitli konumlara bakar. bu sefer "./"siz calistirilir.
+test.sh          : export PATH=$PATH:... islemi sonrasi calistirma usulu.
+
+Home directory kurmadan hesap acma:
+cd /home/etc                : etc acilir.
+cat login.defs              : CTREATE_HOME    yes gorulur. no yapilirsa home directory kurulmaz hesap acilislarinda.
+sudo vim login.defs         : dosyaya girilerek yes, no yapilip kaydedilirse artik home directory olusmaz.
+useradd user2               : kullanici olustu. home directory olusmadi.
+useradd -m /home/user2 user2:  yazilirsa directorysi olusur.
+
+Onemli:
+ls file?      : file1, file2, ... seklinde gosterir.
+ls ?????      : file1, file2, image, bddpp vb 5 harfli tum dosyalar.
+ls file*      : file, file2, file11, filedir vb seklinde gosterir.
+ls *[2-3]     : file2, file3, argem3, kediler2
+sudo shutdown                 : shutdown
+sudo shutdown -r              : restatrt
+sudo shutdown -h 10           : 10dk sonra kapan.
+sudo !!                       : son komutu root yetkisiyle tekrar calistirir.
+
+Karakterler:
+echo Hello ; cat fil2          : ";" birden cok islemi bagimsiz olarak ayni anda yapmaya yarar.
+sleep 10 &                     : "&" onceki komutun bitmesini beklemeden com promtu verir.
+cat file1 && echo OK           : "&&" and komutudur. 1. calisirsa eger 2.yi de calistirir. 2. calismasa da 1. calistirilir.
+echo 1 || echo 2 ; cat fil     : "||" or komutudur. birinci calismazsa ikinci taraftaki calisir. 3 her turlu calisir. 
+rm fil && echo bra || echo fail: bir komutun calistigini gormek icin yanina && ile basit bir ikaz koyariz ve else.
+echo birinci satir \
+ikinci satir.                  : "\" satir satir yazsak da sonra tek satir gosterir.
+echo hello \; world            : "hello ; world" yazar. komutu yaziya cevirir.
+echo $?                        : bir onceki islemin "0" ise dogru oldugunu verir, yoksa yanlis.
+
+
+Diger:
+echo $PS1           : kodunu yazar promtun.
+PS1="$ "            : promt $ oldu.
+PS1="\t "           : promt saati gosterir. \h: hostname'i.
+echo -e "hi\nAhmet" : "-e": ozel karakterleri dikkate alir. yoksa sadece yazdirir. "\n": alt satira gecer.
+echo -e "hi\tAhmet" : "\t": tab demektir.
+
+Volumes:
+lsblk                         : diskleri listeler. mountpoint olusturulmasi onemli olan.
+sudo file -s /dev/xvdf        : file systemini gosterir.
+sudo mkfs -t ext4 /dev/xvdf   : format atilir.
+sudo mkdir /mnt/mp1           : mounting point olusturma.
+sudo mount /dev/xvdf /mnt/mp1 : volume'u mounting pointe baglama.
+df -h                         : disklerin available space'lerini gosterir.
+sudo resize2fs /dev/xvdf      : consoldan enlarge edilen disk bolumunu mevcut formata formatlar.
+sudo reboot now               : cihazi tekrardan acma. dosyaya yazilmadiysa mounting point duser.
+sudo fdisk /dev/xvdf          : n > p > 1 > ent > +100G > n > p > 2 > ent > ent > w (yaz)
+sudo growpart /dev/xvdg 3     : partitionlu diski genisletirsek son bolumu secip ekleriz. fdisk gerek.
+sudo resize2fs /dev/xvdg3     : enlarge edilen son bolumu fdisk etmeliyiz. df -h'te gorebiliriz.
+sudo mkfs -t ext4 /dev/xvdg1 && sudo mkdir /mnt/mp2 && sudo mount /dev/xvdg1 /mnt/mp2 : 
+sudo cp /etc/fstab /etc/fstab1: automount yapmadan once ilgili sistem dosyasi yedeklenir.
+sudo vim /etc/fstab           : automount yapmaya yarar. oncesinde mnt/mp1'ler yapilmali.
+   /dev/xvdf       mnt/mp1   ext4  defaults,nofail        0       0
+   /dev/xvdg1      mnt/mp2   ext4  defaults,nofail        0       0
+
+Stress tool:
+sudo amazon-linux-extras install epel -y
+sudo yum install -y stress
+stress --cpu 90 --timeout 20000
+
+Uzun komutlar:
+useradd -m -d /home/walter -c "walter clarus" walter :
+   -m: home directory olusmaya zorlar.
+   -d: home directorynin ismini girmeye/degistirmeye yarar.
+   -c tanimlama yapmaya yarar.
+
+https://cmdchallenge.com/
+
+
+
+
+

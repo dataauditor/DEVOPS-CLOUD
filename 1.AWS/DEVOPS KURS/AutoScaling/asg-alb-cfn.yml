@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  this template executes ASG, ELB. It works on simple application ec2's.
+  ASG, monitors average cpu usage of target group.   
+Parameters:           #.pem dosyasi gibi kisiye has bilgileri girebiliriz. Daha sonra referans vererek Resource'ta kullaniriz. boylece baska bir kullanici parametre uzerinden .pem dosyasi guncellenebilir.
+  VpcIP:              #parameter yazdik
+    Description: VpcId of your existing Virtual Private Cloud (VPC)
+    Type: AWS::EC2::VPC::Id
+  Subnets:
+    Description: The list of SubnetIds in your Virtual Private Cloud (VPC)
+    Type: List<AWS::EC2::Subnet::Id>
+  InstanceType:
+    Description: WebServer EC2 instance type. Avrupa sampiyonu italya
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t1.micro
+      - m1.small
+      - m1.medium
+      - m1.large
+    ConstraintDescription: must be a valid EC2 instance type that we gave.
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+Conditions:            # Duruma gore alternatifler olusturulur. ornegin test produksjon level da farkli resourcelar calistirilabilir.  
+
+Resources:
+  mySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enables SSH and HTTP for EC2s and ALB.
+      SecurityGroupIngress:
+        - IpProtocol: tcp             # UDP/IP de secilebilir.
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0           # 89.54.212.33/32 sadece bir bilgisayara acacaksak.
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0        
+  MyApplicationLoadBalancer:                           # loadbalancer version2 secilir.
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      Scheme: internet-facing             # default da internet-facing
+      SecurityGroups:                     # listener ve healt check'in portlarini da icermelidir.
+        - !GetAtt 
+      Subnets: !Ref Subnets               # minimum iki subnet secilmeli
+  targetg
+
+
+
+
+
+Outputs:                 # bir tanimlama ile public IP'yi otomatik olarak sistemden bilgiyi cektirebiliriz.   

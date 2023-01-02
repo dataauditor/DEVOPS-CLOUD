@@ -1,0 +1,425 @@
+1.Shell-scripting temelleri:
+mkdir shell-scripting && cd shell-scripting
+
+vim basic.sh
+
+#!/bin/bash            : scripting oldugunu bildirir.
+var=degisken
+echo "Hello World" $var: Hello World degisken
+
+echo << EOF > file.txt : hem ekrana yazdi hem de dosyaya, EOF gorunce kapatir.
+Hello
+EOF
+
+ctrl + zz              : kaydedip cik.
+
+chmod +x basic.sh      : executable olmali. chmod 754 basic.sh
+
+./basic.sh
+
+2.Variables:
+harf, rakam ve "_" kullanilabilir ama harfle baslayamaz.
+bosluk olmaz. 
+
+¤!/bin/bash
+key=value
+echo $key              : variable'lar $ ile belirtilir.
+
+var1='global 1'        : 
+var2='global 2'
+func () {
+   local var1='loc var': fonksiyon icinde "local" ile tanimlanirsa yalniz fonksiyonla calisir.
+   va2='global var'    : fonksiyon icinde de tanimlansa globaldir.
+   echo -e $var1 $var2
+} 
+
+3.Command substitution:
+yerine gosterim. $(command) seklinde gosterilir. 
+
+echo ls                : >ls
+echo $(ls)             : >basic.sh
+echo `ls`              : echo $(ls) aynidir.
+echo "today is $(date)": >today is Mon Jun ...
+date=$(date)           : bir komutu bir degiskene atadik.
+echo $date             : Mon Jun ... degisken gosterimi.
+
+4.Insert a variable:
+¤!/bin/bash
+read -p "Enter a name: " name                : isim aldik
+read -s -p "Enter your password: " password  : sifreyi ekranda gostermeden aldik
+echo "Welcome $name"                         : ismi gosterdi
+echo "Your password is $password"            : sifreyi gosterdik
+
+5.Command line arguments:
+¤!/bin/bash
+echo "file name: $0"                  : dosya ismini verir.
+echo "first argument: $1"             : 1. arg verir.
+echo "second argument: $2"            : 2. arg verir.
+echo "third argument: $3"             : 3. arg verir.
+echo "all arguments: $@"              : tum arg gosterir.
+echo "number of arguments: $#"        : argument adedini gosterir.
+echo "random argument: $RANDOM"       : rastgele arg atar.
+echo "mevcut satir numarasi: $LINENO" : satir numarasini verir.
+
+./argument.sh Ali Aydan Rana : scripti yazarken argumentleri eklemeye yarar.
+
+6.Arrays (diziler):
+distros[0]="ubuntu"
+distros[1]="fedora"
+distros[2]="debian"
+distros[3]="centos"
+distros[4]="alpine"
+
+veya
+
+yazilimlar=("docker" "kubernetes" "ansible" "terraform" "jenkins")
+
+echo ${distros[@]}      : hepsini gosterir.
+echo ${distros[2]}      : 2.yi gosterir.
+echo ${yazilimlar[1]}   : 1.yi gosterir.
+
+7.Arithmetic:
+expr 3 + 5  : toplama 
+expr 6 - 2  : cikarma
+expr 7 \* 3 : carpma
+expr 9 / 3  : bolme
+expr 7 % 2  : mode
+
+#!/bin/bash
+read -p "Input first number: " first_number
+read -p "Input second number: " second_number
+echo "SUM="`expr $first_number + $second_number`
+echo "SUM= $(expr $first_number + $second_number)"
+
+let "sum = 3 + 5"  : islemi degiskene atar.
+echo $sum
+let mul=3\*5       : tirnak olmazsa bosluk olmaz.
+let "us = 3 ** 2"  : ussunu alma.
+
+x=5         : variable atama.
+let x++     : 1 artirir.
+let x--     : 1 eksiltir.
+let a=x++   : once x'i a'ya ata sonra x'i artir. a=5, x=6 olur.
+echo $a $x  : 5 6
+
+y=5         
+let b=--y    : once y 1 eksilir, sonra b'ye atanir.
+echo $b $y   : 4 4
+
+echo $((5+3)): 8 islem yapar.
+
+bc -l        : linuxun hesap makinesi acilir.
+
+#!/bin/bash
+read -p "Input first number: " first_number
+read -p "Input second number: " second_number
+sum=$(($first_number + $second_number)) 
+sub=$(($first_number - $second_number)) 
+mul=$(($first_number * $second_number)) 
+echo "SUM=$sum"
+echo "SUB=$sub"
+echo "MUL=$mul"
+
+8.a.If statements:
+#!/bin/bash
+read -p "Input a number: " number
+if [[ $number -gt 50 ]]
+then
+  echo "The number is big."
+fi
+
+chmod +x if.sh
+
+Relational operators (rakamlar icin gecerli):
+| Operator | Description |
+| -------- | ----------- |
+| -eq   | equal                  |
+| -ne   | not equal              |
+| -gt   | greater than           |
+| -lt   | less than              |
+| -ge   | greater than or equal  |
+| -le   | less than or equal     |
+
+String operators (stringler icin gecerli):
+| Operator | Description |
+| -------- | ----------- |
+| =    | equal            |
+| !=   | not equal        |
+| -z   | Empty string     |
+| -n   | Not empty string |
+
+#!/bin/bash
+read -p "Input a number: " number
+if [[ $number  = 5 ]]
+then
+  echo "They are same"
+fi
+
+if [[ "a" != "b" ]]
+then
+  echo "They are not same"
+fi
+
+if [[ -z "" ]]
+then
+  echo "It is empty"
+fi
+
+File test operators:
+| Operator | Description |
+| -------- | ----------- |
+| -d file   | directory  |
+| -e file   | exists     |
+| -f file   | ordinary file     |
+| -r file   | readable          |
+| -s file   | size is > 0 bytes |
+| -w file   | writable          |
+| -x FILE   | executable        |
+
+if [[ -w file ]]
+then
+  echo "file is a writable file"
+fi
+
+8.b.If else:
+#!/bin/bash
+read -p "Input a number: " number
+if [[ $number -ge 10 ]]
+then
+  echo "The number is bigger than or equal to 10."
+else 
+  echo "The number is smaller than 10"
+fi
+
+8.c.if elif else:
+#!/bin/bash
+read -p "Input a number: " number
+if [[ $number -eq 10 ]]
+then
+  echo "The number is equal to 10."
+elif [[ $number -gt 10 ]]
+then
+  echo "The number is bigger than 10"
+else 
+  echo "The number is smaller than 10"
+fi
+
+8.d.Nested if statements:
+#!/bin/bash
+read -p "Input a number: " number
+if [[ $number -gt 10 ]]
+then
+  echo "Number is bigger than 10"
+  if (( $number % 2 == 1 ))
+  then
+    echo "And is an odd number."
+  else
+    echo "And is an even number"
+  fi
+else 
+   echo "It is not bigger than 10"
+fi
+
+9.a.for donguleri:
+for i in $(ls); 
+do
+   echo item: $i
+done
+
+for i in 1 2 3 4   : Buradakileri ve asgidakileri match erder.
+do 
+   for j in 1 2 3 4 5
+   do
+      echo $i$j
+   done
+done
+
+9.b.for loop with array:
+devops_tools=("docker" "kubernetes" "ansible" "terraform" "jenkins")
+for tool in ${devops_tools[@]}
+do
+   echo $tool
+done
+
+10.While donguleri:
+COUNTER=0
+while [ $COUNTER -lt 10 ]: 
+do
+   echo The counter is $COUNTER
+   ((COUNTER++)) 
+   let COUNTER=++COUNTER     : alternatif
+   let COUNTER=COUNTER+1     : alternatif
+done
+
+11.Until loops:
+number=1
+until [[ $number -ge 10  ]]
+do
+   echo $number
+   ((number++))
+   ((number=++number))       : alternatif
+   let number=++number       : alternatif
+done
+echo "Now, number is $number"
+
+12.a.Functions:
+#!/bin/bash
+Welcome () {
+  echo "Welcome to Linux Lessons $1 $2 $3"  : argument girilir
+}
+Welcome $1 $2 $3
+
+12.b.Nested Functions:
+function_one () {
+   echo "This is from the first function"
+   function_two
+}
+function_two () {
+   echo "This is from the second function"
+}
+function_one
+
+13.Boolean operations:
+| Operator | Description |
+| -------- | ----------- |
+| !        | negation    |
+| &&       | and         |
+| ||       | or          |
+
+#!/bin/bash
+read -p "Input your name: " name
+read -sp "Input your password: " password
+
+if [[ $name = $(whoami) ]] && [[ $password = Aa1234 ]]
+then
+  echo -e "\nWelcome $(whoami)"
+else
+  echo -e "\nIt is wrong account"
+fi
+
+14.Case statements:
+#!/bin/bash
+read -p "Input first number: " first_number
+read -p "Input second number: " second_number
+read -p "Select an math operation
+1 - addition
+2 - subtraction
+3 - multiplication
+4 - division
+" operation
+
+case $operation in
+  "1") 
+       echo "result= $(( $first_number + $second_number))"
+  ;;
+  "2")
+        echo "result= $(( $first_number - $second_number))"
+  ;;
+  "3")
+ 	echo "result= $(( $first_number * $second_number))" 
+  ;;
+  "4")
+	echo "result= $(( $first_number / $second_number))"
+  ;;
+  *)                                                               : diger herhangi bir karakter
+        echo "Wrong choice..." 
+  ;;
+esac
+
+#!/bin/bash
+read -p "Input first number: " first_number
+read -p "Input second number: " second_number
+PS3="Select the operation: "
+select operation in addition subtraction multiplication division exit
+do
+  case $operation in
+    addition) 
+      echo "result= $(( $first_number + $second_number))"
+    ;;
+    subtraction)
+      echo "result= $(( $first_number - $second_number))"
+    ;;
+    multiplication)
+      echo "result= $(( $first_number * $second_number))" 
+    ;;
+    division)
+      echo "result= $(( $first_number / $second_number))"
+    ;;
+    exit)
+      break
+    ;;   
+    *)
+      echo "Wrong choice..." 
+    ;;
+  esac
+done
+
+15.Continue and Break Statement:
+#!/bin/bash
+number=1
+until [[ $number -ge 10  ]]
+do
+  echo $number
+  ((number=++number))
+  if [[ $number = 5 ]]          : "==", -eq yazinca da calisir.
+  then
+     break
+  fi
+done
+
+#!/bin/bash
+number=1
+until [[ $number -lt 1  ]]
+do
+  ((number++))
+  tens=$(($number % 10))
+  if [[ $tens -eq 0 ]]
+  then
+      continue
+  fi
+  echo $number
+  if [[ $number -gt 25 ]]
+  then
+      break
+  fi
+done
+
+16.Brace Expansion:
+{A,B}         : A B (suslu parantez icindeki dizideki elemanlara disardaki komut uygulanir.)
+{A,B}.js      : A.js B.js
+{1..5}        : 1 2 3 4 5
+echo _{a,b,c}-: _a- _b- _c-
+
+17.Exit status:
+merhaba       : calismadi
+echo $?       : 0 disinda deger verdi. hatali islem.
+test 9 -eq 9  : 9 9'a esit mi
+echo $?       : 0
+[ 9 -eq 9 ]   : 9 9'a esit mi (test komutuyla [] aynidir)
+test -d folder: 
+echo $?       : 0
+[ -x bol.sh ] : execuitable mi
+echo $?       : 0
+
+18.Standardin, standardout, standarderror:
+stdin
+stdout
+stderr
+cat > file.txt : stdin
+cat file.txt   : stdout
+cat aa         : stderr
+cat file.txt aa: stdout, stderr
+
+cat file.txt > output.txt   : stdout dosyaya gonderilir.
+cat aa > output.txt         : stderr boyle gonderilemez.
+cat aa 2> error.txt         : stderr gonderilir. 
+cat file.txt aa > test.txt  : ayni anda stdout ve stderr boyle gonderilmez.
+cat file.txt aa &> both.txt : ayni anda stdout ve stderr boyle gonderilir.
+cat file.txt aa 2> log.txt  : hatalari log.txt'ye kaydeder.
+
+19.Gereksiz hata kaydindan kurtulma:
+cat file.txt aaa 2> /dev/null
+
+
+
+

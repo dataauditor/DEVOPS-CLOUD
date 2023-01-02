@@ -1,0 +1,17 @@
+- traceroute DNS/IP address	: network hatasinda guzergahtaki arizali routeri gosterir. displays the path a packet takes to get to a remote device by using IP packet Time to Live (TTL) time-outs and Internet Control Message Protocol (ICMP) error messages.
+  >traceroute www.google.com
+  >tracert www.clarusway.com	: windows versiyonu
+>ipconfig			: IP adreslerini, subnet maski, default gatewayi verir. 
+- ping DNS/IP address 		: Ilgili adrese baglanti atar. localhost: kendimize ping atar.
+  >ping 3.255.4.32
+  >ping localhost
+>route [-f] [-p] [Command] [Destination] [mask Netmask] [Gateway] [metric Metric] [if Interface] : To add a route to your routing table, use the following syntax:
+
+>route change 10.100.0.0 mask 255.255.0.0 10.7.0.5 : adres degistirir.
+>route -p add 10.100.0.0 mask 255.255.0.0 10.2.0.1 : If you want to add a persistent route to the destination 10.100.0.0 with the subnet mask 255.255.0.0 and the next-hop address 10.2.0.1
+>route add 10.1.1.0 mask 255.255.255.0 10.2.2.2    : To add a route to the destination 10.1.1.0 with the subnet mask 255.255.255.0 and the next-hop address 10.2.2.2
+>route delete 10.100.0.0 mask 255.255.0.0          : If you want to delete the route to the destination 10.100.0.0 with the subnet mask 255.255.0.0
+>nbtstat -a   
+
+
+

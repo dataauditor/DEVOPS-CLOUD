@@ -1,0 +1,5 @@
+1.Visual Studio Code ile EC2'ya Remote baglanma:
+
+Visual SC > Alt kose oklar > Open SSH configuration file > C:\Users/Test...config > HostName'e ec2'nun Public IP'sini ata > Kaydet  
+Alt kose oklar > Connect to Host > VSCdan > Open folder ile devam edilir.
+

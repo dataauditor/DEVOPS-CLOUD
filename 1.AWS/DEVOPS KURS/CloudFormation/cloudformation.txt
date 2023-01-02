@@ -1,0 +1,45 @@
+1.CloudFormation Template hazirlama:
+  -VSC cfn yazilir:
+    AWSTemplateFormatVersion: 2010-09-09               : zorunlu 
+    Description: |                                     : zorunlu
+      This template launches an EC2 that enables SSH   
+    Resources:                                         : zorunlu
+      MyEc2:                                           : kendimiz tanimlariz
+      Type: AWS::EC2::Instance                         : ne yuklenecekse ismi yazilarak koordine edilir. ec2 yazilinca cikar.
+      Properties:                                      
+        ImageId: ami-0ab4d1e9cf9a1215a                 : instance'den alinir.
+        InstanceType: t2.micro                         : ìnstance'dan alinir.
+        KeyName: ugur                                  : .pem'siz key yazilir.               
+        SecurityGroups:                                : hazirdan alinir.
+         - allow ssh and http
+        Tags:
+         - Key: Name
+           Value: adam-cf-stack-instance
+        UserData:                                      
+           Fn::Base64: !Sub |
+              #!/bin/bash
+                                                       : baska yerden alirsan sil tekrar bosluk birak.
+              yum update -y
+	            amazon-linux-extras install nginx1.12    
+	            systemctl start nginx
+	            cd /usr/share/nginx/html
+	            chmod -R 777 /usr/share/nginx/html
+	            rm index.html
+	            FOLDER="https://raw.githubusercontent.com/ybaslayan/Projects/main/101-kittens-carousel-static-website-ec2/static-web/"
+	            wget $FOLDER/index.html
+	            wget $FOLDER/cat0.jpg
+	            wget $FOLDER/cat1.jpg
+	            wget $FOLDER/cat2.jpg
+	            wget $FOLDER/cat3.png
+	            systemctl restart nginx
+	            systemctl enable nginx
+        
+2.AWS console:
+  -CloudFormation acilir.
+    -Create stack
+    -Template source: Upload a template file
+    -Enter a stack name: awsdemo > create
+
+3.ec2 acilir. cloudFormation ile acilan stackin acildigi gorulur.
+    
+4.wget yerine github ec2'ya clonlanabilir.

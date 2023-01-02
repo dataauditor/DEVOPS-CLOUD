@@ -1,0 +1,92 @@
+1.DynamoDB,  
+  - Non-Relational databasedir. NoSQL-database.
+  - Istedigimiz formatta yapariz ve hersey AWS tarafindan manage edilir (serverless).
+  - Genel sorgulama disinda join islemi olmaz.
+  - Id numberlari olsa da tablolarin diger veriler tablo bazinda farkli olabilir.
+  - Key-value ve document data modelidir.
+  - Onceden belirlenmis semalara bagli olunmaz.
+  - RDS'in aksine DynamoDB'nin tum kontrolu bizde. Herhangi bir patch, guncelleme ihtiyaci yoktur.
+  - In DynamoDB, tables, items, and attributes are the key components that you work with. 
+  - A table is a collection of items, and each item is a collection of attributes.
+  - each item can not exceed 400 KB.
+  - Fast, Scalable-sinirsiz hacim.
+  - RDS vertical scalable, NoSQL horizontal scalable.
+  - It has On-Demand and Provisioned capasity options. If you have predictable application traffic, it will be better for you to prefer Provisioned Capacity Mode.
+  - Each table in DynamoDB has a limit of 20 global secondary indexes (default limit) and 5. local secondary indexes per table.
+  - You can use  Global Tables to keep DynamoDB tables in multiple AWS Regions.
+
+2.On-Demand Backup:
+  - backup olusturulabilir.
+
+3.Point-in-time-recovery:
+  - After creating on-demand backups, you can enable point-in-time recovery for your Amazon DynamoDB tables. 
+  - With point-in-time recovery, you can restore that table to any point in time during the last 35 days.
+
+4.TTL (Time to Live):
+  - DynamoDB TTL allows you to delete expired items from tables automatically so that you can reduce storage usage and the cost of storing data that is no longer relevant.
+
+5.Multi Availibility Zones:
+  - Db is automatically replicated across multiple Availability Zones in an AWS Region.
+  - With Global Tables to keep DynamoDB tables in multiple AWS Regions.
+
+6.DAX (DynamoDB Accelerator):
+  - hizini artirir. ucretlidir.
+
+7.Primary Key:
+  - Tablo olustururken tablo isminin yani sira primary key de belirlenir.
+  - The primary key uniquely identifies each item in the table, so that no two items can have the same key.
+
+  - Iki turlu primary key var:
+    - Partition Key: 
+      - tek attribute (sutun) icerir.
+    - Partition Key + Sort Key: 
+      - Iki attributes icerir. Ilki partition key ikincisi sort key'dir.
+
+8.Secondary Indexes:
+  - Alternatif bir query imkani sunar.
+  - istenilen sutunlar secilerek sorgulama yapilabilir.
+  - Each table in DynamoDB has a limit of 20 global secondary indexes (default limit) and 5 local secondary indexes per table.
+  - GSI (Global secondary index):
+    - An index with a partition key and sort key that can be different from those on the table.
+    - Data size in item collection is over 10GB.
+    - More flaxible, eventual consistency (data her defasinda ayni olmayabilir.)   
+  - LSI (Local secondary index): 
+    - An index that has the same partition key as the table, but a different sort key. 
+    - Max capacity of 10GB per partition key.
+    - Created together with the table.
+    - Highest consistency.
+
+9.DynamoDB Streams:
+  - It captures data modification events in DynamoDB tables. It is a kind of transaction record.
+  - If you enable a stream on a table, DynamoDB writes a stream record whenever events such as adding, updating or deleting an item occurs in the table.
+  - Stream records have a lifetime of 24 hours; after that, they are automatically removed from the stream.
+
+9.AWS Elasticache: 
+  - In-Memory Cache is a temporary and fast storage component. 
+  - Redis, Memcached'ler iki motordur cache'leme icin. 
+  - Elasticache provides a read scaling via Replicas.
+  - Serverdan fazla istek alan verileri Cache'ler ve hizli donus yapar.
+  - In-memory cache service of AWS. Temporary and fast storage component.
+  - Redis ve Memcached farki:
+    - Memcached sadece string degerleri destekler. Redis strings, lists, sorted sets, hashes, bit arrays, hyperloglogs destekler.
+    - Sadece Memcached cok katmanli architecturelari destekler. Redis ayni anda tek operasjon yapar.
+    - Memcached snaphot'i desteklemez.
+    - Sub-millisecond latency (R/M)
+    - Redis, replicayi destekler.
+
+10.Tablo olusturma:
+  - Dynamodb > create table > isim/primary key-Sort Key/use default settings/Provisioned/Read capacity:5/Write capacity:5/(Auto scaling:%70,5 units, 40000 units/IAM role (auto scaling acilirsa iam role de tanimlanir)) > create
+ 
+
+11.CLI ile baglanma:
+aws --version
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" : son cli'i yukler yuklu degilse.
+unzip awscliv2.zip : ilgili dosyayi unzip eder.
+sudo ./aws/install : indirilen cli dosyasini kurar.
+aws sts get-caller-identity --query Account --output text : account numarasini verir.
+aws configure : simdi de configure ederiz.
+
+mkdir dynamodb
+cd dynamodb
+wget https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/samples/sampledata.zip
+unzip sampledata.zip

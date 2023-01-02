@@ -1,0 +1,30 @@
+1.Policy Olusturma:
+  -aws > IAM > Create policy > JSON > 
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow"
+    "Action": "iam:GetAccountPasswordPolicy"
+    "Resource": "*"
+   },
+   {
+    "Effect": "Allow",
+    "Action": "iam:ChangePassword",
+    "Resource": "arn:aws:iam:1234567890:user/${aws:username}"
+   }
+  ]
+}
+
+2.Policy Olusturma: 
+  -aws > IAM > Create policy > Visual editor > Choose a service: S3 > Action lecel secilir >  
+
+3.Managed Policy, ayni anda bircok user, group ve role'e uygulanabilirken; Inline policy tek user, group veya role'e uygulanir.
+  - Inline policy ilgili user/groupla silinir.
+  - Managed policy AWS tarafindan, Customer managed policy kullanici tarafindan olusturulur.
+  - Managed IAM policies can be attached to groups. Inline IAM policies can be added to groups.
+  - The limit of IAM users in a group is equal to the user quota for the account, that is,  max 5000.
+  - An IAM user can be a member of the max. 10 different IAM groups.
+  - Maximum 300 group olusturulabilir.
+  - Every role has two policies: A trust policy and a permission policy.
+    - The trust policy defines who can assume the role. It is a JSON policy document in which you define the principals that you trust to assume the role.
+    - The permission policy is just an IAM policy that gives that role some permissions on some things. It can be thought of as the same as an IAM policy on a group. A permissions document in JSON format in which you define what actions and resources the role can use. The document is written according to the rules of the IAM policy language.

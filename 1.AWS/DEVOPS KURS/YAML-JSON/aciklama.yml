@@ -1,0 +1,48 @@
+# YAML verileri programlara aktarmak icin kullanilir.
+--- 
+person:               # object (asagisinda "-" olmamasi name, age vb degiskenlerin bir objeyi tanimlamasi asagida 2. birisi olsaydi name'den once - olurdu.)
+  name: &isim: "mike" # string, "&": anchor degisken tanimlar.
+  occupation: "lege"  # string
+  age: 23             # integer
+  gpa: 3.5            # float
+  height: !!str 1.85  # "!!str", floati string yapar: "1.85"
+  weight: !!float 76  # "!!float", integeri float yapar: 76.0 
+  male: true          # booleon
+  birthday: 1994-02-06 14:33:22 # ISO 8601 formatini kullanir.
+  flaws: null         # sifir "~" da kullanilabilir.
+  
+  hobbies:            # liste formati
+    - hiking          
+    - movies
+    - riding bike     
+  
+    movies: ["Dark Knight", "Good will hunting"] # liste formati (yaml ikisini de liste olarak gorur.)
+  
+  friends:            # karmasik liste formati
+    - name: "Steph"   # 1. liste
+      age: 22
+    - {name: "Adam", age: 22} # 2.liste
+    -                 # 3.liste ile 1.liste ve 2.liste ayni sekilde okunur.
+      name: "joe"     
+      age: 23
+
+  description: >
+    Uzun bir satiri paragraf seklinde yazarsak
+    YAML'in bunu tek bir satir gibi gormesi icin 
+    ">" isareti kullanilir. Boylece paragrafi 
+    tek bir satir gibi gorur.
+
+  signature: |        # "|" ile her bir satiri ayri ayri gorur/korur. tum veriyi tek bir satir gibi okumaz.
+    Mike 
+    Clarusway Course 
+    email - kepteyn@gmail.com
+
+  id: *isim           # *isim, mike ismini getirir. yukarda name degisirse &isim degiskeni tanimlandigi icin id de degisir.
+
+  base: &base         # &base ile degisken tanimladik
+    var1: value1
+
+  foo:  
+    <<: *base          # yukarda tanimli degiskeni foo'ya atiyoruz: var1: value1       
+    val2: value2
+--- 

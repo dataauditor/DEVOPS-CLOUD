@@ -1,0 +1,257 @@
+1.Genel:
+- AWS'nin monitoring servisidir.
+- Resources ve logs kayitlarini monite eder.
+- Bazi detailed servisleri ucretlidir.
+- AWS servisleri ve on premis log kayitlarini da CloudWatch uzerinden izlenebilir.
+- Metrics, resourcelardan gelen olculebilir verilerdir.
+- EC2 icin default metric 5dk, detailed 1dk'dir ve 1sn'ye kadar da ayrica veri alinabiliyor.
+- Cloudwatch agent sayesinde izlenemeyen resources de cloudwatch'a aktarilir.
+- Troubleshooting: Olusturulan bir arkitechtur or: alb uzerindeki tum resourceslarin log kayitlarina sergileyerek hata ayiklama isinde de kullanilir.
+- Metric ve loglardaki anormallikleri bizi uyarir.
+- Toplar > Monitor eder > Act > Analyse
+- Loglari 10 yila kadar saklayabiliriz.
+- 15 ay kadar da ... tutulur.
+- Metricler servis bazinda saklanir. Ayni platforma ait metricler ayni yerde tutulur.
+- Dashboardlar chartlar uzerinden gorsel olarak global olarak farkli regionlardaki verileri gosterir.
+- Dashboardlar defaultta 5dk arayla verileri gosterirken detailedde 10 sn arayla verileri gosterir.
+- Alarmlar, resource kullanimi belirlenen sinir threshold'a ulasinca ikaz gonderir.
+- Alarm ilk olusturulunca insufficient (yeterli veri almiyor gorulur) belli sure sonra veri gelince "ok" statusune gecer.
+- Loglar, yapilan tum islemlerin kaydedilmesidir.
+- Cloudwatch log agent: bazi loglar otomatik bazilari cloudwatch log agent programinin ilgili resource (ec2)'a yuklenmesi sonucu cloudwatch'a gonderilir.
+- Event: neredeyse tam zamanli olarak aws environmentindeki degisiklikleri kontrol eder. belli bir zamanda icra edilmek uzere verilen komutlardir. (sabah 5.00'da sistemlerin otomatik acilmasi gibi ya da biri sisteme girince bana ikaz gonder gibi)
+- Cloudwatc'a gelen metricler cloudwatch log agent yuklenerek (gerekirse) izlenir.
+- EC2'dan clo
+- 3 tane Dasboard ucretsizdir.
+
+2.Hands on 1:
+- Widget, Alarm, Policy, Role, Lambda, Event, 
+> EC2:
+  > instance ac
+
+> Dashboard Kurma:
+  > Dashboard > create dashboard > Line > metrics > configure 
+
+> Widget Olusturma:
+  - Instanci widget ile instance id bazinda islemci calisma oranini takip eder, ucretlendirmeyi takip eder iki widget.
+  - Instance'a stres testi yapilarak test edilir.
+  > Dashboardim > Add widget > Line > Metrics > EC2 > Per-instance Metrics > instance id (ilgili resource'un) sec > CPUUtilization sec > saat/gun ayarla > create widget
+  > Dashboardim > Add widget > Line > Metrics > Billing > Total Estimated Charge > create widget
+
+> Alarm Olusturma:
+  - Belirlenen threshold ile islem icra eder.
+  - instance id ile %60 yogunlugu gecerse alarm/mesaj gonderir ve instansi kapatir.
+  > CloudWatch > All alarms > create alarm > select metric > EC2 Per-Instance Metrics > InstanceIP arat > "CPUUtilization" soldan sec > select metric > period: 5 min > Threshold type: static (Anomaly tresholdu belirlenen adette gecerse) > Greater > than: 60 > in alarm > create a new topic > topic name > email address > create topic > emailden confirm > AutoScaling action/EC2 action > In alarm > stop this instance > alarm name > create alarm
+
+> Role Olusturma:
+  - Lambda ile instanci acip kapamak icin rol olusturma.
+  > Policies > create policy > Json > policyi yapistir > isim > create
+  > Roles > create role > AWS service > Lambda (yetkilendirilecek) > ilgili policy sec > isim > create role
+
+> Policy:
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:*:*:*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:Start*",
+                "ec2:Stop*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+> Lamda Function Olusturma:
+  - Ilgili rol ve phyton kodu vasitasiyla instanci acip kapama functionlari.
+  > functions > create function > Author from scratch > name > program sec > use an existing role > ilgili role sec > create function
+  > function yukle > deploy > test yan > isim > arayi sil > create > test yan sec > test (instance kapanir)
+
+> Start-function:
+import boto3
+region = 'us-east-1'
+instances = ['i-02c107da60f5dad15']
+ec2 = boto3.client('ec2', region_name=region)
+def lambda_handler(event, context):
+    ec2.start_instances(InstanceIds=instances)            #ec2.stop_instances(InstanceIds=instance)
+    print('started your instances: ' + str(instances))
+
+> Event Olusturma:
+  - Lambda ile CloudWatch'ta event olusturarak periyodik olarak belirlenen saatte instance kapatilir.
+  > Events > Rules > create rule > schedule > cron expression > 0 18 ? * SAT-SUN * (periyodik saat-tarihler belirlenir) > add target > Lambda functin: ilgili stop function sec > configure details > name > create
+
+
+3.Hands on 2 (08_14_2021):
+- Cloudwatch agent ile log kayitlarini cekme. (yalniz resource'un kayitlarini ceker.)
+- Sistem dosyasina bashscript yazarak uygulamalarin log kayitlarini da cekme.
+
+Role Olusturma:
+> Roles > create role > EC2 > policy: CloudWatchLogsFullAccess > name > create role
+
+EC2:
+> icinde nginx yuklu user datali instance acilir. tum trafik acik.
+> ilgili instance sec > Actions > Security > modify IAM role > Attach > yukarki role > apply
+
+User data:
+#! /bin/bash
+yum update -y
+amazon-linux-extras install nginx1.12
+chkconfig nginx on
+cd /usr/share/nginx/html
+chmod o+w /usr/share/nginx/html
+rm index.html
+wget https://raw.githubusercontent.com/awsdevopsteam/route-53/master/index.html
+wget https://raw.githubusercontent.com/awsdevopsteam/route-53/master/ken.jpg
+service nginx start
+
+VSC:
+- Cloudwatch log agent yuklenir. Boylece instance'in loglari cloudwatch'a gonderilir. (/var/log/messages adi altinda.)
+- Daha sonra Nginx gibi uygulamalarin da log kayitlarinin transferi icin ...
+>sudo yum install -y awslogs
+>sudo systemctl start awslogsd
+>sudo systemctl enable awslogsd.service
+
+Cloudwatch:
+- Instance'in log kayitlarina ulasim.
+> Log groups > created log groups > /var/log/messages
+
+VSC:
+- Uygulamanin log kayitlarini cloudwatch'a gondermek icin yukledigimiz awslogs.conf dosyasina bash script komutu ilave edilir.
+>cd /etc/awslogs/
+>sudo su
+>vim awslogs.conf
+> En sonuna eklenecek bash script:
+
+[/var/log/nginx/access.log]
+datetime_format = %b %d %H:%M:%S
+file = /var/log/nginx/access.log
+buffer_duration = 5000
+log_stream_name = {instance_id}
+initial_position = start_of_file
+log_group_name = AccessLog
+
+[/var/log/nginx/error.log]
+datetime_format = %b %d %H:%M:%S
+file = /var/log/nginx/error.log
+buffer_duration = 5000
+log_stream_name = {instance_id}
+initial_position = start_of_file
+log_group_name = ErrorLog
+
+>sudo systemctl stop awslogsd
+>sudo systemctl start awslogsd
+
+Cloudwatch:
+- Browserden instance'a girersek. Nginx calisacaktir.
+> Log groups > AccessLog ve ErrorLog log dosya/kayitlarini goruruz.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,12 @@
+AWS Elasticache: 
+  - In-Memory Cache is a temporary and fast storage component. 
+  - Redis, Memcached'ler iki motordur cache'leme icin. 
+  - Elasticache provides a read scaling via Replicas.
+  - Serverdan fazla istek alan verileri Cache'ler ve hizli donus yapar.
+  - In-memory cache service of AWS. Temporary and fast storage component.
+  - Redis ve Memcached farki:
+    - Memcached sadece string degerleri destekler. Redis strings, lists, sorted sets, hashes, bit arrays, hyperloglogs destekler.
+    - Sadece Memcached cok katmanli architecturelari destekler. Redis ayni anda tek operasjon yapar.
+    - Memcached snaphot'i desteklemez.
+    - Sub-millisecond latency (R/M)
+    - Redis, replicayi destekler.

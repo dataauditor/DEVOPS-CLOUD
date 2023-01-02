@@ -1,0 +1,8 @@
+1.Certificate Olusturma:
+> Certificate Manager > request certifikate > request certifikate > domainname (umitdevopsaws.com) gir > DNS validation > confirm and request
+
+2.CloudFront distribution:
+> S3:
+  > bucket sec > Properties > Static web hosting > endpoint'i "https://" olmadan kopyala > 
+> CloudFront:
+  > create cloudfront distribution > originname'e S3'ten kopyaladigin endpoint'i yapistir.  > HTTP > 

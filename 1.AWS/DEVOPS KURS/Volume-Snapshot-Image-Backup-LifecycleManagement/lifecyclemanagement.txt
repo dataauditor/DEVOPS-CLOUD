@@ -1,0 +1,1 @@
+1.Lifecycle Manager > EBS snapshot policy > Volume > Target Resource tags Name, deneme (instance'in tagi girilir) > belirlenen periyotta snapshot alir.

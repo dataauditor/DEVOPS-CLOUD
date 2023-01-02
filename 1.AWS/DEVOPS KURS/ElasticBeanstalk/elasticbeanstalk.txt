@@ -1,0 +1,234 @@
+1.Genel:
+- Hazirlanan (sistemin tanidigi programlardan) programi zipli olarak beanstalk kurunca kendisi otomatik olarak resourcelari acar.
+- ucretsizdir.
+- PAAS (platsorm as a servis)dir.
+- Applikasyonlari deploy etmeyi ve scale etmeyi kolaylastiran bir servistir. Daha cok developerler kullanir.
+- Lambda, serverlessdir ve Function as a servistir (FAAS). Beanstalk serverlidir.
+- EC2 gibi bir compute servistir.
+- Ruby, python, php, Go, java SE .net ... vb. dilleri desteklenir.
+- Bilgisayarda yuklenebilecegi gibi S3'ten de zipli application dosyasi yuklenebilir.
+- Kodunuzu yukleyince cloudformation alt yapisini kullanarak resourcelari ayaga kaldirir. 
+- Environmentte monitoring yapar, versiyoning yapar, health check yapar ve log kayitlarini tutar.
+- Konseptleri:
+  - Application: yuklenen kodun dosyalari. Logical collection of Elastic beanstalk components. Versiyon ise labellanma hali applikasyon basina. yuklenen her applicationa ayri bir environment (or: instance) tanimlaniyor. yeni versiyonu ya yeni environmette ya da eski versiyonu durdurup yeni versiyonu ayni environmentte calistirabiliriz.
+  - Environment: icinde instance, s3, elb, rds, cloudwatch ..vb calistigi ve bir versiyonu calistirdigi ortamdir.                                 
+    - Web server environment: basit web server. Fronthend gibi dusunulebilir.
+    - Worker environment: amazonun baska servislerini de kullanir. Baskhand gibi dusunulebilir.
+  - Platform: OS, programlama dili ve application'in toplamidir.
+- Cloudwatch vasitasiyla yeni instancelar da acabiliyor.
+- ELB bulunuyor.
+- Beanstalk'in da siyah ekrani var ve konsoldan yapilan herseyi ve fazlasini buradan yapilabilir. yukleme icin:
+  - https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/eb-cli3-install.html
+- Isim verirken "/" karakteri kullanilmaz.
+- Tag olarak name tagini kullandirmaz.
+- All at once: hep beraber kalkar hep beraber kapatilir. Herhangi hata durumunda tumden durur.
+  - Rolling ...  : Birisi hata verirse ikinciyi calistirmiyor. 
+  - Immutable ...:   
+
+
+2.Hands on:
+- (08_14_2021)
+
+Application Olusturma:
+- Environment (tum resourcelar) olusur. Bu sekilde islem tamamdir.
+> Beanstalk > create aplication > name: / tag: / platform: php / upload your code / local file / choose file: zipli dosyayi seceriz > create application
+
+Application-env:
+- Ilgili environmente yonelik alarm ,event, configurasyon vb islemler icin kullanilir.
+> Application-env 
+  > Events : hata, uyari, islem bazinda bakilabilir
+  > Alarms : planli alarmlar
+  > Managed updates: planli updateler
+  > Health : Statsunu gosterir. "ok"
+  > Logs : log kayitlari request log ile istenebilir. baska log da eklenebilir.
+  > Configuration: tum yazilim, instances ... edit edilebilir. ASG uzerinden edit ederek yeni instance acilabilir.
+
+Calisan Applikasyona Resource degisikligi:
+> Application-env > configuration > capacity > edit > instance sayisi/cesidi/... atirilir > save
+
+Endpoint:
+Application > URL > browserdan ilgili sayfa acilir.
+
+SSH ile ulasim:
+- Application env'den key pair tanimlanarak ec2'ya girilir.
+> Application env > Configuration > Security > Edit > key pair sec > apply
+
+Update application:
+- Applicationu guncellemek icin kullanilir.
+Application-env > upload and deploy
+
+Versiyonlama:
+- Yeni versiyonu yuklersek (versiyon olarak) ayni resourcelari kullanarak ek programlari yukler.
+- yeni versiyon yuklerken isme 1, 2 seklinde versiyon numarasi ekler.
+> Application versions > upload > isim ver v2 > zipli yeni dosyayi upload et 
+> yeni versiyonu sec > Actions > deploy 
+> Application-env > yeni versiyon environmenti almis (eski versiyon durmus.)
+
+Restore Environment:
+- Application silmezsek environment silinse bile environment restore yapilabilir.
+> Environments > Ilgili environment > Actions > Terminate environment
+> Applications > Actions > Restore terminated environment
+ 
+Application Silme:
+> Applications > ilgili application > Actions > Delete application
+
+Resource Kontrolu:
+- Application silinince S3 haric acilan tum resourcelar otomatik silinir.
+- Bucketi silmek icin Bucket policy'i silmelisiniz.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

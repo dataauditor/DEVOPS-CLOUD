@@ -1,0 +1,223 @@
+1.CodeCommit:
+
+CodeCommit:
+- Repository Olusturma:
+> Create Repository > Repository name: my-webpage > create
+
+CodeCommit:
+- CodeCommit Credentials Olusturma:
+> IAM > User > rana > Security Credentials > SSH keys for AWS CodeCommit veya HTTPS Git credentials for AWS CodeCommit (biz HTTPS sectik) 
+  > Generate credentials > User name ve Password kopyalanir.
+
+CodeCommit:
+- Clonlama icin GitHub'taki gibi https adresi alinir.
+> CodeCommit > my-webpage > Clone HTTPS (sag tarafta) > 
+  > https://git-codecommit.us-east-2.amazonaws.com/v1/repos/my-webpage (ustte olustu)
+
+VSC:
+- Localde bir konum secilerek clonlama.
+git clone https://git-codecommit.us-east-2.amazonaws.com/v1/repos/my-webpage  
+username: CodeCommit credentials'tan yaz.
+password: CodeCommit credentials'tan yaz.
+
+VSC:
+- Localde git repoya degisim/ekleme ve push:
+- Buraya code dosyasi tasinir. Hepsi once kirmizi add sonrasi yesil olur.
+git add index.html      
+git status  (yalniz index.html yesil oldu. Diger yeni dosyalar kirmizi) 
+git add . 
+git commit -m "w"
+git push
+
+CodeCommit:
+Branch Secme, Commitleri Inceleme:
+> master (ustte) > baska branch secilebilir.
+> Commits (solda) > gonderimleri gosterir.
+> Branches (solda) > mevcut bransi gosterir.
+
+VSC:
+- index.html dosyasinda code degisikligi yapilir.
+git status
+git add index.html
+git commit -m "mod index"
+git push
+
+CodeCommit:
+- Ilgili kodu inceleme.
+> Code > index.html  #degisiklik gorulur.
+> Commit > mod index > degisiklikleri oncesi/sonrasi ve degistireni goruruz.
+
+VSC:
+- Branch olusturma.
+git checkout -b my-feature    # branch olustu/degisti.
+- index.html'de degisiklik yapilir. Yalniz calisilan branchta degisiklik gorulur.
+git status                    # index.html kirmizi
+git add .
+git commit -m "mod v3"
+git push --set-upstream origin my-feature    # remote'da ilgili branch olusturulur ve push eder.
+ 
+CodeCommit:
+- Pull request / Merge.
+> Branches > Pull request > Destination: master / Source: my-fature > Compare > Title: Feature: v3 
+  > Create pull request > Changes (degisiklikleri goruruz uygunsa devam) > Merge > Fast forward merge > Delete source branch my-feature after merging > Merge pull request 
+    - Yalniz master branch kaldi.
+
+
+IAM:
+- Senior Developer ve Junior Developer'lara farkli yetkiler verilmesi.
+- Junior developerlar Master'a push edememeli.
+> IAM > User groups > create group > user group name: junior-devs
+  > create group > junior-devs > permissions > add permissions 
+  > Create inline policy > JSON:
+--------------------------------------------------------------------
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Deny",
+            "Action": [
+                "codecommit:GitPush",
+                "codecommit:DeleteBranch",
+                "codecommit:PutFile",
+                "codecommit:MergeBranchesByFastForward",
+                "codecommit:MergeBranchesBySquash",
+                "codecommit:MergeBranchesByThreeWay",
+                "codecommit:MergePullRequestByFastForward",
+                "codecommit:MergePullRequestBySquash",
+                "codecommit:MergePullRequestByThreeWay"
+            ],
+            "Resource": "arn:aws:codecommit:us-east-2:111111111111:MyDemoRepo",
+            "Condition": {
+                "StringEqualsIfExists": {
+                    "codecommit:References": [
+                        "refs/heads/main", 
+                        "refs/heads/prod"
+                     ]
+                },
+                "Null": {
+                    "codecommit:References": "false"
+                }
+            }
+        }
+    ]
+}
+--------------------------------------------------------------------
+  - "Resource": "arn:aws:codecommit:*:*:*" : tum bolgelerdeki tum accountlarin tum repositorylarina uygular. 
+  - prod ve master repolari icin gecerlidir.
+  > Review policy > name: mastereagirisyok > create policy 
+
+IAM:
+- kepteyn user'ini 
+> Users > rana > Groups > Add user to groups > junior-devs 
+  > Add to groups 
+
+VSC:
+git checkout master     # mastera gectik.
+git pull
+git add index.html
+git commit -m "modified index to v4"
+git push                # gondermeye izin vermedi ilgili hesabin yetkisi olmadigi icin.
+git checkout -b my-new-feature
+git push --set-upstream origin my-new-feature      # bu branchi olusturup gonderebiliriz.
+
+CodeCommit:
+- pull request ile master'a push edilmek uzere Senior'a yonlermek.
+- Pull request'i Senior onaylayarak master'a ceker.
+> Pull request > Destination: master / Source: my-new-feature 
+  > Title: Hey please Merge this Senior Dev > Create pull request
+
+
+CodeCommit:
+- Notification Rule olusturma.
+- Ilgili repository'e istedigimiz durumlar (pull req, comments, merged vb)'da bilgi vermesi icin SNS tanimlanir.
+- Trigger ile neredeyse aynidir SNS topic'te.
+> Source > Repositories > my-webpage > Notify > Create notification rule 
+  > Notification name: my-first-notification-rule > Full 
+  > Events that trigger notifications: On Commit / On pull request / Status changed / Source updated (istedigimizi sectik)
+  > create target > Target type: SNS topic / Topic name: codcommit-notifications-test-notification > create > submit
+
+CodeCommit:
+- Notification rule inceleyebiliriz.
+> Settings > Notification rules 
+
+CodeCommit:
+- Trigger olusturma.
+- Trigger hem SNS notification yapar hem de Lambda trigger edebilir. 
+> Source > Repositories > my-webpage > Settings > Triggers 
+  > Create trigger > Trigger name: MyFirstDemoTrigger > 
+  >  Events: Push to existing branch / Create branch or tag (sectik)
+  > Branch names: calismasini istedigimiz branchlarla kisitlanir. Secim yapilmazsa hepsi
+  > Chose the Service: Amazon SNS > SNS topic: arn:aws:sns:us-east-2:145012395309:codcommit-notifications-test-notification (Yukarda olusturulan SNS topic secilir.)
+  > create trigger
+
+CloudWatch:
+- CloudWatch ile rule olusturarak da Trigger olusturulabilir.
+- Tek rule ile birden cok target secilebilir.
+- CodeBuilt, Lambda, SNS, SQS, Kinesis, ... vb target olarak secilebilir.
+- Olusturdugumuz Notificationu Eventte Rule olarak goruruz.
+> events > Rules > awscodestarnotifications-rule 
+  - Bizim olusturdugumuz rule'u gorduk.
+> events > Rules > create rule > Event Pattern > Servive name: Code Commit > Event type: CodeCommit Repository State Change / Codecommit Comment on Commit / CodeCommit Pull Request State Change 
+  > Targets > Add target 
+
+
+Lambda:
+- Lambda function hazirlama:
+> Create fnction > Author from scratch > Function name: lambda-codecommit 
+  > Runtime: Python 3.6 > create function > Execution role: Create a new role with basic Lambda permissions
+  > create function
+
+
+Lambda:
+- Lambda'ya CodeCommit ile Trigger Hazirlama:
+> Functions > lambda-codecommit > + Add Trigger > Trigger configuration: Codecommit 
+  > Repository name: my-webpage > Trigger name: MyLambdaTrigger
+  > Events: All repository events > Branch names: All branches
+  > Add
+
+Lambda:
+- Lambda fonksiyonu yazma:
+> lambda_function: 
+---------------------------------------------------------------------
+import json
+import boto3
+
+codecommit = boto3.client('codecommit')
+
+def lambda_handler(event, context):
+    #Log the updated references from the event
+    references = { reference['ref'] for reference in event['Records'][0]['codecommit']['references'] }
+    print("References: "  + str(references))
+    
+    #Get the repository from the event and show its git clone URL
+    repository = event['Records'][0]['eventSourceARN'].split(':')[5]
+    try:
+        response = codecommit.get_repository(repositoryName=repository)
+        print("Clone URL: " +response['repositoryMetadata']['cloneUrlHttp'])
+        return response['repositoryMetadata']['cloneUrlHttp']
+    except Exception as e:
+        print(e)
+        print('Error getting repository {}. Make sure it exists and that your repository is in the same region as this function.'.format(repository))
+        raise e
+---------------------------------------------------------------------
+  > File > save > Test > create new test event > Event template: codecommit-repository > Event name: MySampleCodeCommit > create
+
+
+CodeCommit:
+- Code'da degisim yapilir ve lambda ile Cloudwatch'ta log kaydedilmesi beklenir:
+> Code > my-webpage > index.html > degistir > save
+
+CloudWatch:
+- Degisiklik sonrasi log kaydi olusur.
+> Logs > Log groups > /aws/lambda/lambda-codecommit > log kaydi gorulur.
+
+
+
+
+
+
+
+
+
+
+

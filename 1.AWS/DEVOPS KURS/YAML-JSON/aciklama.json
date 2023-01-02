@@ -1,0 +1,81 @@
+# server ile web application arasinda veri aktariminda kullanilan data formati.
+# JSON, fonksiyon, date veya undefined data types olamaz.
+# name/value seklinde kullanilir veya liste, array, vector, sequence seklinde kullanilir.
+# Object yazarken "{" ile baslanip ve "}" ile bitirilir. Her name ":" ile devam eder. name/value segmeleri "," ile ayrilir.
+
+[                                       # array icinde iki object olusturduk.
+    {
+        "name": "A company",
+        "numberofemplayees": 10000,
+        "ceo": "Mary",
+        "rating": 3.6
+    },
+    {
+        "name": "B company",
+        "numberofemployees": 3,
+        "ceo": null,
+        "rating": 4.3
+    }
+]
+
+
+{ "name":"John" }                       # string
+{ "age":30, "weight":-75.3 }            # number
+{ "Pass":true }                         # a boolean
+{ "middlename":null }                   # null 
+[1,2,3]                                 # array 
+["hello", "world"]                      # array 
+{"key":"value"}                         # object
+{                                       # object 
+  "name":"Kyle",
+  "surname":"Adam",
+  "age": 30,
+  "married": true,
+  "hobbies": ["reading", "Bowling"]     # object icinde bir array. ("hobbies", key; "[]" icindekiler arraydir.)  
+  "friends": [{                         # array 
+    "name":"Joey",
+    "age": 32,
+    "isProgrammer": false,
+    "friends": [...] 
+  }]  
+}                              
+
+
+{
+"employee":{ "name":"John", "age":40, "city":"Virginia" }       # an object 
+}
+
+{"firstName":"John", "lastName":"MC"}                           # an object 
+
+{
+"employees":[ "John", "Aaron", "James" , "Oliver" , "Walter" ]  # an array 
+}
+
+employees":[                                                    # an array 
+    {"firstName":"John", "lastName":"MC"},
+    {"firstName":"Walter", "lastName":"W"},
+]
+
+
+# html dosyasina JSON kopyalarken:
+  # <body>
+        <script type="text/javascript">
+            let companies =
+            `[                                       # array icinde iki object olusturduk.
+                {
+                    "name": "A company",
+                    "numberofemplayees": 10000,
+                    "ceo": "Mary",
+                    "rating": 3.6
+                },
+                {
+                    "name": "B company",
+                    "numberofemployees": 3,
+                    "ceo": null,
+                    "rating": 4.3
+                }
+            ]`
+          console.log(JSON.parse(companies))        # eklersek java script gibi gorur.
+          (companies)[0].name)                      # A company'i gosterir.
+        </script>
+    </body>    

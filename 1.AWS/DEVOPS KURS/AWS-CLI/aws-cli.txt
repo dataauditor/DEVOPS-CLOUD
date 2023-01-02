@@ -1,0 +1,158 @@
+				AWS CLI
+
+1.Resource'lara ulasmanin diger yoludur. (Cloudformation, launch template, Console digerleri). tum OS'lerde kullanilabilir.
+  - iki versiyonu vardir. V2 tavsiye edilir.
+    - Windows: Download and run the 64-bit Windows installer.
+    - MacOS: Download and run the MacOS PKG installer.
+    - Linux: Download, unzip, and then run the Linux installer.
+  - https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html
+
+2.Command yazilisi:
+  >aws <command> <subcommand> [options and parameters] : 
+  - command: corresponds to an aws service
+  - subcommand: specifies the operation to perform
+  - options and parameters: Ilk üç bölümü takip ettikleri sürece herhangi bir sırayla belirtebilirsiniz. Ayni parametre birden çok kez belirtilirse, yalnızca son değer geçerlidir. 
+
+3.Once kurulum yapilmasi gerekir. Sonra configurasyon yapilir.
+
+4.Windows icin administrator olarak power shell acilir.
+
+5.EC2'dan Ubuntu ile baglanilacaksa:
+  >sudo apt-get update
+  >sudo apt-get upgrade
+  >curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  >sudo apt install unzip
+  >unzip awscliv2.zip
+  >sudo ./aws/install
+  >aws --version
+  >aws help : gerekli komutlari gosterir.
+
+  >aws iam help                         : iam servisi hakkinda bilgi verir.
+  >aws iam ls help                      : iam servisinde ls komutunu aciklar.
+  >aws iam create-user --user-name Ugur : yeni kullanici tanimlama.
+  >aws iam list-users                   : kullanicilari listeler.
+  >aws iam create-group --group-name YeniGroup : grup olusturma.
+  >aws iam list-groups                  : gruplari listeler.
+  >aws iam add-user-to-group --user-name Ugur --group-name YeniGroup
+
+  >aws s3 ls : bucketleri listeler.
+  >aws s3 ls s3://bucketname                            : Listing bucket objects. Folderlarin icini goremedik.
+  >aws s3 ls s3://bucketname --recursive                : folderlari icerikleri ile gosterir.
+  >aws s3 ls s3://clarusway-test --recursive --summarize : obje sayisi, total size verilerini de gosterir dosyalarin yani sira.
+  >aws s3 mb s3://bucketname                            : "mb": make bucket. yeni bucket yapilir. Region tanimlamazsan cli'in configure edildigi regionda yapilir.
+  >aws s3 mb s3://cli-test-clarusway make_bucket        : cli-test-clarusway : yeni bucket yapar. yukardaki komutla ayni calisir.
+  >aws s3 mb s3://cli-test-clarusway2 --region us-east-2 make_bucket: cli-test-clarusway2 : regionunu belirterek yeni bucket yapma.
+  >aws s3 rb s3://bucketname                            : "rb": remove bucket. delete an empty bucket.  
+  >aws s3 rb s3://bucketname --force                    : ici dolu bucketi siler.
+  >aws s3 rm s3://bucketname/filename                   : File siler.
+  >aws s3 rm s3://bucket-name --recursive               : Bucketin icini siler. Empty yapar.
+  >aws s3 cp file-name s3://bucket-name/new-file-name   : bilgisayardan buckete file kopyalama.
+  >aws s3 cp s3://mybucket/test.txt s3://mybucket/test2.txt : buckettan buckete file kopyalama.
+  >aws s3 cp folder-name s3://bucket-name/folder-name --recursive : bilgisayardan bucketa folder kopyalama.
+  >aws s3 cp s3://bucket-name/file-name new-file-name   : S3'den locale file kopyalama.
+  >aws s3 cp s3://bucket-name/file-name .               : S3'den locale ayni isimle file kopyalama.
+  >aws s3 cp s3://bucket-name/folder-name . --recursive : mevcut locale buckettan folder kopyalama.
+  >aws s3 cp s3://bucket-name/folder-name  /path/to/directory/new-folder-name --recursive : belirtilen locale s3'ten folder kopyalama.
+  >aws s3 mv file-name s3://bucket-name : localden bucketa file move.
+  >aws s3 mv s3://bucket-name/file-name /path/to/directory/new-file-name : buckettan locale file move.
+  >aws s3 mv folder-name s3://bucket-name/new/folder-name --recursive : localden bucketa folder move.
+  >aws s3 mv s3://bucket-name/folder-name /path/to/directory/new-folder-name --recursive : S3'ten locale folder move.
+  >aws s3 cp s3://source-bucket-name/file-name s3://destination-bucket-name : bucketlar arasi file kopyalama.
+  >aws s3 cp s3://source-bucket-name/folder-name s3://destination-bucket-name : bucketlar arasi folder kopyalama.
+  >aws s3 mv s3://source-bucket-name/file-name s3://destination-bucket-name : bucketlar arasi file move.
+  >aws s3 mv s3://source-bucket-name/folder-name s3://destination-bucket-name : bucketlar arasi folder move.
+  >aws s3 cp s3://source-bucket-name s3://destination-bucket-name : bir bucketi baska bucketa kopyalama.
+  >aws s3 mv s3://source-bucket-name s3://destination-bucket-name : bir bucketi baska bucketa move.
+  >aws s3 sync . s3://bucket-name : local current directory bucketa senkronize edilir. Yeni dosyalar ile guncelleme tarihi daha yeni veya hacmi farkli filelar buckata copyalanir.
+  >aws s3 sync s3://bucket-name . : bucketi local directorya senkronize etme (farkli fileleri kopyalama).
+  >aws s3 sync s3://source-bucket-name s3://destination-bucket-name : iki bucketi senkronize etme.
+  >aws s3 sync s3://source-bucket-name s3://destination-bucket-name --source-region us-east-1 --region us-east-2 : farkli regionlardaki bucketlari senkronize etme.
+  >aws s3 sync . s3://bucket-name --exclude "file-name" : senkronize ederken file istisna etme.
+  >aws s3 sync . s3://bucket-name --exclude "*.jpg" : senkronize ederken file sinifi bazinda istisna tutma.
+  >aws s3 sync . s3://bucket-name --delete : bucket ve localin cakistigi dosyalar haric diger filelar silinir.
+
+- Describe:
+  >aws ec2 describe-instances    : hesabinizdaki tum instancelerin detayli bilgisini gosterir.
+  >aws ec2 describe-instances \  : hesabinizdaki tum instancelerin query'den sonra belirtilen niteliklerini gosterir.
+      --query "Reservations[*].Instances[*].{Instance:InstanceId,AZ:Placement.AvailabilityZone,IPv4:PublicIpAddress,CurrentState:State.Name}"
+  >aws ec2 describe-instances \  : Hesabinizdaki tum instancelerin belirlenen ozellilerini tablo halinde gosterir.
+      --query "Reservations[*].Instances[*].{Instance:InstanceId,AZ:Placement.AvailabilityZone,IPv4:PublicIpAddress,CurrentState:State.Name}" \
+      --output table 
+
+- Start-Instances:
+  >aws ec2 start-instances --instance-ids i-0475d2cf0786dca00 i-0578d3cf0656dca03 : id'si yazilan tum instanceleri baslatir. Instancelarin id'sine "describe-instances" komutu ile bakilabilir.
+
+- Terminate-Instances:
+  >aws ec2 terminate-instances --instance-ids i-0475d2cf0786dca00 i-0578d3cf0656dca03 : id'si yazilan tum instanceleri kapatir. Instancelarin id'sine "describe-instances" komutu ile bakilabilir.
+
+- Run-Instances:
+  >aws ec2 run-instances --imageid ami-0a887e401f7654935 : Instance olusturur. Launching instance. Create-instance ise AWS OpsWorks ile calisir ve OpsWork stack'te instance olusturmada kullanilir.
+  >aws ec2 run-instances \     
+   --image-id ami-173d747e \
+   --count 3 \
+   --instance-type t2.micro \
+   --key-name FirstKeyPair \
+   --security-groups FirstSecGroup \
+   --subnet Public-1a
+
+- Modify-Instance-Attribute:
+  >aws ec2 modify-instance-attribute \    : instance'in ozelligini degistirmek icin kullanilir. burada instance type, m1.small olarak degistirildi.
+  --instance-id xxxxxxxxxxxxxxx \
+  --instance-type "{\"Value\": \"m1.small"\}" 
+  >aws ec2 modify-instance-attribute       : termination protectionu kurduk. Kaldirmak icin " no-disable-api-termination" kodu kullanilir.
+   --instance-ids xxxxxxxxxxxxxxxx 
+   --disable-api-termination
+
+- Kep Pairs:
+  >aws ec2 describe-key-pairs   : tum key-pairleri gosterir.
+  >aws ec2 create-key-pair --key-name MyFirstKey : Keypair olusturma.
+  >aws ec2 delete-key-pair --key-name MyFirstkey  : Key-pair silme.
+
+6.Configurasyon:
+   My Security Credentials > Access key ulasilir/gorulur (bizdeki exel'de de var).
+   bash > aws configure > (access id , access key , us-east-1 , yaml )  
+   >aws configure : tekrar degisim yapilacaksa da kullanilir. 
+
+  - EC2 gibi bazi servisler S3 gibi global degildir. Bu yuzden bu gibi servislere ulasabilmek icin configurationda islem yapilacak region secilmeli. 
+
+7.Powershell/Bash:
+  >cd .aws : 
+  >cat credentials : icinde access id ve access key bulunur
+  >cat config : region secimi bulunr. Byradan sonra degisiklik yapilabilir. 
+
+  >aws s3 ls: s3 miktarini gosterir.
+
+8.Tek bilgisayardan birden cok hesaptan CLI kullanimi:
+  >aws configure --profile umit
+  >cat credentials
+  >cat config
+  >aws s3 ls --profile dev : baska kullanici komut girerken profilini belirtmeli.
+  >export AWS_PROFILE=umit  : default kullanici olarak section boyunca umit'i tanimlar.
+  >setx AWS_PROFILE umit : yukarkinin Windows versiyonu.
+  >aws s3 ls : umit'in verileri gelir.
+  >aws se ls --profile default : default kullanici ikinci hesap gibi oldu. shell kapanirsa eski halini alir.
+  >aws sts get-caller-identity : kullanimdaki hesabi gosterir.
+
+9.Komutlar:
+  >aws "servis" "komut" [options ]
+  >aws ec2 describe instances [--filters ]
+  >aws s3 ls : bucketlar listelendi. bucketlar listelendi.
+  >aws s3 ls s3://...  : yukardan bir bucket secilerek ici gorulur.
+  >aws s3 mb s3://cli-demo-umit : bucket olusturduk.
+  >aws s3 cp test.txt s3://cli-demo-umit : file'i bucketa gonderme.
+  >aws s3 rb s3://cli-demo-umit: remove bucket. silme
+  >aws s3 rb s3://cli-demo-umit --force: remove bucket. silme. icinde data olan bucketi siler.
+  >aws ec2 run-instances --generate-cli-skeleton > demo.json
+  >sudo vim demo.json
+  >aws ec2 run-instances --cli
+
+10.Instance State Codes
+ 0 - Pending
+16 - Running
+32 - Shutting-down
+48 - Terminated
+64 - Stopping
+80 - Stopped
+
+11.DynamoDB:
+aws dynamodb batch-write-item --request-items file://Forum.json  : dynamodb isimli klasor icinde mevcut konumdaki Forum.json isimli filedeki verileri Forum isimli tabloya yazdiririz.

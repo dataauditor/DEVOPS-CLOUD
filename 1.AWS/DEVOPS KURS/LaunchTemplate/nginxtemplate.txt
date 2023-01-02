@@ -1,0 +1,18 @@
+1.Template Olusturma:
+  -Launch templates > Create launch templates > 
+    *name
+    *Version
+    *AMI
+    *Instance type
+    *Key pair
+    *Security settings
+    *Resource tags: name/NginxWebserver/Instance
+    *Advance details: User data
+    *Create data
+
+2.Template ile cihaz acma:
+  -Launch templates > Actions > Launch Instance from template > Source template vession secilir > Launch instance from template
+
+3.Version olusturma:
+  -Launch templates > Actions > Modify template > Template version description: V3 > Create template version  
+   

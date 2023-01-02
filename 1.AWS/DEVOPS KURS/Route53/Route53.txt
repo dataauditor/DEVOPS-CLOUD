@@ -1,0 +1,92 @@
+1.DNS Service:
+- URL'leri IP adreslerine cevirir.
+- Route 53'un uc ana fonksiyonu var:
+  - Routing: dunyaya acilimi sagliyor.
+  - DNS Health Check: Servisin latency bazli kontrolunu/yonlendirmesini sagliyor.
+  - Domain Name Registration: Isim register ediyor.
+- TTL (Time to Live): Caching yapiyor. Icerigi tutuyor. Ne kadar uzun TTL suresi o kadar az ucretlendirme. Statik olmayan siteler icin kisa tutulmali. 
+- ICAAN domainname'lerin satisini koordine eder.
+- Hosted Zones: Kayitlarin/recordlarin tutuldugu databasedir. Hem public hem de private Hosted Zones'larda tutar. Disardan ilgili DNS'i yazinca hangi servera gideceginizi tutar. Private Hosted Zones ise bir VPC icinde dns kayitlarini tutarak yonlendirir. 
+- DNS Record Set: Domain name'lerin tutuldugu documents. Route53, 13 cesit Record Seti destekler.
+- Domainname alinca otomatik olarak Hosted Zone acilir ve record olarak SOA (Start of Authority) NS (Name Server) olusur. Kesinlikle silinmemeli. 
+- NS: It contains a list of servers authorized to host. kimlik karti gibi. 
+- Domainname'i ile Bucket ismi ayni olmali. Domainname'i alir almaz bucket alinmali.
+- Instance, bucket, Static Web Host Adresi veya ALB'ye de domain name'e record olarak tanimlanabilir.
+- Domainname register edince veya hosted zone kurunca SOA (start of authority) ve NS (name server) 4 name server tutar.
+
+Hosted zone:
+- Recordlarin tutuldugu bir containerdir.
+- Her bir domainname privat/public olarak ayrilabilir.
+- Hosted zone ile domainname ayni isimdedir.
+
+Privat Host: 
+- Privat IP tanimlanabilen domainname (public ip de tanimlanabilir). 
+- Ayni domainname'i hem public hostta hem de privat host'da tanimlasak da localden farkli bir sayfaya ulasma imkani tanir.
+- Yalnizca privattaki resourcelar kullanabilir.
+- Registrationa ihtiyac olmaksizin her turlu isim secilebilir.
+
+Record:
+- A     : IPv4 numarasi bazli.
+- AAAA  : IPv6 bazli.
+- CNAME : baska bir domainname ismi yazilarak o adresi de bu domain name'e yonlendiririz.
+
+Routing Policies:
+- Simple Routing ile yapilamayan konfigurasyonlar/policies:
+  - Latency Routing policy: Mesafe ve zaman'a bagli policy. en hizli cvp veren source ile calisilir. Yogunluga bagli olarak degisir kaynak.
+  - Geolocation Routing policy: Web serverin konumuna bagli policy. Bolge bazli farkli dillerdeki serverlara yonlendirmek icin kullanilir.
+  - Geo Proximity Routing Policy: Enlem- boylam bazli belirledigimiz bolgelere gore policy.
+  - Fail over policy: ana kaynakta problem olunca alternatif kaynak tanimlanir. 
+  - Weighted Routing policy: Serverlara hangi oranda talep gonderilecegini belirler.
+  - Multivalue Answer Routing Policy: 
+
+TTL: Belirli sure boyunca ayni veriyi gosterir, cacheler.
+
+DNS Health Checking:
+- Ilgili kaynak'tan belirlenen adet pozitif cvp alinamayinca secondary resource'a yonlendirir. Simple routing disindaki routing policylerde kullanilir.
+
+2.Proje:
+
+Domainname alma:
+> Route53 > Registered domains > Register Domain > isim sec >> Complete order
+
+Domainname'i Bucket'a Baglama:
+> S3:
+  > create bucket > domainname ile ayni isimde sub domain ismi dahil (www.umitdevopsaws.com) isim al / Public access: enabled > create
+  > ilgili bucket > Permissions > Bucket Policy > edit: 
+
+{
+    "Version": "2012-10-17", 
+    "Statement": [
+        {
+            "Sid": "PublicReadGetObject",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::don't forget to change me/*"
+        }
+    ]
+}
+
+
+Health Checks:
+- Uc cesittir. 
+> Create health check > name/ Endpoint / IP address veya 
+
+Record Olusturma:
+> Hosted Zones:
+  > Domainname'e tikla > create record > Record name: www (herseyi yazabilirsin or: info)/ Record type ...Value: ilgili instance/alb/static host public IP > create record
+CNAME Record Olusturma:
+> Hosted Zones:
+  > Domainname'e tikla > create record > simple routing / Value: bir baska domainname gir / 
+Alias Record Olusturma:
+  > Domainname'e tikla > create record > simple routing / Alias > Alias to S3 website endpoint > Region sec (bucketin bulundugu region) > bucket (ilgili bucket ayni isimdeyse otomatik gorulur) sec > create records
+
+
+
+
+
+
+
+
+
+

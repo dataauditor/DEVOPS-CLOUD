@@ -1,0 +1,102 @@
+1.VPC:
+Ayni regionda en fazla default + 5 VPC olusturulabilir. fazlasi talep edilebilir.
+Normalde 2 tane IP numarasi broadcast vb sebeplerle kullanilamazken aws'de her subnette 5 IP adresi kisitlanir ve host'a tahsis edilemez.
+Internet Gateway: 
+  - NAT ozelligi sayesinde AWS PUBLIC IP POOL'dan public IP alir. 
+  - private-public ip degisimini saglar. 
+  - VPC'ye attach edilir.
+VPC CIDR IP POOL: private IP'leri tahsis eder.
+Tek instance'a 5 tane sg baglanabilir.
+Subnetlere internet gateway veya VPN gateway ile ulasilabilir. 
+Root table: 
+  > Root tables > create root table (private subnetler icin 2. privat-rt olusturulur) > name/vpc sec > create 
+  > Root tables > privat-rt > subnet associations > Edit subnet assosiations > privat subnetleri sec > save
+    * Subnetlere sec grouplar belirlenir. Security Groups'da ise instancelara rulelar belirliyorduk.
+VPC:
+  > Your VPCs > create VPC > IPv4 tanimlanir 
+  > Tenancy: default (sizin cihazlarin konumlanmasi virtual olarak. dedicated olsa ilgili rack vb size tahsisli olup ucrete tabidir.) > create VPC
+DNS Hostnames: 
+  > Your VPCs > ilgili VPC > Actions > DNS hostname > enable > save
+    * instancelere public IP'lerin atamasini yapar. 
+Her VPC olustugunda public route table'i da olusur. Private subnetler icin 2. bir route table gerekir VPC bazinda.
+Modify auto assign IP settings:
+  > Subnet > ilgili subnet > Actions > Modify autoassign IP > Public IP'ler tahsis edilir. 
+    * Otomatik olarak public IP alinmasini saglar. Public subnetlere yapilir.
+Bastion Host/Jump Box:
+  - Amaci Public Subnetteki bilgisayara pem key'imizi kodla cekerek, ayni kodla kurdugumuz privat subnetteki insyance'e privat ip uzerinden ulasmaktir.
+  - Private Subnete giris yapilir. Cikis degil.
+  - Proxy server gorevi gorur. SSH veya RDP ile baglanir ve Jump Box olarak da bilinir.
+  - Public Subnete kurulur ve bunun uzerinden private subnete secur olarak ulasilir.
+  - Public ve Private ec2lara ayni key degerleri verilmeli.
+NAT Gateway:
+  - Private Subnetten internete cikis yapar.
+  - Elastic IP kullanmak zorunludur.
+  - MZ tarafindan kullanilabilir.
+  - SG verilmez ve Elastic IP detach edilemez.
+NAT Instance:
+  - Managed by you.
+  - Availibility ve bandwith daha kisitli.
+  - Sadece 22 portunun acik olmasi 
+  - Elastic IP zorunlu degildir.
+  - Hem NAT instance hem de Bastion Host olarak kullanilabilir.
+  - Ucretlendirme NAT instance olarak yuklediginiz ec2 icindir.
+  > EC2:
+    > ami-00a36856283d67c39 ami numarali veya bir NAT instance kur > (22, All ICMP IPv4 port) public subnette olmali.
+    > Instance > Actions > Networking > Change source/destination check > stop (baska bilgisayarlar icin gelen verilere olan engeli durdurduk)
+Peering:
+  - Farkli/ayni regiondaki ve farkli/ayni userlarin VPC'leri arasinda privat IPv4 veya privat IPv6 ile baglanti kurulmasi.  
+  - Peering connection birinin public digerinin privatinda kurulur. ikisi de birbirinin route table'ina eklenir.
+  - Baskasinin hesabina yapilirsa requestin kabul edilmesi gerekir.
+Endpoint:
+  - VPC'den internete cikmadan role vasitasiyla endpointten AWS'nin S3 gibi public servislerine veya baska VPC'deki instancelere giris saglamaktir.  
+  - Endpointler 2'ye ayrilir. Interface Endpoint ve Gateway Endpoint.
+    * Interface Endpoint: Security Groupslarla calisir ve cogu yerde kullanilir. private IP ile calisir.
+    * Gatawey Endpoint: S3 ve DynamoDB'ye hizmet verir. Route table'lara tanimlanir.
+  - Baska hesaplarin s3 gibi servislerine de baglanilabilir ve find service by name ile bulunur.
+NACL:
+  - Firewall of subnets. Bir veya birkac subnete attach edilebilir ama bir subnete birden fazla NACL baglanamaz.
+  - SG'ler instance tabanli iken NACL'lar subnet-VPC tabanlidir.
+  - Sg'lerden farkli olarak stateless'dir. Subnetlere giriste hem innbound hem de outbound kurallari tanimlanir. Hem allow hem de deny yapilabilir. 
+  - Kendisine baglanan Subnetlerin tum trafigini etkiler. Olusturulan NACL'a baglanmayan Subnet default Subnet'e baglanir.
+  - Daha cok malicious attacklere karsi bir IP veya araligini kisitlar.
+  - VPC olusturulunca otomatik olarak Nacl'lar (allow all in and allow all out olarak) kurulur.
+  - Subnet oncesinde kurulur. VPC'ye uygulanir.
+  - Subnet temelli security componentidir.
+  - SG'de sadece izin verilirken, Nacl'da hem izin hem de kisitlama uygulanabilir.
+  - SG'larda outbound otomatik all iken yeni Nacl'larda otomatik olarak hersey kisitli gelir, siz acarsiniz.
+  - Rule'lar sira numarasina gore (100-200-300 vb) kucuk olan onceliklidir. Bir rule uygulanirsa digerlerine bakmaz.
+  - 1’den 32766’ya kadar kural tanimlanabilir.
+  - Ucretsizdir.
+VPN: 
+  - AWS Site-to-site VPN ve AWS Client VPN olarak 2 cesittir.
+  - AWS Site-to-site VPN: 
+    - On-premise ile VPC arasinda secure baglanti kurar.
+    - AWS tarafinda bulunan virtual edge'e Virtual Private Gateway, on-premises tarafindakine Customer Gateway denir.
+    - IPSec (internet protocol security) kullanilir encrypted tunnel olusturmak icin.
+    - Her baglanti icin iki tunnel kurulur. 
+  - AWS Client VPN: 
+    - Remote user ile AWS veya on-premises arasinda secure baglanti saglar. AWS servislerine remote userlarin ulasmasini saglayan bir application'dur.
+    - Heryerden AWS servislerine veya on-premise baglanmaya imkan verir.
+Direct Connect:
+  - internet yerine aws ile anlasmali servis saglayicilar vasitasiyla dogrudan ve hizli baglanti kurulmasidir.
+  - Privat network baglantisi ile veri gonderilir.
+  - 3 ana bilesenden olusur: AWS region, Direct connect (DX) location and Customer on-premises data center.
+  - DX icinde iki cage bulunur: AWS cage ve Customer/partner cage.
+  - AWS cage'de direct connect routers ve customer/partner cage'de customer/partner routers bulunur.
+  - Virtual interface olusturmaliyiz public servislere ulasim icin.
+    - public virtual interface: s3 gibi public servislere ulasim saglar.
+    - private virtual interface: VPC'a giris saglar.
+  - Benefits:
+    - Reduce cost when using large volumes of traffic.
+    - Increase reliability (predictable performance).
+    - Increase bandwidth (predictable bandwidth).
+    - Decrease latency.
+
+
+Cloudfront:
+- CDN (Content Distribution Network). It makes the website load fast by serving cached content that is nearby.
+- CloudFront is a good choice for the distribution of frequently accessed static content that benefits from edge delivery—like popular website images, videos, media files, or software downloads.
+-  Edge Location is the location where content is cached (separate to AWS regions/AZs).
+
+
+

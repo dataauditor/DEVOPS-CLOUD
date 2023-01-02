@@ -1,0 +1,183 @@
+1.Bucket: 
+- Object based (bir butun olarak) olarak bircok object tutulur, URL ile cekilebilir. genelde back up/snapshot icin kullanilir.
+- EBS'e gore high availibilty ve daha ucuzdur. S3 servisinde bulunur. Container gibi de degerle
+- Metadata + file + Unique ID
+- her accountta 100'e kadar bucket kurulabilir.
+- depolama siniri sinirsizdir.
+- bucket isimleri unique olup her yerden ulasilabilir. Herbir yuklu obje URL alir aws'den.
+- ayni region icinde 3 farkli AZ'de yuklenir ve silinse de alternatifi yuklenir.
+- konsoldan 160GB, ancak cli/aws sdk/amazon s3 REST API'den daha yuksek veri aktarilabilir.
+- Tek simple file'in kapasitesi maksimum 5TB veri olabilir
+- S3 içinde Upload ve Transfering aynı region içinde ücretsizdir, ancak Download, Storage ve Request ücretlidir.
+- Object Lock: silme ve degistirmeye karsi koruma saglar.
+- Stored objects in a bucket may be in the form of any files such as text, image, movie, video, etc.
+- EBS: Block based tutar. sadece attach edilmis ec2 uzerinden ulasilabilir. share edilemez.
+- EFS: ayni region icinde 1000'e kadar ec2'ya attach edebiliriz.
+
+- Storage Cesitleri:
+   - Standard: 3 tane AZ'de saklanir. Saklama maliyeti yuksek ama restore ucreti azdir. Siklikla kullanilan verilere ve hizli ulasim icin kullanilir: web services, oyunlar, apps . Eger storage sinifi belirlenmezse aws default olarak bunu atar. Reliability: %99,99999999, Availibility: %99,99
+   - Reduced Redundancy: kritik olmayan data icindir. kullanim anlami yok ani ozellikler ve daha pahali. Reliability: %99,99
+   - Standart-IA: 3 AZ'de saklar. sik kullanilmayan. daha az storage cost, higher restore cost, 30 days data deletion fee. availibility: %99,9. 
+   - One Zone-IA: sik kullanilan data icin ama tek zone da kullanilir. Diger tum storageler 3 AZ kullanir. kritik olmayan data icin. Standard-IA'dan %20 ucuzdur because of less availibility. 
+   - Intelligent Tiering: otomatik olarak az kullanilan datayi daha ucuz storage'e tasir zamanla.
+   - Glacier: zipli saklanir, uzun sure kullanilmayan datalari arsivler. minimum 90 gun saklamali. oncesinde datayi silseniz de ucreti odenir. 1-5 dk'da girilebilir. restore ucreti cok.
+   - Glacier Deep Archive: en az 180 gun saklanilir ve 12-48 saatte ulasilabilir. Bol ziplidir. restore ucreti cok yuksek.
+
+- log bucket tanimlayip farkli farkli server larin log kayitlari kaydedilebilir.
+- S3 onune cloudfront koyarak secure yapilir static web sitesi.
+
+
+
+a.Bucket Kurulumu:
+> Create bucket > Bucket name/Block Public Access (kaldir)/Versioning/create bucket
+
+b.Bucket permissions:
+- Bucket bazinda: Herbir objeye URL ulasilabilir ancak izin vermek gerekiyor.
+  - Bucket > permissions > Block public access (blocku kaldir) 
+    - Bucket Policy gir (Json) veya
+    - ACL'den everyone izin ver
+- Obje bazinda:
+  - objeyi sec > actions > make public > object tikla > object URL kopyala > browsere yapistir.
+  - (veya) objeyi tikla > permissions > edit > public read secilir. (2 yolu var.)
+
+c.Versioning:
+- Versioning sayesinde hatali silme veya program hatalarindan korunulur. versioning enable edilmis olmali.
+- Version tiklenince marker acilir. Delete markeri silersen silinen veri geri gelir. diger versiyonlari da gorebilirsin.
+- Versioning acilirsa bir daha kapatilamaz ama suspend edilebilir. Eski versiyonlar daha ucuz ucretlendirilir.
+- Uc modu var: Unversioned (the default), Versioning-enabled, Versioning-suspended.
+
+d.Bucket Silme:
+- Once bucket secilerek empty tiklanir veya ici acilarak file/folderlar silinir.
+- Sonra backet silinir.
+
+e. Lifecyle Management:
+- Storage classlar arasi gecislerdir. Standart, OneZone-IA, Standard-IA, RRS, Glacier Deep Archive, Glacier, Intelligent Tier arasi gecisleri konu alir.
+- Amac ucuz storage class'ta data tutmaktir. 
+- Bucket seviyesinde yapilir.
+- Mevcut ve eski bucket'lar uzerinde yapilabilir.
+- Geciskenlik: tek yonlu oluyor. yalniz asagi class secilebilir.
+  - Standart/Reduced Redundancy > Standart-IA > Intelligent Tier > OneZone-IA > Glacier > Glacier Deep Archive
+- Lifecycle Rule Belirleme:
+  > Bucket secilir > Management > Create Lifecycle rule > All (Limit secilirse belirlenen data depo degistirir) 
+  > Prefix (yalniz bucket icindeki secilen dosya icini gosterir.)/Object tags (objelere verilen tag'a gore objelere izin verir.) 
+  > Lifecycle rule actions (Transition current versions, Transition previous version, Expire... vb secilebilir)
+  > Storage class transition (storage class secilir belirlenen sure sonra storage'in degisimi icin. bir kac farkli secilebilir. kademeli)
+    (30gun ve katlari secilir, Glacier icin 90, Glacier .. icin 180 gun ve katlari secilir.) > create rule
+
+e.Static Web Site Kurulumu:
+> Ilk once website icin ve log kayitlari icin (istenirse) 2 bucket kurulur. Public accesleri acik 
+> WebHostingBucket:
+  > Permissions > Edit Bucket policy (Bucket ARN'ini degistir. JSON dosyasinin (asagida))
+  > Properties > Static Website Hosting > Edit > Enable > index document'i yaz (index.html)
+  > Properties > Static Website Hosting > Bucket website endpoint'i kopyala browsere yapistir. (Static website kuruldu)
+  > Properties > Server access logging > Enable > browse > LogBucket secilir. > save
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PublicReadGetObject",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::source.umit/*"
+        }
+    ]
+}
+
+f.Log file icin Bucket kurulumu:
+> Log kayitlari icin LogBucket kurulur:
+  > Hicbir izne ihtiyac olmayan bucket kurulur.
+> Once Static Web Sitesi icin Bucket kurulur.
+  > Properties > Server access logging > Enable > browse > LogBucket secilir. > save
+> Belli sure sonra Web Sitesinin log kayitlari LogBucketta sergilenir.
+
+g.Bucket Replikasyonu:
+- Bucket birebir ayni SRR veya baska bir regiona CRR kopyalanabilir.
+- Replike ederken metadatasi da replike edilir otomatik olarak. Tamami veya bir kismi replike edilebilir.
+- Replikasyon esnasinda baska bir class istenebilir ve farkli bir owner atanabilir. Replikasyon esnasinda tek yonlu degildir class secimi.
+- yalniz source bucketa replikasyondan sonra konulan yeni objeler replike edilir.
+- Replika %99 15dk'da olusur. 
+
+- Replikasyon yapma: 
+> Once Source Bucket (Static Web Site) kurulur (yukarida aciklandi)
+  - Versioning ve Permissions public olmali. > Create role > Create policy > 
+> Destination bucket:
+  > create edilir (Block all public access izin verilir, versioning enable) > create
+  > Properties > Static Website Hosting > Edit > Enable > index document'i yaz (index.html)   
+  > Permissions > Edit Bucket policy (Bucket ARN'ini degistir. JSON dosyasinin)
+  > IAM Role Olusturma:
+    > Policies > create policy > JSON (bulunani sil asagidakini ekle ve destinationun 1, source bucketin Properties'ten uzantisini buraya 2 yere degistir) > next > isim > create policy
+    > Roles > create role > AWS service > Use case: S3 > Select your use case: S3 > next > yukarda olusturulan policy secilir > create role
+  > Source Bucket:
+    > Management > Create replication rule > tum objeler secilir veya Limit the scope: filter dosya ile, Tags ise tag ismi ile tasinacak dosyalari sinirlar. 
+    > destination bucket secilir > kurdugum IAM role secilir > save edilir
+    > index.html ve diger istenen dosyalar yenilenip/degistirilirse Destination replicaya da gider ve WEB Server gibi gosterir Staatic Web Server URL'sinden.    
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "s3:Get*", 
+                "s3:ListBucket"
+            ],
+            "Effect": "Allow",
+            "Resource": [
+                "arn:aws:s3:::source.replica.clarusway(change me)",
+                "arn:aws:s3:::source.replica.clarusway(change me)/*"
+            ]
+        },
+        {
+            "Action": [ 
+                "s3:ReplicateObject", 
+                "s3:ReplicateDelete",
+                "s3:ReplicateTags",
+                "s3:GetObjectVersionTagging"
+            ],
+            "Effect": "Allow",
+            "Resource": "arn:aws:s3:::destination.cross.region.replica.clarusway(change me)/*"
+        }
+    ]
+}
+
+h.Cross-Origin Resource Sharing:
+- Bir Static Web Serverin baska bir Static web serverin icerigini kullanimi.
+- Birinci bucketin ikinci bucketin icerigini kullanabilmesi icin ilk buckettaki html dosyasina ikinci bucketin URL adresi "/uzanti" dahil yazilir.
+- Icerigi kullanilan bucketin Cross-origin resource sharing (CORS) ile birinci bucketin adresi yazilarak veri paylasimina izin verilir.
+> S3:
+  > Izinleri verilmis bucket umit.broadcast olustur. > icine dosyalar yukledik > bucket policy edit et > Static website hosting'i enable et. index.html'i yaz 
+  > Izinleri verilmis bucket umit.cors.broadcast olustur. > icine dosyalar yukledik > bucket policy edit et > Static website hosting'i enable et. index.html'i yaz
+  > umit.cors.broadcast > Permissions > Cross-origin resource sharing (CORS) > edit > 
+
+> Bucket Policy:
+{
+    "Version": "2012-10-17", 
+    "Statement": [
+        {
+            "Sid": "PublicReadGetObject",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::don't forget to change me/*"
+        }
+    ]
+}
+
+> CORS file:
+[
+    {
+        "AllowedHeaders": [
+            "Authorization"
+        ],
+        "AllowedMethods": [
+            "GET"
+        ],
+        "AllowedOrigins": [
+            "http://umit.broadcast.s3-website-us-east-1.amazonaws.com/cors.html"
+        ],
+        "ExposeHeaders": [],
+        "MaxAgeSeconds": 3000
+    }
+]
+
