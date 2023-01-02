@@ -1,0 +1,53 @@
+parameters:
+  - name: packageId
+
+  - name: packageVersion
+
+  # OPTIONAL Path to the .nupkg directory
+  # Default is a .nupkg in the Artifact Staging Directory
+  - name: pathToNupkgDirectory
+    default: $(Build.ArtifactStagingDirectory)
+
+  # OPTIONAL Additional arguments to use when installing the package.
+  - name: installArguments
+    default: ''
+  
+  # # OPTIONAL URL to an Artifact Feed which contains any dependencies needed by this package.
+  # # Default is the main NBIM Artifact Feed
+  # - name: testInstallDependenciesArtifactFeed
+  #   default: "https://pkgs.dev.azure.com/NBIM/_packaging/NBIM-Artifacts-Shared/nuget/v2"
+
+steps:
+  - powershell: |
+      .chocolatey_offline_install/install.ps1
+      Write-Output "Using Chocolatey $(choco --version)"
+      choco feature enable -n allowGlobalConfirmation
+
+      try{
+        Write-Output "Install package ${{ parameters.packageId }} from ${{ parameters.pathToNupkgDirectory }}..."
+        choco install ${{ parameters.packageId }} -s ${{ parameters.pathToNupkgDirectory }}
+
+        Write-Output "Installed successfully!  Currently installed packages are:"
+        choco list -l
+      }catch{
+        Write-Output "Installation of package ${{ parameters.packageId }} failed!"
+        exit 1
+      }
+    name: Install
+
+  - powershell: |     
+      .chocolatey_offline_install/install.ps1
+      Write-Output "Using Chocolatey $(choco --version)"
+      choco feature enable -n allowGlobalConfirmation
+
+      try{
+        Write-Output "Uninstalling package ${{ parameters.packageId }} (${{ parameters.packageVersion }})"
+        choco uninstall ${{ parameters.packageId }} --version ${{ parameters.packageVersion }}
+
+        Write-Output "Uninstalled successfully!  Currently installed packages are:"
+        choco list -l
+      }catch{
+        Write-Output "Ununstallation of package ${{ parameters.packageId }} failed!"
+        exit 1
+      }
+    name: Uninstall    

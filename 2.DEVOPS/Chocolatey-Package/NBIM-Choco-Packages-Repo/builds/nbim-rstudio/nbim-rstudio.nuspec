@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-rstudio</id>
+    <version>1.4.1717</version>
+    <description>Install and configure RStudio. It needs to be updated every 2-3 months</description>
+    <authors>Umit Ceylan</authors>
+    <title>nbim-rstudio</title>
+    <tags>rstudio</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

@@ -1,0 +1,3 @@
+---
+- s3://nbim-s3-euwe1-software-packages-chocolatey/Citrix/Microsoft/officedeploymenttool_15028-20160.exe
+- s3://nbim-s3-euwe1-software-packages-chocolatey/Citrix/Microsoft/Configuration.xml

@@ -1,0 +1,1 @@
+﻿# Not supported as it shall not be allowed to uninstall this package. Will only uninstall this package from the choco registery, not the fixes itself

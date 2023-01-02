@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-factset</id>
+    <version>2016.41.040</version>
+    <description>Install and configure FactSet. Real version is 2016.41.040.015</description>
+    <authors>Umit Ceylan</authors>
+    <title>nbim-factset</title>
+    <tags>factset</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-office</id>
+    <version>15330.20230</version>
+    <title>nbim-office</title>
+    <authors>Umit Ceylan</authors>
+    <owners>my company</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Install and configure Microsoft Office</description>
+    <tags>nbim-office</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

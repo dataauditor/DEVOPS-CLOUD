@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>nbim-dotnet-core-hosting3.1</id>
+    <version>3.1.14</version>
+    <description>Microsoft .NET Core 3.1.14 - Windows Server Hosting</description>
+    <authors>Eskil Larsen</authors>
+    <title>nbim-dotnet-core-hosting3.1</title>
+    <tags>nbim-dotnet-core-hosting3.1</tags>
+    <owners>NBIM</owners> <!-- also known as package mantainers -->
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

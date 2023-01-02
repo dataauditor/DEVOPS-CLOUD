@@ -1,0 +1,3 @@
+---
+- s3://nbim-s3-euwe1-software-packages-chocolatey/BMC/ControlMAgentWindows/controlm_setup.zip
+- s3://nbim-s3-euwe1-software-packages-chocolatey/BMC/ControlMAgentWindows/windows_x86_64_9.0.18.zip

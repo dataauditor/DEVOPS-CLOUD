@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>nbim-notepadplusplus</id>
+    <version>8.1.5</version>
+    <description>Notepad++</description>
+    <authors>Atle Boerke</authors>
+    <title>nbim-notepadplusplus</title>
+    <tags>nbim-notepadplusplus</tags>
+    <owners>my company</owners> <!-- also known as package mantainers -->
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

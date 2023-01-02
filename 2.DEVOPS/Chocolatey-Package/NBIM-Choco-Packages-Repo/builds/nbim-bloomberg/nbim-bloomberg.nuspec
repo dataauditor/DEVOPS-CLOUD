@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>nbim-bloomberg</id>
+    <version>105.5.80</version>
+    <description>Install and configure Bloomberg. It needs to be updated every 2-3 months</description>
+    <authors>Umit Ceylan</authors>
+    <title>nbim-bloomberg</title>
+    <tags>nbim-bloomberg</tags>
+    <owners>my company</owners> <!-- also known as package mantainers -->
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

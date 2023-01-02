@@ -1,0 +1,78 @@
+# Optionally downloads files from S3, then runs "choco pack" and saves the output .nupkg as a Pipeline Artifact.
+
+parameters:
+  # Relative path from the root of the GitHub repository to the package's directory.
+  - name: pathToPackageDirectory
+
+  # OPTIONAL Full URI to a directory in S3 with any files that need to be downloaded.
+  # They will be stored in the subdirectory "files" in the package's directory (specified above).
+  # (e.g. s3://nbim-s3-euwe1-software-packages-chocolatey/PUBLISHER/PRODUCT/VERSION/)
+  - name: pathToS3FilesDirectory
+    default: ''
+
+  # The version of the package to use
+  - name: packageVersion
+
+steps:
+  - powershell: |
+      $MyDir    = '${{ parameters.pathToPackageDirectory }}'
+      $files    = gci -Recurse $MyDir | ? basename -like "sources" | ? extension -match "\.y[a]{0,1}ml" 
+      if ($files) {
+        $files | % {
+          $file = $_.Fullname
+          # Make sure the sources are downloaded into the "tools" directory
+          $Downloads = New-Item -Force -ItemType Directory ($_.DirectoryName+"/tools/sources")
+          Get-Content $file | % {
+            $line       = $_ -Replace "^\s*\-\s*", ""
+            $MyObject   = ($line -Replace "^[a-zA-Z3]+://", "") -Replace "/.*$", ""
+            $MyPath     = (($line -Replace "^[a-zA-Z3]+://", "") -Split "/"  )[1..999]   -join "/"
+            $MyFile     = $line -Replace ".*\/", ""
+            if ( $line -Match "^s3://" ) {
+              Write-Output "Found S3" $line
+              $s = "Copy-S3Object -Region eu-west-1 -BucketName "+${MyObject} + " -Key " + ${MyPath} + " -LocalFile " + ($Downloads.FullName+"/"+$MyFile)
+              Invoke-Expression $s
+            } elseif ( $line -Match "^https://" ) {
+              Write-Output "Found HTTPS " $line
+              [Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+              $webClient = New-Object System.Net.WebClient
+              $webClient.DownloadFile($line, ($Downloads.FullName+"/"+$MyFile))
+            } elseif ( $line -Match "^file://" ) {
+              Write-Output "Found FILE" $line
+              Wrote-Host "---------->>>>> THIS FUNCTION IS NOT YET CREATED <<<<<<-----------"
+            }
+          }
+        }
+      } else {
+        Write-Host "No Sources files found. That is probably fine, but just wanted you to know"
+      }
+    name: DownloadSources
+  - powershell: |
+      # Make sure the files directory exists
+      mkdir -p ${{ parameters.pathToPackageDirectory}}/tools/files/
+      
+      # Recursively copy files from S3 to the files directory
+      aws s3 cp ${{ parameters.pathToS3FilesDirectory }} ${{ parameters.pathToPackageDirectory}}/tools/files/ --recursive
+
+      Write-Output "Contents of the ${{ parameters.pathToPackageDirectory}}/tools/files/ directory is now:"
+      Get-ChildItem "${{ parameters.pathToPackageDirectory}}/tools/files/"
+    
+    name: DownloadFilesFromS3
+    condition: ne('${{ parameters.pathToS3FilesDirectory }}', '') # Only run this step if the S3 directory has been set as a parameter
+
+  - powershell: |
+      Invoke-WebRequest -UseBasicParsing -OutFile chocolatey_agent.nupkg.zip http://repo.nbim.no/windows/chocolatey_agent_1.1.0.nupkg
+      Expand-Archive chocolatey_agent.nupkg.zip
+      .\chocolatey_agent.nupkg\tools\chocolateyInstall.ps1
+
+      Write-Output "Using Chocolatey $(choco --version)"
+
+      cd ${{ parameters.pathToPackageDirectory }}
+      Write-Output "Packaging version ${{ parameters.packageVersion }}..."
+      choco pack --version ${{ parameters.packageVersion }} --outputdirectory $(Build.ArtifactStagingDirectory)
+    name: Pack
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      artifactName: NuGetPackage
+      targetPath: $(Build.ArtifactStagingDirectory)
+    name: Save

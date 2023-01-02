@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>nbim-python3.10</id>
+    <version>3.10.8</version>
+    <description>Python 3.10.8</description>
+    <authors>Eskil Uhlving Larsen</authors>
+    <title>nbim-python3.10</title>
+    <tags>nbim-python3.10</tags>
+    <owners>my company</owners> <!-- also known as package mantainers -->
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

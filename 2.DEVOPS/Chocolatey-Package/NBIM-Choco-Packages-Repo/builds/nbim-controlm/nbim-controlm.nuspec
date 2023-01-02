@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-controlm</id>
+    <version>9.0.18</version>
+    <description>Install ControlM Agent for Windows</description>
+    <authors>NaveenG naveen.gujar@nbim.com</authors>
+    <title>nbim-controlm</title>
+    <tags>controlm</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

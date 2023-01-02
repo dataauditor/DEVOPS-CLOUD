@@ -1,0 +1,181 @@
+#
+# AzDo pipeline to deploy Windows Server Base AMIs
+#
+
+parameters:
+  - name: ServiceName
+    default: ''
+  - name: ScriptFile
+    default: ''
+  - name: Version
+    default: ''
+  - name: Description
+    default: ''
+  - name: Dependency
+    type: string
+    default: ''
+  - name: builddir
+    type: string
+    default: 'nbimserviceenginexxyyzz'
+  - name: serviceprefix
+    type: string
+    default: 'nbim-service-'
+  - name: root
+    type: string
+    default: 'nbimserviceengine'
+
+# We have to build a nuspec file 
+# and the file structure in order to generate a choco package
+steps:
+  - powershell: |
+      # Set Default Values.
+
+      # Detect the root path of this repository
+    
+      # Validate scriptfile is valid. Take into account that this template can be called using "checkout" or not
+      if ( -Not ( $ScriptFile = (Get-Item -ErrorAction SilentlyContinue "${{ parameters.ScriptFile }}").FullName ) ) {
+        if ( -Not ( $ScriptFile = (Get-Item -ErrorAction SilentlyContinue "*/${{ parameters.ScriptFile }}").FullName ) ) {
+          Write-Host "##vso[task.logissue type=error]Could not validate ScriptFile [${$ScriptFile}]."
+          $ScriptFile = ''
+          $CompleteFailure = $True
+        }
+      }
+
+      # Determine servicename from parameter or from scriptname
+      if ( "${{ parameters.ServiceName }}".Length -le 0 ) {
+        # No ServiceName Parameter found. Try to determine it from ScriptFile
+        $ServiceName = (($ScriptFile -Replace "\..*$", "") -Replace "^.*\/", "").Trim()
+      } else {
+        $ServiceName = "${{ parameters.ServiceName }}"
+      }
+      $FullServiceName = "nbim-service-${ServiceName}".ToLower().Trim()
+
+      # Validate ServiceName or produce errors
+      if ( $ServiceName -NotMatch "^[a-zA-Z0-9-_]+$" ) {
+        Write-Host "##vso[task.logissue type=error]ServiceName specified but is not compliant [${ServiceName}]."
+        $CompleteFailure = $True        
+      }
+
+      # Validate Version or produce errors
+      $Version = "${{ parameters.Version }}"
+      if ( $Version.Length -le 0 ) {
+        $Version = "$(Build.BuildNumber)"
+      } else {
+        if ( $Version -NotMatch "^[0-9a-z.-_]+$" ) {
+          Write-Host "##vso[task.logissue type=error]Version is not compliant [${Version}]."
+          $CompleteFailure = $True
+        }
+      }
+
+      # Validate Description or produce errors
+      $Description = "${{ parameters.Description }}"
+      if ( $Description.Length -le 0 ) {
+        $Description = "NBIM Service ${ServiceName}, Version ${Version}, Build $(Build.BuildNumber) from repo $(Build.Repository.Name), branch $(Build.SourceBranch)"
+      } else {
+        if ( $Description -NotMatch "^[0-9a-z.-_, ()/]+$" ) {
+          Write-Host "##vso[task.logissue type=error]Description is not compliant [${Description}]."
+          $CompleteFailure = $True
+        }
+      }
+
+      # Check if something has gone wrong
+      if ($CompleteFailure) {
+        Write-Host "##vso[task.logissue type=error]Parameters are not compliant. Check messages and verify documentation."
+        Exit(242)
+      }
+
+      Write-Host "Using following run environment: "
+      Write-Host "ServiceName: ${ServiceName}"
+      Write-Host "Version: ${Version}"
+      Write-Host "Description: ${Description}"
+      Write-Host "ScriptFile: ${ScriptFile}"
+
+      Write-Host "##vso[task.setvariable variable=_myservicename]${ServiceName}"
+      Write-Host "##vso[task.setvariable variable=_myfullservicename]${FullServiceName}"
+      Write-Host "##vso[task.setvariable variable=_myserviceversion]${Version}"
+      Write-Host "##vso[task.setvariable variable=_myservicedescription]${Description}"
+      Write-Host "##vso[task.setvariable variable=_myservicescriptfile]${ScriptFile}"
+    displayName: 'Create runtime variables'
+  - powershell: | 
+      $exelocal = "${{ parameters.root }}/servicescripts/createservice.ps1"
+      if ( -Not ( $ExeGenerator = (Get-Item -ErrorAction SilentlyContinue "${exelocal}").FullName ) ) {
+        if ( -Not ( $ExeGenerator = (Get-Item -ErrorAction SilentlyContinue "*/${exelocal}").FullName ) ) {
+          Write-Host "##vso[task.logissue type=error]Could not detect ExeGenerator [${exelocal}]."
+          $ScriptFile = ''
+          exit(141)
+        }
+      }
+      Write-Host "Found ExeGenerator [${ExeGenerator}]"
+      . "${ExeGenerator}" -FullServiceName $(_myfullservicename) -ServiceName $(_myservicename) 
+    displayName: 'Create service .exe file'
+  - powershell: |
+      $files            = "${{ parameters.builddir }}/$(_myfullservicename)/files"
+      $tools            = "${{ parameters.builddir }}/$(_myfullservicename)/tools"
+      
+      Write-Host " ---- Creating file structure ----"
+      New-Item -Verbose -ItemType Directory "${files}"
+      New-Item -Verbose -ItemType Directory "${tools}"
+      Write-Host " ---- Populate file structure ----"
+      Copy-Item -Verbose        "$(_myservicename).exe" "${files}/$(_myfullservicename).exe"
+      Write-Host "Tools: "
+      Copy-Item -Verbose        "$(Build.Repository.LocalPath)/*/${{ parameters.root }}/chocotools/*.ps1" "${tools}/"
+      Write-Host "ScriptFile: "
+      Copy-Item -Verbose        "$(_myservicescriptfile)" "${files}/$(_myfullservicename).ps1"
+      Write-Host "Servicewrapper: "
+      Copy-Item -Verbose        "$(Build.Repository.LocalPath)/*/${{ parameters.root }}/servicescripts/servicewrapper.ps1" "${files}/$(_myfullservicename)-wrapper.ps1"
+      Write-Host "Results:"
+      Get-ChildItem -Recurse "${{ parameters.builddir }}" | Select FullName
+    displayName: 'Populating nuspec file structure'
+  - powershell: |
+      # Create some lowercase versions of the servername for standardised formatting of services
+      $lcservice        = "$(_myservicename)".ToLower().Trim()
+
+      if ( "${{ parameters.Dependency }}".length -gt 0 ) {
+        if ( "${{ parameters.Dependency }}" -Match "^[a-zA-Z0-9-_]+$" ) {
+          # $DependencyString = "<dependencies><dependency id=`"${{ parameters.Dependency }}`" version=`"1.0`" /></dependencies>"
+          $DependencyString = "<dependencies><dependency id=`"${{ parameters.Dependency }}`" /></dependencies>"
+        } else {
+          $DependencyString = ''
+          Write-Host "##vso[task.logissue type=warning]Dependency String is invalid. Will still build."
+        }
+      }
+
+      # $GitUser = (git log -1 --pretty=format:'%an')
+      $GitUser = "N/A"
+      $TargetXmlFile = "${{ parameters.builddir }}/$(_myfullservicename)/$(_myfullservicename).nuspec"
+      "<?xml version=`"1.0`" encoding=`"utf-8`"?>
+      <package xmlns=`"http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd`">
+        <metadata>
+          <id>$(_myfullservicename)</id>
+          <version>$(_myserviceversion)</version>
+          <description>$(_myservicedescription)</description>
+          <authors>${GitUser}</authors>
+          <title>$(_myfullservicename)</title>
+          <tags>nbim-service</tags>
+          ${DependencyString}
+        </metadata>
+        <files>
+          <file src=`"tools\**`" target=`"tools`" />
+          <file src=`"files\**`" target=`"files`" />
+        </files>
+      </package>" | Out-File -Verbose -Encoding UTF8 -FilePath "${TargetXmlFile}"
+      Get-Content "${TargetXmlFile}"
+      echo " ------- VERIFYING XML GENERATION -----"
+      Try {
+        $xml = [xml](Get-Content "${TargetXmlFile}")
+      } Catch {
+        Write-Error $Error[0]
+      }
+    displayName: 'Generate the .nuspec file'
+  - powershell: |
+      Get-ChildItem -Recurse -ErrorAction Silentlycontinue "$(Build.Repository.LocalPath)"
+    displayName: 'Show content of package'
+  - template: read-nuspec.v1.yaml
+    parameters:
+      pathToNuspecFile: "${{ parameters.builddir }}/$(_myfullservicename)/$(_myfullservicename).nuspec"
+  - template: pack.v2.yaml
+    parameters:
+      pathToPackageDirectory: "${{ parameters.builddir }}/$(_myfullservicename)"
+      packageVersion: $(_myserviceversion)
+  # Publish to Azure Artifacts
+  - template: publish-to-azure-artifacts.v2.yaml

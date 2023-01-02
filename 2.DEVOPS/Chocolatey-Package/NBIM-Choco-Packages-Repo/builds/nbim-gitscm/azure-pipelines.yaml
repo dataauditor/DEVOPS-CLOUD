@@ -1,0 +1,32 @@
+# Trigger for commits to any branch
+trigger:
+  paths:
+    include:
+      - builds/nbim-gitscm/*
+
+pr: none
+
+pool:
+  name: '(AWS)_(nbim-software-packages)'
+  demands:
+    - agent.os -equals Windows_NT
+
+# Setting default artifact store to the dev store. Only when pushing to 'master' will the production store be updated
+variables:
+  pckname: 'nbim-gitscm'
+  todays_date: $[format('{0:yyyyMMdd}', pipeline.startTime)] # Today's date in the format yyyyMMdd
+  todays_build_count: $[counter(format('{0:yyyyMMdd}', pipeline.startTime), 1)] # The number of runs today.  Resets to 1 each day
+
+steps:
+  # This template runs a step that gets variables from the .nuspec file "$(ReadNuspec.ID)", "$(ReadNuspec.NAME)", "$(ReadNuspec.VERSION)"
+  - template: ../../.pipeline-templates/read-nuspec.v1.yaml
+    parameters:
+      pathToNuspecFile: builds/$(pckname)/$(pckname).nuspec
+      
+  - template: ../../.pipeline-templates/pack.v2.yaml
+    parameters:
+      pathToPackageDirectory: builds/$(pckname)
+      packageVersion: $(ReadNuspec.VERSION).$(todays_date)$(todays_build_count)
+
+  # Publish to Azure Artifacts
+  - template: ../../.pipeline-templates/publish-to-azure-artifacts.v2.yaml

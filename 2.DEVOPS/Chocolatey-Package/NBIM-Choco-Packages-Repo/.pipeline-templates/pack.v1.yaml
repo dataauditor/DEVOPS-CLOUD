@@ -1,0 +1,43 @@
+# Optionally downloads files from S3, then runs "choco pack" and saves the output .nupkg as a Pipeline Artifact.
+
+parameters:
+  # Relative path from the root of the GitHub repository to the package's directory.
+  - name: pathToPackageDirectory
+
+  # OPTIONAL Full URI to a directory in S3 with any files that need to be downloaded.
+  # They will be stored in the subdirectory "files" in the package's directory (specified above).
+  # (e.g. s3://nbim-s3-euwe1-software-packages-chocolatey/PUBLISHER/PRODUCT/VERSION/)
+  - name: pathToS3FilesDirectory
+    default: ''
+
+  # The version of the package to use
+  - name: packageVersion
+
+steps:
+  - powershell: |
+      # Make sure the files directory exists
+      mkdir -p ${{ parameters.pathToPackageDirectory}}/tools/files/
+      
+      # Recursively copy files from S3 to the files directory
+      aws s3 cp ${{ parameters.pathToS3FilesDirectory }} ${{ parameters.pathToPackageDirectory}}/tools/files/ --recursive
+
+      Write-Output "Contents of the ${{ parameters.pathToPackageDirectory}}/tools/files/ directory is now:"
+      Get-ChildItem "${{ parameters.pathToPackageDirectory}}/tools/files/"
+    
+    name: DownloadFilesFromS3
+    condition: ne('${{ parameters.pathToS3FilesDirectory }}', '') # Only run this step if the S3 directory has been set as a parameter
+
+  - powershell: |
+      .chocolatey_offline_install/install.ps1
+      Write-Output "Using Chocolatey $(choco --version)"
+
+      cd ${{ parameters.pathToPackageDirectory}}
+      Write-Output "Packaging version ${{ parameters.packageVersion }}..."
+      choco pack --version ${{ parameters.packageVersion }} --outputdirectory $(Build.ArtifactStagingDirectory)
+    name: Pack
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      artifactName: NuGetPackage
+      targetPath: $(Build.ArtifactStagingDirectory)
+    name: Save

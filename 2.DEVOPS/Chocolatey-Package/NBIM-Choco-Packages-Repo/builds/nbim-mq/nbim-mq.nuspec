@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-mq</id>
+    <version>9.2.2</version>
+    <description>Installs the MQ Client on Windows.</description>
+    <authors>NaveenG, naveen.gujar@nbim.no</authors>
+    <title>nbim-mq</title>
+    <tags>mq</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

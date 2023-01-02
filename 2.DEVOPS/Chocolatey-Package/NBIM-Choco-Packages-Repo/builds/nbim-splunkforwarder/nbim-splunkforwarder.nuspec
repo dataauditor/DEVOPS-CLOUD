@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-splunkforwarder</id>
+    <version>8.0.6</version>
+    <description>Install and configure splunk universal forwarder with NBIM configuration</description>
+    <authors>Hakon the magnificent</authors>
+    <title>nbim-splunkforwarder</title>
+    <tags>splunk universalforwarder</tags>
+    <dependencies>
+      <dependency id="nbim-eventlog" version="0.1" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

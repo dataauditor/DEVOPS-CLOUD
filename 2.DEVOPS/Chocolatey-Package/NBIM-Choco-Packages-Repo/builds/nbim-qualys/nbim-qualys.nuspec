@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>nbim-qualys</id>
+    <version>2.1.1</version>
+    <description>Install and configure with qualys</description>
+    <authors>Wonderwoman rrg@nbim.no</authors>
+    <title>nbim-qualys</title>
+    <tags>Qualys Cloud Agent</tags>
+    <dependencies>
+      <dependency id="nbim-eventlog" version="0.1" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

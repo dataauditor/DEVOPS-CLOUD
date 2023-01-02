@@ -1,0 +1,220 @@
+GENEL:
+https://chocolatey.org
+  > Chocolatey/Chocolatey CLI (choco)/Commands/Install - attributeleri aciklar.
+https://www.youtube.com/watch?v=fLe5Dkds7A0
+C:\ProgramData\chocolatey\.chocolatey altinda tum yuklu packageslerimiz olur.
+PowerShell - admin olarak:
+choco
+  - yuklendigini gosterir.
+choco -h
+  - "-h": help gibi atributeleri gosterir.
+choco install vlc
+  - vlc package'ini yukleriz.
+choco install paint.net
+  - paint.net'i install ederiz.
+choco uninstall paint.net
+  - paint.net'i uninstall ederiz.
+choco upgrade vlc
+  - vlc'yi upgrade yapar.
+choco upgrade chocolatey
+  - kendisini upgrade eder. Son versiyonu indirir.
+choco upgrade all -y
+  - Yuklu olan tum packageleri upgrade eder.
+choco install choco upgrade-all-at-startup
+  - Her acildiginda yuklu tum paketleri otomatik upgrade eden bir schedular task.
+
+
+
+
+1.SUREC:
+> choco new ugur 
+  > nuspec.yaml, source.yaml, chocolateyinstall.ps1 ve pipeline konfigure edilir.
+  > choco pack .\example-package\example-package.nuspec
+    - Pipeline ile uzak repoya yuklenecegi icin burada kullanilmaz.
+    - Localde kurulmus olur package.
+  > choco install .\example.0.0.1.nupkg
+    - Pipeline ile uzak repoya yuklenecegi icin burada kullanilmaz.
+    - Yuklemeyi saglar.
+  > ilgili S3 bucket ve Repo'ya dosyalar kaydedilir.
+
+
+
+
+2.Package Hazirlama:
+> PowerShell 
+    - Administrator olarak.
+choco new notepadplusplus
+cd notepadplusplus
+vim notepadplusplus.nuspec
+----------------------------------------------------------------
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>notepadplusplus</id>
+    <title>Notepad++ (Install)</title>
+    <version>7.0</version>
+    <authors>Don Ho</authors>
+    <owners>my company</owners> <!-- also known as package mantainers -->
+    <description>Notepad++ is a free source code editor.</description>
+ </metadata>
+<files>
+  <file src="tools\**" target="tools" />
+</files>
+</package>
+----------------------------------------------------------------
+  - id, title, version, authors, owners degistirilir.
+  - Yuklenen applikasyonun versiyonu yazilir.
+vim /tools/chocolateyInstall.ps1
+----------------------------------------------------------------
+$ErrorActionPreference = 'Stop';
+ 
+$packageName= 'notepadplusplus'
+$toolsDir   = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
+$fileLocation = Join-Path $toolsDir 'npp.7.Installer.x64.exe'
+ 
+$packageArgs = @{
+  packageName   = $packageName
+  fileType      = 'exe'
+  file         = $fileLocation
+ 
+  silentArgs    = "/S"
+  validExitCodes= @(0)
+----------------------------------------------------------------
+  - Packagename yazilir...
+choco pack
+  - To build the choco package, navigate to the notepadplusplus folder and enter.
+choco install .\notepadplusplus.7.0.nupkg
+  - install ediyoruz.
+
+
+
+
+
+2.Chocolatey Programi Install:
+Browser:
+> https://chocolatey.org
+  > Install
+  > 1.Choose How to Install Chocolatey: Individual
+  > 2.Now run the following command: > Set-ExecutionPolicy... - copy
+ 
+> PowerShell - admin olarak:
+Set-ExecutionPolicy... - past
+  - Yukarki adresten kopyalanir.
+Exit
+  - Restart yapilir.
+
+
+
+3.Package Olusturma:
+> PowerShell - Run as administrator
+Set-ExecutionPolicy Unrestricted -Force -Scope Process
+  - The command instructs PowerShell to let you run scripts for this session. 
+iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex
+  - This command downloads the install.ps1 file from the website and then executes the script that installs chocolatey.
+  - choco --version
+choco search ChocolateyGUI
+  - This command will list out packages that match search criteria. We want to install ChocolateyGUI, to which I affectionately call GUIChocolatey (gooey chocolatey).
+choco install ChocolateyGUI -y
+  - This command tells Chocolatey to install the package. 
+choco list -l
+  - This command lists packages. By default, it will list everything in the chocolate store. 
+choco uninstall ChocolateyGUI -y
+
+
+
+
+
+
+4.Task Scheduler Olusturma:
+- "choco install choco upgrade-all-at-startup" komutunu Task Scheduler ile de ayarlayabiliriz.
+> Actions: Create Basic Task
+  > Name: choco upgrade
+  > Next
+  > When I log on
+    - Daily, Monthly .. vb de secilebilir.
+  > Next
+  > What action do you want the task to perform?: Start a program
+  > Next
+  > Program/Script: choco upgrade all -y
+  > Next
+  > Yes
+  > Finish
+
+
+4.Task Scheduler Manual Baslatma:
+- Alternatif.
+> choco upgrade all -y
+  > RC
+  > run
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+mkdir c:\Jaws
+cd c:\Jaws
+mkdir tools
+nuget spec
+  - Package.nuspec file is created.
+exit
+
+> Explorer
+  > C:\Packages\Package.nuspec  Notepad2 ile ac.
+-------------------------------------------------------------------
+    <id>Jaws</id>
+
+-------------------------------------------------------------------
+
+
+
+
+
+
+
+choco new MyTest
+  - Ilgili tree olusur.
+cd MyTest
+  > chocolateyinstall.ps1 - cek ve asagidaki Script penceresine birak.
+  > Windows PowerShell ISE > Script
+      - VSC gibi file'lari degistirmek/yazmak icin kullanilir.
+-----------------------------------------------------------------------    
+13 $fileLocation = Join-Path $toolsDir 'NAME_OFEMBEDDED_INSTALLER_FILE'
+25 #url = $url
+26 #url64bit = $url64
+41 #silentArgs = "/qn /norestart /l*v .........
+45 silentArgs = '/S'  # NSIS 
+59 #Install-ChocolateyPackage @packageArgs # https://chocolatey.org/docs...
+63 Install-ChocolateyInstallPackage @packageArgs # https://chocolatey.org/docs/...
+-----------------------------------------------------------------------
+
+
+
+
+
+
+> Open Windows PowerShell with admin role.
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+  - Install chocolatey package manager on Windows server. Sonra PowerShell kapanip acilmali.
+choco install apache-httpd --params '"/installLocation:C:\HTTPD /port:443"
+  - "choco install apache-httpd": Install Apache server. 8080 portu default kurulur.
+  - Default olarak C:'ye kurulur. Burada degisti.
+  > Defender'a public/private icin izin verilir.
+  > 127.0.0.1:443
+    - kontrol edilir.
+  > C:\Users\Test\AppData\Apache24\htdocs
+    - Buraya yayinlamak istedigimiz dosyalari ekleriz.
+
+

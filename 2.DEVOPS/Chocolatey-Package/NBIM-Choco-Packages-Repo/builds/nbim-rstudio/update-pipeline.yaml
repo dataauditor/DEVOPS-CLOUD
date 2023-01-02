@@ -1,0 +1,25 @@
+trigger:
+  paths:
+    include:
+      - builds/nbim-rstudio/*
+
+pr: none
+
+pool:
+  name: '(AWS)_(nbim-software-packages)'
+  demands:
+    - agent.os -equals Windows_NT
+
+# Setting default artifact store to the dev store. Only when pushing to 'master' will the production store be updated
+# variables:
+#   pckname: 'nbim-rstudio'
+#   todays_date: $[format('{0:yyyyMMdd}', pipeline.startTime)] # Today's date in the format yyyyMMdd
+#   todays_build_count: $[counter(format('{0:yyyyMMdd}', pipeline.startTime), 1)] # The number of runs today.  Resets to 1 each day
+
+steps:     
+  - task: PowerShell@2
+    displayName: 'Run Powershell Script for Update'
+    env:
+      FSXSERVICEPASSWORD: $(FSXSERVICEPASSWORD)
+    inputs:
+      filePath: 'builds\nbim-rstudio\update.ps1' 

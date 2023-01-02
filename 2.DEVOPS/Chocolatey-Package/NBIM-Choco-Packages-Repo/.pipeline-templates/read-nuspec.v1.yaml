@@ -1,0 +1,27 @@
+# Parses the details of the package from its .nuspec file.
+
+parameters:
+  # Path to the .nuspec file to get the version from.
+  - name: pathToNuspecFile
+
+steps:
+  - powershell: |
+      $xml = [xml](Get-Content ${{ parameters.pathToNuspecFile }})
+      $id = $xml.package.metadata.id
+      $title = $xml.package.metadata.title
+      $version = $xml.package.metadata.version
+
+      
+      if($id -AND $title -AND $version){
+        Write-Output "Detected package ID as '$id'"
+        Write-Output "Detected package title as '$title'"  
+        Write-Output "Detected package version as '$version'"
+
+        echo "##vso[task.setvariable variable=ID;isOutput=true]$id"
+        echo "##vso[task.setvariable variable=TITLE;isOutput=true]$title"
+        echo "##vso[task.setvariable variable=VERSION;isOutput=true]$version"
+      }
+      else{
+        exit 1
+      }
+    name: ReadNuspec
