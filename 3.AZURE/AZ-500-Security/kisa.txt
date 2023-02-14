@@ -1,0 +1,110 @@
+Bastion Host:
+- AzureBastionSubnet gerekir.
+- Tier: Basic, Standard: autoscaling (ihtiyaca gore bastion host sayisini artirir.
+
+
+Once the application security group is attached to a network interface , it can be assigned to any network interface assigned to virtual machines within the same virtual network.
+
+
+Update Management: VM'in running olmasi gerek. Windows ve Linux icin calisir.
+
+
+
+
+
+
+
+
+Microsoft Antimalware for Azure VM - 134
+
+
+
+Containers:  - 140-147
+
+
+
+Putty  - 140
+
+
+
+WinSCP:  - 141
+- PuTTY gibi ama dosyalari da gorebiliyoruz.  
+- Hem local hem de remotun dosyalarini karsilikli tasiyabiliyoruz.
+
+
+
+Blueprint:
+- Management Group veya Subscription seviyesinde tanimlanabilir.
+- RG seviyesinde tanimlanmaz.
+
+
+
+Storage Explorer:
+Access Key ile tum Storage account'a ulasilabilir.
+Change access level: Container seviyesinde tanimlanir.
+SAS (Shared access signature): Objeye belirli sure icin ulasim imkani tanir. Blob SAS URL ile ulasilir objeye veya Storage Explorerdan.
+SAS: Blob ve Account seviyesinde paylasilabilir. Storage Account > Shared access signature
+Account seviyesinde SAS verirken istenen serviceleri ve permissionslar secilebilir. 
+Account seviyesinde SAS verirsek yalniz Storage Explorer ile calisisir. Browserden blob seviyesindeki SAS calisisr.
+Storage Explorer > Add an account 
+RBAC ile giris en guvenilir yol.
+Encryption yalniz Blob ve File'lar icin gecerlidir.
+
+
+
+1.Your company has deployed a system onto their Azure environment. The system consists of an application hosted via the Azure Web App service. The application connects to a database hosted on the Azure SQL database service. You have to implement the following requirement
+1) Ensure that the data within a column named SSN within a table is encrypted. Only the application should be allowed to decrypt the data.
+2) The application must make use of a managed identity to get the keys required for the decryption process.
+C: Always encrypted using Key vault
+
+
+
+2.Your company has deployed a system onto their Azure environment. The system consists of an application hosted via the Azure Web App service. The application connects to a database hosted on the Azure SQL database service. You have to implement the following requirement
+1) Ensure that the data within a column named SSN within a table is encrypted. Only the application should be allowed to decrypt the data.
+2) The application must make use of a managed identity to get the keys required for the decryption process.
+Which of the following needs to be configured to ensure that the application can retrieve the keys?
+C: Configure an access policy in the Azure Key Vault.
+
+
+
+3. Can Security Admin role delegate access to another user for appvault? 
+C: No (It does not provide any sort of permissions over the key vault.)
+
+
+
+4.Can User Access Administrator role delegate access to another user for appvault? 
+C: Yes
+
+
+5.Restore The Secret Backup to Another Vault in different region same geography and same subscription.
+(Baska Geography veya Subs'a restore olmaz.)
+C: Yes 
+
+
+6.Your company has an Azure AD tenant and an Azure subscription. They have an Azure SQL database defined as part of their Azure subscription. The Azure AD tenant is also synced to the company’s on-premises Active Directory setup via Azure AD Connect. The company wants a set of users to be able to log onto the Azure SQL database with the use of their on-premises Active Directory credentials. You have to ensure to reduce the authentication prompts in the process. Which of the following method should you use from SQL Server Management Studio for this requirement?
+C: Active Directory - Inyegrated
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

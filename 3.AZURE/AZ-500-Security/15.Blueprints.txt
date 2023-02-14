@@ -1,0 +1,59 @@
+Bluprints
+- ARM templates, Azure policies, RG ve RBAC yuklenebilir.
+- Ortak RG, policies, RBAC olabilir. 
+- Blueprint ile ortak RG, policies, RBAC'lari subscriptionlaraka deploy edebiliriz.
+- Tenant, Management Group veya Subscription seviyesinde tanimlanabilir.
+- Management group'a tanimlaninca altindaki istenen Subscriptiona assign edilir.
+- RG seviyesinde tanimlanmaz.
+- En azindan contributor rolu gerekiyor kurulum icin.
+
+
+Surec:
+> Definition
+  > Publish
+  > Assign
+
+
+1.Define Blueprint:
+> Blueprints
+  > Blueprint definitions
+    > Scope: mg1
+    > + Create blueprint
+      > Start with a blank blueprint
+        > Blueprint-name: app-print | Definition location: mg1
+        > + Add artifact
+            - Policy assignment, Role assignment, ARM template, RG
+          > Resource Group
+            > Artifact display name: rg-artifact
+            > RG: app-rg | This value should be specified when the bluerint is assigned - uncheck
+            > Location: north europe | This value should be specified when the bluerint is assigned - uncheck
+        > + Add artifact
+          > Role assignment | Role: Contributor
+            > Add user, app, or group: appusrA | This value should be specified when the bluerint is assigned - uncheck
+            > Add
+        > Save draft
+        
+
+
+2.Publish Blueprint:
+> Blueprints
+  > Blueprint definitions
+    > app-print
+    > Publish blueprint
+      > Version: version1
+      > Publish
+
+
+
+3.Assign Blueprint:
+- MG seviysesinde kurdugumuz icin istedigimiz subs'a massign ederiz.
+> Blueprints
+  > Blueprint definitions
+    > app-print
+    > ... (3 nokta) 
+    > Assign blueprint
+      > Subscription: stagingsub | Assignment name: Assignment-app-print | Managed identity: System assigned
+      > Assign
+
+
+    

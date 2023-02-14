@@ -1,0 +1,215 @@
+1.Azure Container Registry Service (ACR):
+- myapp isimli image'i appregistry2030.appregistry2030.azurecr.io repository'sine push ediyoruz.
+a.ACR Olusturma:
+> Container Registry > Create > Name: appregistry2030
+
+
+b.Azure CLI Kurulur: 
+sudo apt-get update
+sudo apt-get install ca-certificates curl apt-transport-https lsb-release gnupg
+sudo mkdir -p /etc/apt/keyrings
+curl -sLS https://packages.microsoft.com/keys/microsoft.asc |
+    gpg --dearmor |
+    sudo tee /etc/apt/keyrings/microsoft.gpg > /dev/null
+sudo chmod go+r /etc/apt/keyrings/microsoft.gpg
+AZ_REPO=$(lsb_release -cs)
+echo "deb [arch=`dpkg --print-architecture` signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" |
+    sudo tee /etc/apt/sources.list.d/azure-cli.list
+sudo apt-get update
+sudo apt-get install azure-cli
+
+
+c.CLI ile Azure Account'a Login Olunur.
+sudo az login
+  - www.microsoft.com/devicelogin'yi acip verilen kodu girmemizi ister.
+
+browser:
+www.microsoft.com/devicelogin
+  - bu sayfaya girilir ve verilen "DQYQX4CGW" kodu girilir.
+  - hesaba login olunmus olunur.
+
+
+d.ACR Registry'e Login Olunur:
+sudo az acr login --name appregistry2030
+  > Image Registry'e push edilir.
+
+
+e.Image'a Repository'nin Ismi Tag Olarak Verilir:
+sudo docker tag myapp appregistry2030.azurecr.io/myapp
+
+
+f.Image Puh Edilir:
+sudo docker push appregistry2030.azurecr.io/myapp
+  - appregistry2030 Repository'si altinda myapp olarak gorulur.
+
+
+
+
+2.AZURE CONTAINER INSTANCE:
+- Fargate gibidir.
+- ACR'den buraya deploy ederiz image'i.
+
+
+a.ACR
+> appregistry2030
+  > Access keys
+    > Admin user - enable
+
+
+b.Container Instance Olusturma:
+> Container Instances | Create | Name: app-instance
+  > Image source: Azure Container Registry
+      - Docker Hub veya Azure'un Quickstart image'leri de secilebilir.
+      - Admin degilsen goremezsin hata verir.
+    > Registry: appregistry2030 | Image: myapp | Image tag: latest
+    > Networking: Public | Ports: 80 | Restart policy: On failure
+  > Create
+
+
+c.Container Instance'a Baglanma:
+> app-instance
+  > Public IP address: 14.23.1.234 - copy
+    - ACR'den image'i alarak container olusturduk.  
+
+Browser:
+14.23.1.234
+  - Containerin icerigine baglandik.
+
+
+
+
+!!!!!
+3.AZURE CONTAINER GROUPS:
+- Birden cok containerlerin ayni host'ta farkli fonksiyonlar icin kullanilmasi. 
+- Biri frontend, biri db, biri backend vb.
+- Resource Manager template veya Yaml file eszamanli olarak ayni host'da calistirilabilirler.
+
+a.Yaml File:
+vim deployment.yaml
+-------------------------------------------------------------------------
+apiVersion: 2018-10-01
+location: eastus
+name: container
+properties: 
+  containers:
+  - name nginx-demo
+    properties: 
+      image: nginx
+      resources: 
+        requests:
+          cpu: 1
+          memoryInGb: 1.5
+      ports: 
+      - port: 80
+  osType: Linux
+  ipAddress: 
+    type: Public
+    ports:
+    - protocols: tcp
+      port: 80
+tags: null
+type: Microsoft.ContainerInstance/containerGroups
+-------------------------------------------------------------------------
+az container create --resource-group cont-grp --file deployment.yaml 
+
+
+b.Browserden App'i Acma:
+> All resources
+  > container
+    > Public IP address
+
+Browser:
+<Public IP Address>
+  - Ilgili app'a ulasilir.
+
+
+
+
+
+
+4.SERVICE PRINCIPLE ile CONTAINER INSTANCE'tan ACR'ye BAGLANMA:
+- RBAC ile Cintainer Instance'in ACR'ye ulasimi.
+- "Azure Container Registry roles and permissions": docs microsoftta hangi rolun hangi haklari var ona gore rbac atarsin.
+
+a.ACR'de Admin user Disable Edilir:
+> appregistry2030
+  > Access keys
+    > Admin user - Disabled
+
+
+b.RBAC Tanimlayarak Container Istance Olusturma:
+az ad sp create-for-rbac --name registryapp --scopes $(az acr show --name appregistry2030 --query id --output tsv) --role acrpull
+    - ACRPULL RBAC rolu icin service principal olusturuyoruz.
+  > appId: "as45cdd-343fd-3f45-43213-2423544tr54" - copy
+  > password: "DFewFR645FT&%G65"  - copy
+$appID: "as45cdd-343fd-3f45-43213-2423544tr54" - past
+$appPassword: "DFewFR645FT&%G65" - past
+  - Iki degisken tanimlanir.
+az container create --name app-instance2000 --resource-group container-grp --image appregistry200390.azurecr.io/myapp:latest --registry-login-server appregistry200390.azurecr.io --registry-username $appID --registry-password $appPassword --ip-address Public
+  - Container Instance olusturuyoruz.
+
+
+c.Container Instance'a Baglanma:
+> app-instance
+  > Public IP address: 14.23.1.234 - copy
+    - ACR'den image'i alarak container olusturduk.  
+
+Browser:
+14.23.1.234
+  - Containerin icerigine baglandik.
+
+
+
+
+5.CONTENT TRUST in ACR:
+- Registry'deki Kayitli Image'lerin signed edilerek guvenli oldugunu belirtilmesi.
+- Premium service tier ile kullanilir.
+- Oncesinde image'ler signed edilmeli.
+
+a.ACR Registry'nin Premium SKU Konfigurasyonu:
+> appregistry2030 
+  > Content trust
+    > Upgrade registry to Premium SKU to enable Content trust policy
+      > Admin user: Disabled | SKU: Premium
+      > Save
+    > Status: Enabled
+    > Save
+
+
+
+
+
+6.Container Instance ile Microsoft Defender'in Kullanilmasi:
+- ACR'yi scan eder. Image'deki applicationu, librariesi ve OS'yi scan eder.
+- Image'in security standardlarini karsilama durumunu ve vulnarabilitiesi gosterir ve tavsiyelerde bulunur.
+- Yeni push edilen imageleri inceler.
+
+a.Defender'in Kurulmasi:
+> Microsoft Defender for Cloud
+  > Environment Settings
+  > Azure | Tenantim | Subscriptionum 
+    > Defender plans 
+    > Enable all Microsoft Defender for Cloud plans
+      > Containers  - On | Diger hepsi - Off
+      > Save
+
+b.Image Push Ediyoruz:
+sudo docker push appregistry2030.azurecr.io/myapp2
+
+c.Security Incelemesi Sonuclari:
+> appregistry2030 
+  > Security
+  > Description: 
+    - Burada iyilestirme tavsiyelerini goruruz.
+  > View additional recommendations in Defender for Cloud
+    - Asil burada Defender'in tavsiyelerini goruruz.
+
+
+
+
+
+7.Secure Variables with Container:
+- docs.microsoft.com/en-us/azure/container-instances/container-instances-environment-variables
+- environmentVariables'i expose etmez ve secure yapabiliriz.
+- secureValue: degeri gostermez.
+

@@ -1,0 +1,137 @@
+Hub and Spoke Model:
+- Hub Vnet: AzureFirewallSubnet, AzureBastionSubnet ve GatewaySubnet olur.
+- Spoke Vnet: VM'ler
+- Arada peering olur.
+- Spoke vnette kurulan Route table spoke trafigini firewall'a yonlendirir.
+- Site-to-site VPN kurulacaksa Virtual network propagation kapatilir.
+- GatewaySubnet'te de ayri bir route table kurulur. Points to the firewall ip add the next hop to the spoke networks.
+- Oncesinde Vnet'ler ve VM'leri kurduk.
+
+
+1.Hub Vnet'in Konfigurasyonu:
+> Bastion Host: kurulur ve Firewal enable: AzureFirewall edilip firewall'u da birlikte kurar.  
+  > GatewaySubnet: Hub Vnet > + GatewaySubnet 
+  > Virtual network gateway: Create > Name: appgateway > Virtual network: hubnetwork > Public IP: gateway-IP
+  > Local network gateway: Create > Name: localgateway | Endpoint: IP address | IP address: 56.3.2.11 | Address space: 10.2.0.0/16
+    - IP address: On-prem public IP addresi
+    - Address space: On-prem Vnet addresi
+  > appgateway > Connections > + Add > Name: connection | Connection type: Site-to-site | Local network gateway: localgateway | Shared key: abc123 
+
+
+
+2.On-prem'den Site to Site Baglanti Kurulmasi:
+> RDP
+  > Local Servers > ... > Routing and Remote Access > companyvm > Network Interfaces | RC | New Demand-dial Interface 
+  > Interface name: Azure Router > Connect using virtual private networking (VPN) - check | IKEv2 - check 
+  > Host name or IP address: 54.34.2.13 > Route IP packets on this interface - check > Destination: Add 
+    > Destination: 10.3.0.0 | Network Mask: 255.255.0.0 | Metric: 10
+  > Add 
+    > Destination: 10.4.0.0 | Network Mask: 255.255.0.0 | Metric: 10
+      - Host name or IP address: appgateway'in Public IP Addresi.
+      - Destination: Hub Vnet'in ve Spoke Vnet araliklari 10.3.0.0/16 ve 10.4.0.0/16 girilir.
+  > Finish
+
+> RDP
+  > Local Servers > ... > Routing and Remote Access > companyvm > Network Interfaces 
+  > Azure Router | RC | Properties | Security | Use preshared key for authentication: abc123 | OK
+  > Azure Router | RC | Connect
+
+
+
+3.hubnetwork ve spoke-network Arasina Peering Kurulmasi:
+> spoke-network
+  > Peerings | + add
+    > Peering link name: spoke-hub | Virtual network gateway or Route Server: Use the remote network's gateway or Route Server 
+    | Peering link name: hub-spoke | Virtual network: hubnetwork | Virtual network gateway or Route Server: Use the remote network's gateway or Route Server 
+    > Add
+
+
+
+4.Spokevm'in Konfigurasyonu:
+> spokevm > Connect | Bastion | Use Bastion
+  > User name: demousr | Password: 123 | Connect
+    > Add roles and features
+        - spokevm'e bagliyiz suan.
+      > Web Server  - check | Add features | Install
+
+> spokevm | Private IP address: 10.4.0.4  - copy
+
+> onpremvm | Browser
+10.4.0.4
+  - IIS'in homepage'ini gorebiliyorum. On premden spokevm'e ulastim.
+
+
+
+5.Firewall'un Eklenmesi:
+- Yukardaki sistem'de on-prem ile spoke-vnetteki spokevm VPN gateway uzerinden gorusebiliyor.
+- Simdi ilave olarak gelen giden trafigi Firewall'a aktaracagiz.
+- Iki adet User defined routes tanimlamak gerek. Biri spoke-vnette digeri hub-vnetteki gateway subnette olacak.
+
+a.Gateway'de Gelen Trafigi Kontrol Eden Route Table:
+> Route Table | Create
+  > ... | Name: companyroute
+  > Create
+
+> companyroute
+  > Routes | + Add
+    > Route name: To-Spoke
+    > Address prefix: 10.4.0.0/16
+      - Spoke-Vnet adresli trafik.
+    > Next hop type: Virtual appliance
+    > Next hop address: 10.3.3.4  
+      - Firewall'un private address'i.
+    > OK
+  > Subnets | + Associate
+    > Virtual network: hubnetwork | Subnet: GatewaySubnet
+    > OK
+
+
+b.spoke-network'ten Cikan Trafigi Kontrol Eden Route Table:
+> Route Table | Create
+  > ... | Name: SpokeRoute | Propagate gateway routes: No
+  > Create
+
+> SpokeRoute
+  > Routes | + Add
+    > Route name: To-CompanyVM
+    > Address prefix: 0.0.0.0/0
+      - Spoke-Vnet adresli trafik.
+    > Next hop type: Virtual appliance
+    > Next hop address: 10.3.3.4  
+    > OK
+  > Subnets | + Associate
+    > Virtual network: spoke-network | Subnet: SubnetA
+    > OK
+      - Suan trafik iki tarafli olarak Firewall'a yonlendiriliyor.
+      - Simfi Firewall'a 2 adet Rule kurulmali.
+
+
+c.Firewall Kurulumu:
+- Firewall yerine Firewall Manager kullanilirsa policy'i ilgili Vnet'e associate etmek gerek.
+- Firewall Manager kullanilirsa ilgili firewall policy birden fazla vnet secilerek associate edilebilir.
+> AzureFirewall
+  > Firewall Manager | Visit Azure Firewall Manager to configure and manage this firewall
+  > Azure Firewall Policies | Create Azure Firewall Policy
+    > Name: firewallpolicy | DNS Settings: Disabled | Rules | + Add a rule collection
+      > Name: AllowWeb | Rule collection type: Network | Priority: 100 | 
+      > Rules:
+        > Name: AllowSpoke | Source type: IP Address | Source: 10.2.0.4 | Protocol: TCP 
+        | Destination Ports: 80 | Destination Type: IP Address | Destination: 10.4.0.4 
+        > Add
+           - "Source: 10.2.0.4": on-premdeki vm'in private IP adresi
+           - "Destination: 10.4.0.4 ": spokevm'in private IP adresi
+      > Create
+
+> Firewall Manager 
+  > Azure Firewall Policies  - check
+  > Manage associations | Associate Vnets 
+  > hubnetwork  - check  | Add 
+
+
+
+
+
+
+
+
+

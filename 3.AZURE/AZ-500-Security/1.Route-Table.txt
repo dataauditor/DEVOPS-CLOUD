@@ -1,0 +1,86 @@
+User Defined Route:
+
+GENEL:
+Surec:
+> Bir route table kurulur.
+  > Ilgili Subnet'lerin trafiginin baska bir Subnetteki VM uzerinden gitmesini koordine eder.
+
+
+- Vnet icindeki trafigin serbest olmasi yerine secilen Subnetlerdeki resource'larin trafiginin once secilen bir VM'in NIC'ine yonlendirilmesini saglar.
+
+
+Bir VM'in Route Durumu:
+> VM > Networking > NIC:vmb66 > Effective routes
+  - Gelen trafigin muteakip adreslerini gosterir. Address Prefixes: 10.0.0.0/16 | Next Hop Type: Virtual Network  vb
+
+
+netstat -r
+  - Destination 0.0.0.0 | Gateway 192.168.0.1
+  !!! Internet adresli tum routeslar Gateway'e gider demektir.
+
+
+
+A.Vnetteki Trafigin Bir VM Uzerinden Route Edilmesi:
+
+1.Route Olarak Kullanilacak VM'de IP Forwarding Konfigurasyonu:
+- IP forwarding enable edilir.
+
+a.Network interface layer'da Izin:
+> centralVM
+  > Networking
+  > Private IP: 10.0.0.4  - copy
+  > Network interface: centralvm59
+  > IP configurations
+    > IP forwarding: Enabled
+    > Save
+
+b.OS Layer'da Izin:
+> RDP to centralVM
+  > Add roles and features
+  > Role-based or feature-based installation
+  > Remote access  - check
+  > Routing  - check  | DirectAccess and VPN - check 
+  > Install
+
+> Sari Unlem Wizard - Tikla
+  > Open the Getting Started Wizard
+  > Deploy VPN only
+
+> Connect this server to cloud services
+  > centralvm (local) | RC | Configure and Enable Routing and Remote Access
+  > Custom configuration
+  > LAN routing
+  > Finish
+  > Start service
+
+
+
+
+2.Route Table Olusturma:
+> Route Table | Create
+  > ... | Name: customroutetable
+  > Create
+
+
+
+3.Route Table Konfigure Etme:
+- Bir route olusturuyoruz.
+- Ilgili route ile gelen trafigi centralVM'e yonlendiriyoruz.
+- Ilgili route'u istedigimiz Subnet'lere associate ediyoruz.
+> customroutetable
+  > Routes | + Add
+    > Route name: customroute 
+    > Address prefix: 10.0.0.0/16
+      - Vnet'teki tum veriyi/ip'leri kapsasin istiyorum.
+    > Next hop type: Virtual appliance
+    > Next hop address: 10.0.0.4  - past
+    > OK
+  > Subnets | + Associate
+    > Virtual network: routing-grp-vnet | Subnet: SubnetA
+    > OK
+    > Virtual network: routing-grp-vnet | Subnet: SubnetA
+    > OK
+
+
+
+

@@ -1,0 +1,183 @@
+1.Azure Monitor Service:  - 160
+a.Metrics:
+- Metrics, alerts olusturulabilir
+
+c.Activity Logs:
+- Userlar tarafindan yapilan islemleri takip eder. Start, stop, create ...
+- Control place/management activities. Buradan alert olusuturulur.
+- When a VM stopped/created
+
+c.Alerts:
+- Metricsler veya Activity logs'lar ile tetiklenebilir.
+- Once scope yani resource secilir sonra condition yani tetikleyici metric/Activity log secilir.
+
+
+
+
+2.Log Analytics Workspace:
+- Central solution for all of logs db dahil.
+- Log datasi uzerinde Query yapilabilir.
+- Ilgili resourcelar ile farkli bir regionda kurulabilir. Log datalarinin regionlar arasi transferi ucrete tabilir.
+- Ilgili resource'lara agent yuklenir.
+- On-prem ile de calisir.
+
+a.Olusturma:
+> Log Analytics Workspace | Create
+  > Name: app-workspace11
+  
+
+b.Agenti Indirma:
+> app-workspace11
+  > Agent management
+      - Yuklenmesi gereken agentlar burada. Ilgili Windows agenti indiririz.
+    > Workspace ID: 2n490j4ou8y4  - copy
+    > Primary key: 89jhou7uioy7987jiou89  - copy
+
+c.VM'e Local C:'nin Baglanmasi:
+> Downloads/RDP download file | RC | Edit 
+  > Local Resources | Local devices and resources: More | + Drives | Local Disk (C:) - check | OK
+    - VM'i Local c: ile bagladik.
+  > Connect
+    > User name: demousr
+    > Password: 123
+    > Yes
+
+d.VM'e Agent'in Yuklenmesi:
+> RDP
+  > File Explorer | This PC | C on Desktop-M5D34
+      - Local C: baglanmis.
+    > Downloads | MMASetup-AMD64 - copy | Temporary Storage (D:) - past
+      - Localden VM'e tasiyoruz agent'i.
+    > Temporary Storage (D:) | MMASetup-AMD64 - cift tikla
+      > Connect the agent to Azure Log Analytics - check
+        > Workspace ID: 2n490j4ou8y4  - past 
+        > Workspace Key: 89jhou7uioy7987jiou89  - past
+          - Primary key veya Secondary key alinip yapistirilabilir.
+      > Finish
+
+e.Logs analyticcs'in Konfigurationu:
+- Windows event logs, Windows performance counters, Linux performance counters, Syslog ve IIS Logs'tan biri secilebilir.
+- Log analytics'i konfigure ederek hangi verilerin VM'den cekilecegi belirlenir.
+> app-workspace11
+  > Agents configuration | + Add window event log
+    > Windows event logs
+      > Log name: System | Error, Warning, Information - check
+      > Apply
+    > Windows performance counters | + Add performance counter
+      > Memory\Available MBytes | Sample rate: 60
+      > Apply
+
+f.Loglarin Incelenmesi:
+- Tum data Logs altinda olur.
+Kusto Query Language'i Kullanir.
+> app-workspace11
+  > Logs
+    > '>>' 
+      - Sorgulanacak Tables, Queries, Functions belirir.
+    > Log Management: 
+      > Event 
+        - Event logs buraya gelir.
+      > Perf
+        - Performance logs buraya gelir.
+    > Sag Buyuk Sorgulama Ekrani:
+--------------------------------------------------------------------------
+Event 
+  - Tum datayi goruruz.
+Event | search "vm1"
+  - Sadece vm1 ile ilgili verileri gosterir.
+Event | top 10 by TimeGenerated
+  - Son 10 eventi getirir.
+Event | where EventLevel == 4
+Event | where TimeGenerated > ago(5m)
+  - 5 dk once olusan veriler.
+Event | where TimeGenerated > ago(5m) | project Eventlog, Computer
+  - Yalniz Eventlog, Computer kolonlarini getirir.
+Perf
+Perf | where TimeGenerated > ago(5m) | summarize count() by ObjectName, CounterName
+  - ObjectName, CounterName'in ... sayilari.
+Perf | where TimeGenerated > ago(5m) | summarize avg(CounterValue) by Computer
+  - VM basina ortalama 
+--------------------------------------------------------------------------
+  > Run
+    - Herbir komuttan sonra ayri ayri Run ifadesine basilir.
+
+
+g.Custom Logs Olusturma:
+- Once workspace'e cekmek istedigimiz logu locale ceker oradan workspace'e tanitiriz. 
+- Daha sonra formati anlayinca VM'deki path'ini tanitiriz.
+
+g.1.WinSCP ile Linux VM'e Baglanip Log File'i Locale Tasiriz:
+- Custom 
+> VM:
+----------------------------------------------------------------
+cd /var/log/nginx/access.log  - copy
+  - access.log: girisleri gosterir.
+----------------------------------------------------------------
+> Local
+cd tmp/access.log  - past
+  - manual olarak mouse ile tasidik. 
+
+g.2.Workspace'in Konfigurasyonu:
+> app-workspace11
+  > Custom logs | Custom logs | + Add custom log
+    > Select a sample log: c:\tmp\access.log  - sec
+    > Collection paths: Type: Linux | Path: /var/log/nginx/access.log
+    > Details: Custom log name: Linuxlog
+    > Create
+
+g.3.Custom Log'un Incelenmesi:
+> app-workspace11
+  > Logs
+    > '>>' 
+------------------------------------------------------------------------
+Linuxlog_CL
+  - Tum access loglarini getirir.
+------------------------------------------------------------------------
+   - Run
+
+
+!!!!
+h.Log Analytics Workspace'ye Alert Olusturma:
+> app-workspace11
+  > Logs
+    > '>>' 
+------------------------------------------------------------------------
+Linuxlog_CL | where RawData contains "92.98.191.196"
+  - Ilgili IP giris yapmis mi gosterir.
+------------------------------------------------------------------------
+  > Run
+  > + New alert rule
+  > Whenever the average custom log search is greate than <logic undefined>
+    Search query: Linuxlog_CL | where RawData contains "92.98.191.196"
+    > Aler logic
+      > Based on: Number of results | Operator: Greater than | Threshold value: 5 
+    > Evaluated based on:
+      > Period: 5 | Frequency: 5
+    > Done
+
+
+i.Azure Template ile VM Olusturulurken Workspace'e Baglama:
+- Onceden olusturulmus bir Workspace'in WirkspaceId ve Primarykey verilerek VM olusurken agent yuklenir ve workspace'e baglanir.
+i.1.Resource'larin Template ile Olusturulmasi:
+> Template deployment | Create
+  > Build your own template in the editor
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  > Save 
+  > Create
+
+i.2.VM'in Kontrolu:
+> newvm
+  > Extensions + applications 
+    > Microsoft.Insights.LogAnalyticsAgent
+
+i.3.Workspace Uzerinden VM'in Bagli Olma Durumunun Kontrolu:
+> db-workspace1000
+  > Virtual machines 
+    - newvm bu workspace'e bagli oldugunu gorebiliriz.
+
+Application Insights:
+- Performance management system for your live apps.
+
+

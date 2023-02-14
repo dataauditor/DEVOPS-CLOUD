@@ -1,0 +1,61 @@
+A.SSL Certificated Custom Domain Baglama:
+
+1.App Service Editor:
+- Applikasyon ekleriz.
+- Windows secerek kurarsak
+> webapp11
+    - Olustururken code secip deployment yapmazsak. 
+  > App Service Editor | Go
+    > WWWROOT | RC | New File
+    > Default.html
+--------------------------------------------------------------------------------------
+<h1>This is our web application</h1>
+--------------------------------------------------------------------------------------
+
+
+> webapp11 > URL - copy
+
+
+Browser:
+- applicasyonu goruruz.
+URL - past
+
+
+2.Custom domains:
+- GoDaddy.com'dan domain aldik.
+- GoDaay'de TXT ve A Record'u yapmak icin verileri de webapp11'den aliriz.
+- TXT record'u ve A Record'u GoDaddy.com'dan alip buraya ekleriz.
+- Alttakileri es zamanli yapariz.
+> GoDaddy.com
+  > Cloud'daki Host name ve Value'yi GoDaddy'de TXT record acip yapistiririz.
+    > Add record
+  > A Record | Edit
+    > Value'ye IP yazilir.
+    > Save
+> webapp11 
+    - Custom domaini attach ederiz. Sonra SSL'i de eklemeliyiz yoksa sertifikasiz guvensiz olur.
+  > Custom domain > + Add Custom domain
+    > Custom domain: umit.com | Validate | Add custom domain
+  
+
+
+3.TLS/SSL settings:
+> webapp11
+  > TLS/SSL settings (preview)
+    > Private key certificates | + Add certificate
+      > Source: Create App Service Managed Certificate | Custom domain: umit.com
+      > Validate | Add
+  > Custom domains
+    > SSL STATE: Not Secure: SSL Binding: Add binding    
+      > Custom domain: umit.com | Private Certificate Thumbprint: umit.com (678gyu67yihu...) | TLS/SSL Type: SNI SSL
+      > Add Binding
+
+
+
+B.Managed Identity:
+- Storage Account'a Access key vb yerine RBAC ile ulasmak icin. 
+> webapp11
+  > Identity | Status: On
+
+> SrorageAcc
+  > Add role based  

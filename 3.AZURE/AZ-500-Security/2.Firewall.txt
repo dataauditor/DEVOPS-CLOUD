@@ -1,0 +1,105 @@
+Azure Firewall Service:
+- Rules ve policies belirleyebiliriz.
+- Statefull, high available...
+- Farkli bir subnette olusturulur.
+- AzureFirewallSubnet: Subnetin ismi sabittir.
+- Public IP address alir.
+- Bagli cihazlarin public IP addresi olmaz.
+- Tum internet trafigi firewall'un public ip'si uzerinden olur.
+- Firewall rule ile VM'den internete cikis kisitlanmaz. Internete cikisi da kontrol etmek istersek Route table kurariz Firewall uzerine.
+
+
+
+A.Firewall Kurma:
+
+1.VM ve AzureFirewallSubnet Olusturulur:
+- Public IP address'i yok.
+> Name: demovm
+  > Subnet: default 10.0.0.0/24  - check
+  > AzureFirewallSubnet: 10.0.0.1/24
+    - Hem VM hem de firewall icin Subnet olusturduk.
+  > Public IP: None
+  > Create  
+
+> demovm
+  > Private IP address: 10.0.0.4  - copy
+
+
+2.Firewall Olusturma:
+> Firewall | Create
+  > Name: firewall | Subnet: AzureFirewallSubnet
+  > Firewall tier: Standard
+  > Firewall management: Use a Firewall Policy to manage this firewall
+  > Firewall policy | Add new 
+    > Policy name: firewall-policy | Policy tier: Standard | Yes
+  > Choose a virtual network: use existing: firewall-grp-vnet
+  > Public IP address | Add new
+    > Name: firewall-ip | OK
+  > Create
+
+
+3.Firewall'a Rule Ekleme:
+> firewall
+  > Firewall private IP: 10.0.1.4  - copy
+  > public IP configuration
+    > firewall-ip: 13.79.157.190  - copy
+  > Firewall policy: firewall-policy
+  > DNAT Rules
+  > + Add a rule collection
+    > Name: RDPRules | Rule collection type: DNAT | Priority: 100 | 
+    > Rules:
+      > Name: demovm | Source type: IP Address | Source: 92.87.234.1 | Protocol: TCP 
+      | Destination Ports: 4000 | Destination Type: IP Address | Destination: 13.79.157.190 
+      | Traslated address: 10.0.0.4 | Translated port: 3389
+        - Source: kendi local makineminkini verdim.
+        - "Destination Ports: 4000": firewall'un herhangi bir portunu verdim.
+        - "Traslated address": Firewall tarafindan yonlendirilecek VM'in private ip address'i.
+        - "Translated port": Normalde baglanmak istedigimiz port.
+
+
+4.Localden demovm'e RDP Baglantisi:
+> Start
+  > Remote Desktop Connection
+    > Computer: 13.79.157.190:4000
+    > Connect
+    > User name: demousr | Password: 123
+
+
+
+
+B.Route Table Kurma:
+
+1.Route Table Olusturma:
+> Route Table | Create
+  > ... | Name: firewallroutetable
+  > Create
+
+
+2.Route Table Konfigure Etme:
+- Bir route olusturuyoruz.
+- Ilgili route ile gelen trafigi firewall'e yonlendiriyoruz.
+- Ilgili route'u istedigimiz Subnet'lere associate ediyoruz.
+> customroutetable
+  > Routes | + Add
+    > Route name: Internetroute 
+    > Address prefix: 0.0.0.0/0
+      - Internete cikan tum trafigi firewall'a yonlendirir.
+    > Next hop type: Virtual appliance
+    > Next hop address: 10.0.1.4  - past
+      - firewall'un private IP address'i.
+    > OK
+  > Subnets | + Associate
+    > Virtual network: firewall-grp-vnet | Subnet: default
+    > OK
+
+
+3.Firewall'un Konfigurasyonu:
+- Yalnizca tek bir URL'e cikis icin izin veren rule tanimlama.
+> firewall-policy
+  > Application Rules > + Add a rule collection
+    > Name: AllowSites | Rule collection type: Application | Priority: 100 | Rule collection action: Allow
+    > Rules:
+      > Name: AllowMicrosoft | Source type: IP Address | Source: 10.0.0.4 | Protocol: http,https 
+      | Destination Type: FQDN | Destination: www.microsoft.com 
+        - "Source": demovm private ip address.
+      > Add

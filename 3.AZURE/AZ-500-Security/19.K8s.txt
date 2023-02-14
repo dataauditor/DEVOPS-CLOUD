@@ -1,0 +1,46 @@
+Kubernetes Deployment:
+
+a.Cluster Olusturma:
+> Kubernetes Service | Create
+  > Name: appcluster | AZ: None | Scale method: Autoscale | Node count: 1 - 3
+  > Authentication method: System-assigned managed identity
+  > Role-based access control (RBAC) - check
+  > Network configuration: Kubenet
+  > Container registry: appregistry2030
+    - Onceden hazirladigimiz ACR'yi seciyoruz.
+  > Container monitoring: Enabled
+  > Log Analytics workspace: Workspace-ca123
+  > Azure Policy: Disabled
+  > Create
+
+
+b.Deploy Cluster:
+> appcluster
+  > Workloads | + Add | Add with YAML
+    > YAML:
+----------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------  
+    - Manuel olarak yapistirilir.
+    - Cluster deployment image'i ACR'den ceker ve clusteri olusturur.
+    > Add
+
+
+c.Deploy Service:
+> appcluster
+  > Services and ingresses | + Add | Add with YAML
+    > YAML:
+----------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------  
+    > Add
+  > app-service: External IP: 20.108.2.34
+
+Browser:
+20.108.2.34
+  - Ilgili app'a ulastik.
+
+
+c.Delete Cluster:
+> appcluster
+  > Delete

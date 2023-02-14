@@ -1,0 +1,43 @@
+Genel:
+- VM size'i, virus programi yukleme zorunlulugu vb policy'ler uygulanabilir.
+- Tenant, Management Group, Subscription veya RG seviyesinde uygulanabilir.
+
+
+1.Policy Assign Etme:
+- Subscription seviyesinde policy uyguladik.
+
+a.Yeni VM'lere Antimalware Yukleme Policy'si Assign Etme:
+> Policy
+  > Definitions
+      - Hazir policyleri burada bulabilir ve uygulayabiliriz.
+    > Microsoft IaaSAntimalware extension should be deployed on Windows servers
+      > Assign
+        > Scope: Subscription | RG - secilebilir veya tum subs secili kalir.
+          > Select
+        > Exclusions: RG: derg
+      > Create
+
+
+b.Mevcut VM'lere Antimalware Yukleme Policy'si Assign Etme:
+> Policy
+  > Definitions
+      - Hazir policyleri burada bulabilir ve uygulayabiliriz.
+    > Deploy default Microsoft IaaSAntimalware extension for Windows servers
+      > Assign
+        > Scope: Management Group | Subscription | RG - secilebilir veya tum subs secili kalir.
+          > Select
+        > Exclusions: RG: derg
+        > Create a remediation task - check
+          > Policy to remediate: Deploy default Microsoft IaaSAntimalware extension for Windows servers
+            > type of Managed identity: System assigned managed identity - check
+              - Managed Identity olusur ve bu identity ile policy yukleme islemlerini icra eder.
+            Permissions: Virtual Machine Contributor
+      > Create
+
+
+> appvm 
+  > Extensions + applications
+    - Onceden kurulu makineye Antimalware yuklenmis. 
+
+
+

@@ -1,0 +1,73 @@
+Update Management  - 135-137
+- Azure Log Analytics Workspace ile koordineli olarak VM ve on-prem'in update'leri otomatize edilebilir.
+- Azure Automation Account: Update'leri Update Management Service'in talebine gore yapar.
+- Log Analytics Agent: VM ve on-prem'e yuklenerek verileri Azure Log Analytics Workspace'e gonderirler.
+- Update Management Service:  Azure Log Analytics Workspace ile irtibata gecerek ilgili VM veya on-prem cihazlardaki eksik updateleri Azure Automation Account'a icra ettirir.
+- Linux ve Windows ikisini de kapsar.
+- VM/on-prem ile Azure Log Analytics Workspace ayni region'da olmali aksi takdirde update esnasindaki veri aktarimi ucrete tabi olur.
+
+
+1.Azure Log Analytics Workspace:
+- Tum regionlar Azure Automation Account ile linki desteklemezler.
+a.Automation Olusturma:
+> automation | Marketplace
+  > Automation | Create
+    - Microsoft tarafindan released
+  > Automation account name: vmautomation | System assigned - check | 
+  > Create
+
+b.Update Management Eneble Etme:
+> vmautomation
+  > Update management 
+    > Log Analytics workspace> Create New Workspace 
+    > Enable
+
+c.VM'leri Tanimlama:
+> vmautomation
+  > Update management 
+  > + Add Azure VMs
+    > appvm - check, linuxvm - check 
+    > Enable
+      - VM'lere Log Analytics Agent'leri yukler.
+      - 1 saat kadar surebilir.
+      
+d.Update Otomatize Etme:
+> vmautomation
+  > Update management 
+  > Schedule update deployment
+    > Name: WindowsUpdate | Operating system: Windows 
+      - Windows ve Linux icin ayri Update deployment tanimlanir.
+    > Machines to update: 
+        - Group to update: Dynamic olarak bir gruptaki tum Windows veya Linux VM'leri secer. Filtreleme imkani da var.
+      > Type: Machines | appvm - check | OK
+    > Update classifications: 8 select
+      - Hepsini sec.
+    > Schedule settings
+      > Starts: 01.01.2023 | Recurrence: Once | OK
+    > Maintenance window: 30
+  > Create
+
+e.Update Durumlarini Inceleme:
+> vmautomation
+  > Update management 
+    - Guncellemeler yapilmis.
+
+
+
+
+> Workspace-ca745
+    - vmautomation'u enable ederken otomatik olustu.
+  > 
+  
+
+> Monitor
+  > Activity log
+  - Tum administrative activiteleri gosterir. Tum Error'lari gorebiliriz.
+
+
+
+
+2.VM'in Konfigurasyonu: 
+> RDP
+  > Settings
+  > Update & Security

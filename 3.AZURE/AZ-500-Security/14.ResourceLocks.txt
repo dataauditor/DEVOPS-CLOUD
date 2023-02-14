@@ -1,0 +1,22 @@
+Resource Locks:
+- Yanlislikla resource'lari silmayi engeller.
+- Resource, RG veya Subscription seviyesinde kurulabilir.
+- Delete: Silmeyi engeller.
+- Read-Only: Silmeyi, Start-Stop, Edit herseyi engeller.
+a.Resource Seviyesinde Lock:
+> VM
+  > Locks
+    > + Add
+        - Resource level
+#       - Resource group
+#     > Lock name: LockA | Lock type: Delete
+        - Read-only
+      > OK    
+
+
+b.RG Seviyesinde Lock:
+> demorg
+  > Locks
+    > + Add
+      > Lock name: LockA | Lock type: Read-only
+      > OK    

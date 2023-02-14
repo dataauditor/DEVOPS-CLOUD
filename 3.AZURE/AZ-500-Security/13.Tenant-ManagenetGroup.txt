@@ -1,0 +1,11 @@
+Tenant > Management Group > Subscription > RG > Resource  - 174
+Management Group: 
+- Tek Tenant'a bagli ve altinda birden fazla Subscription olabilir.
+- Policy'leri Management group'a baglayarak ilgili subscriptionlara policy uygulanabilir.
+- Mevcut Subscription eklenebilir.
+- Mevcut User eklenebilir.
+Tenant Root Group: 
+- Default olarak olusur.
+- Management groups altinda bulunur.
+
+
