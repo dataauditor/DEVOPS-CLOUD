@@ -1,0 +1,76 @@
+1.GoDaddy'den Custom Domain Name Alma:
+a.Domain Name Olusturma:
+> dcc.godaddy.com
+  - Buradan domainname aldik. "cloudportalhub.com"
+
+
+
+2.WebApp'a Custom Domain Konfigure Etme:
+- Normalde webapp1.azurewebsites.net seklinde domain name'i olur Azure'dan.
+a.WebApp'in Custom Domain Feature'u Acilir:
+> webapp1 > Custom Domains > + Add custom domain
+  > custom domain: cloudportalhub.com
+  > validate
+  > Type: A | Host: @ | Value: 20.50.64.24 - copy
+    - A record'un verileri godaddy.com'daki custom domain record'a eklenir.
+  > Type: TXT | Host: asuid | Value: 47892764392743892492 - copy
+
+
+b.Domain Records'tan Verileri Alip Azure ile Konfigure Etme:
+> dcc.godaddy.com/control/cloudportalhub.com/dns?plid=1
+  > DNS Records: 
+    > Add
+      > Type: A | Name: @ | Value: 20.50.64.24 - past
+      > Add record
+    > Add
+      > Type: TXT | Name: asuid | Value: 47892764392743892492 - past
+      > Add record
+
+
+c.WebApp'de Custom Domain Name'in Validate Edilmesi:
+- Birkac dakika bekleyip eklenip eklenmedigi kontrol edilir.
+> webapp1 > Custom Domains > + Add custom domain
+  > custom domain: cloudportalhub.com
+  > validate
+    - available olarak gosterir.
+
+
+d.WebApp'a Custom Domain ile Baglanma:
+> cloudportalhub.com
+  - http olarak guvensiz baglanir.
+
+
+
+3.Domain Name'e SSL Ekleme:
+a.TLS/SSL Certificate Olusturma:
+> webapp1 > TLS/SSL settings (preview)
+  > Private key certificates > + Add certificate
+    > Source: Create App Service Managed Certificate
+      - Azure tarafindan managed edilir. Indirilemez.
+      - Farkli alternatifler de var burada.
+    > Cstom domain: cloudportalhub.com
+    > Certificate friendly name: cloudportalhub.com-webapp1
+    > Validate
+    > Add
+    
+
+b.Olusturulan TLS/SSL Certificate'i WebApp'a Baglama:
+> webapp1 > Custom domains 
+  > SSL STATE: Not Secure | ASSIGNED CUSTOM DOMAINS: cloudportalhub.com | SSL Binding: Add binding  - tikla
+    > Custom domain: cloudportalhub.com | Private Certificate Thumbprint: cloudportalhub.com | TLS/SSL Type: SNI SSL
+    > Add Binding
+
+
+c.Secure olarak WebApp'a Girmek:
+> Browser: https://cloudportalhub.com
+
+
+
+
+
+
+
+
+
+
+

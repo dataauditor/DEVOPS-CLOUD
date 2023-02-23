@@ -1,0 +1,17 @@
+Deployment Slots:
+- Application'un Yeni Versiyonlarinin Production Slot'a gonderilmeden once test edilmesi gerekir.
+- Yeni versiyon once baska bir webapp'e deploy edilrek test edilir daha sonra prod'a deploy edilir.
+- Deployment Slots'lari kullanabilmek icin App Service plan, Standard ve uzeri olmali.
+- Slotlar:
+  - Versiton 1: Production Slot
+  - Versiyon 2: Staging Slot
+  - Istenilen anda slot'lar degistirilerek Staging, Production olarak degistirilebilir.
+  - Hata olma durumunda roll back the changes by changing slots again.
+
+
+
+
+
+
+
+
