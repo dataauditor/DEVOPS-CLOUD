@@ -1,0 +1,120 @@
+1.Localde Yeni bir .NET6.0 Projesi Olusturma:
+a.Yeni bir .NET6.0 Projesi Olusturma:
+> VS > File > New > Project
+  > ASP.NET Core Web App
+  > Project name: sqlapp | Location: C:\tmp1
+  > Framework: .NET 6.0
+  > Configure for HTTPS  - check
+  > Create
+
+
+b.Product Class Olusturuyoruz:
+> VS > sqlapp  - secili iken
+  > Project > New Folder 
+  > Rename: Models
+      - sqlapp klasoru altinda olusur ve manual olarak ismi degistirilir.
+      - Models folder'i secili iken
+    > Project > Add Class > Name: Product.cs > Add
+-------------------------------------------------------------------------------
+namespace sqlapp.Models
+{
+	public class Product
+	{
+		public int ProductID { get; set; }
+
+		public string ProductName { get; set; }
+
+		public int Quantity { get; set; }
+	}
+}
+-------------------------------------------------------------------------------
+
+
+
+c.VS'ye NuGet Yukluyoruz Localden SQL'e Applicationun Baglantisi icin:
+> VS > Tools > NuGet Package Manager > Manage NuGet Packages for Solution
+  > Browse | System.Data.SqlClient
+    > Versions: Project - check | sqlapp - check
+  > Install
+
+
+d.Applicationun SQLDB ile Konusabilecek Sekilde Program Ekleniyor:
+> VS > sqlapp  - secili iken
+  > Project > New Folder 
+  > Rename: Services
+      - Services folder'i secili iken
+    > Project > Add Class > Name: ProductService.cs > Add
+      - Database'e baglanip veri cekecek.
+-------------------------------------------------------------------------------
+namespace sqlapp.Services
+{
+	public class ProductService
+	{
+		private static string db_source = "appserver3000.database.windows.net";
+		private static string db_user = "sqladmin";
+		private static string db_password = "123";
+		private static string db_database = "appdb";
+
+		private SqlConnection GetConnection()
+		{
+			var _builder=new SqlConnectionStringBuilder();
+			_builder.DataSource= db_source;
+			_builder.UserID= db_user;
+			_builder.Password= db_password;
+			_builder.InitialCatalog= db_database;
+			return new SQLConnection(_builder.ConnectionString)
+		}
+		public List<Product> GetProducts()
+    		  > Product'in altinda cikan isaretten using sqlapp.Models; secilir.
+		{
+			SQLConnection conn = GetConnection();
+			List<Product> _product_lst = new List<Product>();
+			string statement = "SELECT ProductID,ProductName,Quantity from Products";
+			conn.Open();
+			SQLCommand cmd =new SqlCommand(statement, conn);
+			using (SqlDataReader reader=cmd.ExecuteReader())
+			{
+				while(reader.Read())
+				{
+					Product product = new Product()
+					{
+						ProductID=reader.GetInt32(0),
+						ProductName=reader.GetString(1),
+						Quantity=reader.GetInt32(2)
+
+					};
+					-product_lst.Add(product);
+				}
+			}
+			conn.Close();
+			return _product_lst;
+			
+		}
+
+	}
+}
+-------------------------------------------------------------------------------
+
+
+
+2.sqlapp'in Web App'e Aktarilmasi:
+- Db ile baglantisi kurulan sqlapp isimli applikasyonu web app'e aktariyoruz.
+- Verileri db'den ceken bir app, webapp300'de calisacak.
+> VS > sqlapp | RC | Publish | Azure | Azure App Service (Windows)
+  > App Service instances: webapp300
+  > Finish
+  > Publish
+
+
+Browser:
+webapp300.azurewebsites.net
+
+
+
+
+
+
+
+
+
+

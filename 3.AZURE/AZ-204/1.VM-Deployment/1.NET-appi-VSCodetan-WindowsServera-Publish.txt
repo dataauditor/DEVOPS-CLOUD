@@ -1,0 +1,154 @@
+IIS (Internet Information Service): 
+- Windows Server'da Server role'udur. 
+- Applikasyonlara host gorevi yapar. 
+- Client'ler IP adresi uzerinden Server'a ulasarak applikasyonu kullanabilirler. 
+- NSG'yi de konfigure ederiz.
+
+
+
+
+1.Windows Server'da Web Server Rolu Konfigurasyonu:
+a.Web Server rolu tanimlayacagiz.
+> Start > Server Manager > Dashboard > Configure this local server: Add roles and features
+  > Role-based or feature-based installation 
+  > Select a server from the server pool: appvm, 10.0.0.4, Mic Win Server 2019 Datacenter
+  > Web Server (IIS) > Add feature
+  > Install
+
+
+b.NSG'yi Konfigure Etme:
+- NSG kapalidir. Default olarak Windows Server 80 portundan dinleme yapar.
+- 8172 ve 80 portunu aciyoruz.
+- 8172: Management Service'in portu.
+- Default olarak internetten yalniz RDP'ye aciktir. Locale aciktir.
+> appvm > Networking 
+  > Add inbound port rule
+    > Source: Any | Destination: Any | Service: HTTP | Action: Allow | Priority: 300
+    > Add
+  > Add inbound port rule
+    > Source: Any | Destination: Any | Service: Custom | Destination port: 8172 | Protocol: Any | Action: Allow | Priority: 320
+    > Add
+
+
+
+c.IP Adresini Alma:
+> appvm > Public IP address: 52.1.43.23  - copy
+
+
+d.Browserdan Windows Server'a Ulasma:
+52.1.43.23
+  
+
+
+2.Windows Server DNS name Konfigurasyonu:
+- Azure'un kendi verdigi DNS name'e on ad eklenerek alinir.
+a.Azure'dan DNS Name Alma:
+> appvm > DNS name: Not configured
+  > IP address address assignment: Dynamic | DNS name label: appvm11.northeurope.cloudapp.azure.com
+  > Save
+
+> appvm > DNS name: appvm11.northeurope.cloudapp.azure.com  - copy
+
+
+b.Browserdan Windows Server'a DNS Name ile Ulasma:
+> appvm11.northeurope.cloudapp.azure.com
+
+
+
+3.Management Service Role'unun VM'de Konfigurasyonu:
+a.Management Service'in Konfigurasyonu:
+> Configure this local server: Add roles and features
+  > Role-based or feature-based installation 
+  > Select a server from the server pool: appvm, 10.0.0.4, Mic Win Server 2019 Datacenter
+  > Web Server (IIS) | Management Tools | Management Service | Add Features
+  > Install
+
+
+b.IIS'in Konfigurasyonu:
+> Tools > Internet Information Service (IIS) Manager:
+  > appvm > Management Service > Enable remote connections - check
+  > Port: 8172
+  > Apply
+  > Start
+
+
+
+4.Ilgili Framework/Program'i Windows Server'a Install Etme:
+- .NET: application'larin IIs'de host edilmesini saglar.
+a.Windows Server'in Download Engelini Kaldirma:
+> Local Server > IE Enhanced Security Configuration: On - tikla
+  > Administrators: Off | Users: Off
+  > OK
+
+
+b.".NET 6.04"'i Download Etme:
+> Browser:
+  > https://dotnet.microsoft.com/en-us/download
+  > All .NET 6.0 downloads
+  > Windows: Hosting Bundle > Run > Install
+
+
+
+5.Web Deploy v3.6 Tool'u Install Etme:
+> Browser:
+  > https://dotnet.microsoft.com/en-us/download/details.aspx
+  > Download > webdeploy_amd64_en-us.msi  - check
+  > Run
+  > Complete
+  > Install 
+  > Finish
+
+
+
+6.Visual Studio Code ile Code'u Publish Etme:
+- User name ve password ile baglanilir.
+a.Visual Studio Code'u Azure Account'a Baglama:
+> VSCode > Tools > Options
+  > Azure Service Authentication: Account Selection
+  > Choose an account > Add an account
+  > OK
+
+
+b.Application'u Publish Etme:
+- Ilgili appvm'e publish ediyoruz.
+> VSCode > webapp  - RC 
+  > Publish
+    > Target: Azure > Azure Virtual Machine
+    > Subscription name | View: Resource group | Virtual machines: appvm - check
+    > Finish
+  > More actions: Edit > Connection
+    > Validate Connection | User name: demousr | Password: 123
+      - appvm'in administrator hesabinin passwordu ile girdim.
+    > Accept
+    > Save
+  > Publish
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

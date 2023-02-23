@@ -1,0 +1,194 @@
+1.Ubuntu VM Olusturma:
+> Image: Ubuntu | Authentication tyoe: Password
+  > User name: adminusr | Password: 123
+  > Public inbound rules: 80, 22
+  > Create
+
+
+
+
+2.VSCode'dan Locale Project Binaries'in Transferi:
+a.VSCode'dan Locale Transfer:
+> webapp | RC | Publish
+  > Publish (soldaki) | + New
+    > Target: Folder: | Location: bin\Release\net6.0\publish\
+    > Finish
+    > Publish (ustteki)
+
+
+b.Localde Binaries'i Kontrol Etme:
+- Ilgili adresteki binaries'i VM server'a transfer etmeliyiz.
+> c:\tmp1\webapp\webapp\bin\Release\net6.0\publish\
+
+
+
+
+3.WINSCP ile Localden VM'e Binaries'in Transferi:
+- Bu alternatif yoldur.
+a.Locale WINSCP Install:
+> winscp.net/eng/download.php
+
+
+b.WINSCP'ye Baglanma:
+> Start > WinSCP 
+  > Hostname: 20.233.12.2 | Port: 22 | User name: adminusr | Password: 123
+  > Login
+
+
+c.WINSCP ile Gorsel Olarak Binaries'in Localden VM'e Transferi:
+- Solda local, sagda VM'in klasorleri gorulur.
+- Dosyalar surukleyerek tasinir.
+> WINSCP 
+  > /home/adminusr/ 
+    - Sag tarafta bu konum acilir. Bu konuma tasinacak.
+  > c:\tmp1\webapp\webapp\bin\Release\net6.0 | publish  - sag tarafa tasinir.
+  > /home/adminusr/publish
+    - sag tarafa tasindi.
+
+
+d.Localden PuTTY ile VM'e Project Binaries'i Kontrol Etme:
+a.PuTTY ile VM'e Baglanma:
+> PuTTY
+  > Host Name: 20.233.12.2 | Port: 22 | SSH | Open
+  > Login as: adminusr | Password: 123
+------------------------------------------------------------
+cd /home/adminusr/publish
+  - ilgili dosyalari gorebiliriz.
+
+
+
+4.VM'e Dependencies/Framework/Program Yukleme:
+a.Locale ".NET6.04" Binaries Download Edilir:
+> https://dotnet.microsoft.com/en-us/download
+  > OS:Linux, Installers: Package manager instructions | Ubuntu
+  > https://docs.microsoft.com/en-us/dotnet/core/install/linux-ubuntu
+    > 20.04 
+      - Ubuntu'nun .NET6.0 ile calisan versiyonunu indirmek icin ilgili code'lari verir.
+      - Bizim VM de bu versiyon almali.
+    > wget https://...
+    > sudo dpkg -i packages-microsoft-prod.deb
+    > rm packages-microsoft-prod.deb
+  
+
+
+b.Locale Install PuTTY:
+> putty.org
+  > You can download PuTTY here. - (tikla)
+
+
+c.PuTTY ile VM'e Baglanma:
+> PuTTY
+  > Host Name: 20.233.12.2 | Port: 22 | SSH | Open
+  > Login as: adminusr | Password: 123
+
+
+d.PuTTY ile SSH Uzerinden VM'e ".NET6.04"u Install:
+-----------------------------------------------------------
+wget https://...
+sudo dpkg -i packages-microsoft-prod.deb
+rm packages-microsoft-prod.deb
+-----------------------------------------------------------
+
+
+
+5.VM'e Install SDK:
+a.SDK Yukleyip Applicationu http://localhost:500'de Calistiriyoruz:
+> https://docs.microsoft.com/en-us/dotnet/core/install/linux-ubuntu
+  > 20.04 > Install the SDK
+    - Yukarda install ettigimiz .NET6.04'un hemen altinda.
+-----------------------------------------------------------
+sudo apt-get update; \
+  sudo apt-get install -y apt-transport-https && \
+  sudo apt-get update && \
+  sudo apt-get install -y dotnet-sdk-6.0
+dotnet webapp.dll
+  - SDK'nin yuklendigini goruruz.
+  - App'i calistirir.
+  - http://localhost:5000 portunda app'in calistigini gosteriryor.
+-----------------------------------------------------------
+  - PuTTY ile yuklemeleri VM'e yapiyoruz.
+
+
+b.PuTTY ile Application'un Calistiginin Kontrolu:
+-----------------------------------------------------------
+curl http://localhost:5000
+-----------------------------------------------------------
+  - "This is a sample web application" yazisini goruruz.
+
+
+
+
+6.NGINX Konfigurasyonu:
+- 80 portundan gelen request'leri 5000 portuna yonlendirecek sekilde konfigure edecegiz.
+- App, 5000 portunda calisiyor cunki.
+- .NET konfigurasyonunu biraz degistiririz.
+a.Install NGINX to VM:
+-----------------------------------------------------------
+sudo apt-get install nginx -y
+-----------------------------------------------------------
+
+
+b.Browser'dan App'a Ulasma:
+> 20.233.1.23
+  - NGINX'in default homepage'ine ulasilir.
+
+
+c.NGINX Configurationu Icin NGINX'in Stop Edilmesi:
+- Konfigurasyon oncesi NGINX stop edilir.
+- 80 portundan gelen request'leri 5000 portuna yonlendirecek sekilde konfigure edecegiz.
+-----------------------------------------------------------
+sudo service nginx stop
+cd /etc/nginx/sites-available
+sudo chmod 777 default
+  - Konfigure edebilmek icin gecici olarak degistiriyoruz.
+-----------------------------------------------------------
+
+
+d.WINSCP ile Default NGINX File'in Modify Edilmesi:
+> WINSCP 
+  > /etc/nginx/sites-available/default  - Cift tikla
+    - Sag tarafta NGINX'in default conf file'i acilir.
+-----------------------------------------------------------
+location / {
+        proxy_pass		http://localhost:5000;
+	   proxy_http_version	1.1;
+	   proxy_set_header	Upgrade $http_upgrade;
+	   proxy_set_header	Connection keep-alive;
+	   proxy_set_header	Host $host;
+	   proxy_cache_bypass	$http_upgrade;
+	}
+-----------------------------------------------------------
+    - location dosyasini bu sekilde duzenleriz.
+  > Save
+
+
+e.NGINX Configurationu Icin NGINX'in Start Edilmesi:
+-----------------------------------------------------------
+cd /etc/nginx/sites-available
+sudo chmod 644 default
+sudo service nginx start
+-----------------------------------------------------------
+
+
+f.Browser'dan App'a Ulasma:
+20.233.1.23
+  - Application'a ulasilir.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

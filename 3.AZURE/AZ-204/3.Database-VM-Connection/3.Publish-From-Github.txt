@@ -1,0 +1,79 @@
+1.Web App Olusturma:
+> Web App > Create
+  > RG | Name: newapp20.azurewebsites.net | Publish: Code | Runtime stack: .Net 6.0 | 
+  > Operating system: Windows 
+  > Windows Plan: ASP-appgrp-a3a1
+    - Bu regionda daha once Windows icin hazirladigimiz App Service Plan.
+  > Continuous deployment: Disable
+    - "Enable": Github Actions ile calisir. Sonradan da konfigure edilebilir.
+  > Create
+
+
+
+2.VS'deki Kodu GitHub'a Push Etme:
+> VS > Git > Create Git Repository
+  > Push to a new repo: GitHub
+    > Local path: C:\tmp1\webapp
+    > Account: dataauditor | owner: umit... | repository name: webapp | Private repository - uncheck
+  > Create and Push
+ 
+
+
+3.GitGub'tan Web App'e Otomatik Deployment Konfigurasyonu:
+> newapp20 > Deployment Center 
+  > Settings
+    > Source: GitHub
+    > Signed in as: Change Account
+      - GitHub account'u tanitilir.
+    > Organization: dataauditor
+    > Repository: webapp
+    > Branch: master
+    > Save
+  > Logs
+      - Codu alip build yapip webapp'e deploy edildigini gorebiliriz.
+
+
+
+4.VS'de Yapilan Degisikligi GitHub'a Push Edince GitHub'taki Kod Web App'te de Yenilenir:
+- VS'de kodu degistirip push edince GitHub'a gider.
+- GitHub'ta degisiklik olunca Web app yeni kodu alip build edip yayinlar.
+
+
+
+
+5.ConnectionString ile Otomatik Baglanti:
+- Buradaki veriler ustteki txt filelerindan alindi.
+- Hem VS'de koda ConnectionString komutu ile db server'in verileri girilir. 
+> VS > appsettings.json > ConnectionStrings > SQLConnection
+-----------------------------------------------------------------  
+{
+	"ConnectionStrings": {
+	  "SQLConnection": "Server=tcp:appserver3000.database.windows.net,1433;Initial Catalog=appdb;Persist Security Info=False;User ID=sqladmin;Password=123;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
+	}
+}
+-----------------------------------------------------------------
+
+
+- Ayni zaman da web app'de de konfigurasyon yapilir.
+> webapp3000 > Configuration > Application Settings
+  > + New connection string
+  > Name:   
+  > Value: MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
+  > Type: SQLAzure
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
