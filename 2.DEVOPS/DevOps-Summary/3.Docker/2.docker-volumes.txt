@@ -1,0 +1,113 @@
+1.Docker Volumes:
+- Sudosuz islem yapma komutu:
+>sudo usermod -a -G docker ec2-user newgrp docker
+- Container icinde saklanan veri container silince gider.
+- Docker volume: Docker host'da verileri depolar. Bu sayede container silinse de volume silinmez.
+- "-v" veya "--volume" volume'un isim ve :/ ise mount yapmak icin pathini tanimlar. 
+- Ayni volume'u bircok containere farkli pathlerden mount edebiliriz.
+- Bircok container ayni volume baglanabilse de containerlerin bazisina read-only bazisina write yetkisi verilebilir.
+- ilk volume ismi sonra mount point sonra yetki (optional).
+- Ayrica volume olusturmadan container ile hosttaki iki adresi birbirine eslestirerek de verileri hosta aktarabiliriz.
+- Bir dosya pathine ile volume mount edilirse:
+  * pathde dosya varsa volume'da yoksa volume'a kopyalanir.
+  * pathde (veya path yoksa) yok volume'da varsa pathe (path olusturulup) kopyalanir.
+  * her ikisinde de varsa volumedaki path'e kopyalanir pathdeki silinir.
+
+!!!
+>docker volume create firstvolume           # hostta volume olusturur.
+!!!
+>docker container run -it -v firstvolume:/sample:ro alpine sh  # :/sample path'indeki firstvolume'e baglanir ve alpine'i calistir. "ro" read only
+>docker container run -it -v firstvolume:/var/test alpine      # bir alttaki /test dosyasindan firstvolume'a baglanarak alpine'i calistirir. iki ayri container farkli pathlerle ayni volume ile gorusur.
+>cd sample && touch file1.txt
+>echo "deneme" > file1.txt
+>exit                                       # container disina ciktik.
+>docker container rm 2e7 3m4                # containerleri sildik.
+!!!
+>docker volume inspect firstvolume          # Mountpoint (/var/lib/docker/volumes/disk/_data) burada gosterir.
+>cd /var/lib/docker/volumes/disk/_data      # volume icindeyiz. Inspect komutu ile elde edilir adres.
+>cd .. && cd test && touch file2.txt && ls  # file1.txt ve file2.txt dosyalarini burada da goruruz.
+>docker container run -it -v firstvolume:/try2 ubuntu sh       # 
+> cd try2 && ls                             # file1.txt ve file2.txt dosyalarini burada da goruruz.
+
+!!!!!
+>docker run -it -v /home/mount/data:/var/lib/mysql/data alpine  # ilk adres hosttan ile ikinci adres containerden birlestirerek containere yazilan hersey hosttaki adrese gonderilmis olur. Hosttaki istedigimiz adresle containerdeki istedigimiz adresi eslestirebiliriz.
+>docker run -it --name try3 -v full-vol:/hello-clarus clarusway/hello-clarus sh  # clarusway repository'sinden hello-clarusway imagini calistiriyoruz ve volume bagliyoruz.
+!!!!!
+>docker start 23g && docker attach 23g      # terminaline baglanilir. Oncesinde start gerekir.
+!!!
+>docker exec -it 23g bash                   # bash'i calistirip baglanir. Yukardaki ile ayni.
+
+
+
+2.Hands-on:
+- Ayni volume'a birden fazla container baglama.
+>>docker volume create cw-vol                # volume'un adresini verir burada.
+>>docker container run -it --name clarus -v cw-vol:/home/cw alpine ash   # cw-vol volume ile /home/cw adresine bagladik.
+>echo "deneme" > /home/cw/i-will-persist.txt
+>exit
+>docker volume inspect cw-vol
+  - adresini gosterir.
+>ls -al /var/lib/docker/volumes/cw-vol/_data
+>cat /var/lib/docker/volumes/cw-vol/_data/i-will-persist.txt
+
+>docker run -it --name clarus2nd -v cw-vol:/cw2nd alpine ash
+>cd cw2nd                                    #i-will-persist.txt dosyasi duruyor
+>echo "this is deneme" > loadmore.txt
+>ls                                          # her iki dosya da goruluyor.
+
+>docker run -it --name clarus3rd -v cw-vol:/home/bin/cw3rd ubuntu bash
+>cd /home/bin/cw3rd
+>echo "deneme" > file-from-3rd.txt
+>ls                                          # 3 dosya da gorulur.
+>docker container ls -a                      # containerleri gosterir.
+
+>docker run -it --name clarus4th -v cw-vol:/cw4th:ro ubuntu bash  # read-only ile kurduk
+>touch file.txt                              # hata verir cunli read only
+
+>docker start 6f6
+>docker exec -it 6f6 ash                      # verilen komutu icra eder. "-it" ac demek.
+>docker container prune                       # tum duran containerleri siler
+>docker container prune -f                    # stop etmemis containerler dahil tum containerleri siler.
+>ls /var/lib/docker/volumes/cw-vol/_data      # volume icine bakar.
+>docker volume rm cw-vol                      # docker hosttaki volume'u siler. Oncesinde baglisi containerler silinmeli.
+
+
+3.hands-on:
+docker volume create full-vol
+docker volume create empty-vol
+docker volume ls
+docker run -it --name vol-lesson -v full-vol:/cw alpine ash
+cd cw
+echo "this is created in the full-vol" > full.txt
+exit
+docker volume inspect full-vol
+docker run -it --name clarus clarusway/hello-clarus sh    # repository'den image cekip run ettik.
+cd hello-clarus                                # dolu
+
+docker run -it --name try1 -v full-vol:/cw clarusway/hello-clarus sh
+cd cw
+ls                                             # full.txt var
+
+docker run -it --name try3 -v full-vol:/hello-clarus clarusway/hello-clarus sh 
+cd hello-clarus          
+ls                                             # pathdeki dosya silinmis yerine volumedaki dosya gel,is.
+
+docker container prune                         # containerleri siler
+docker volume prune                            # volume'lari siler.
+docker volume prune -f                         # 
+
+4.BIND MOUNTS:
+- Volume olusturmadan docker hosttaki bir adres ile containerdeki bir adresi eslestiririz.
+docker run -d --name nginx-default -p 80:80 nginx   # 80:80 portuna mapler. '-d': detach modda shell acmadan arkada calisir. Istenirse 'exec' ile baglanilir.
+cd /usr/share/nginx/html                            # index.html dosyasi burada
+!!!
+docker run -d --name nginx-new -p 8080:80 -v /home/ec2-user/webpage:/usr/share/nginx/html nginx  # Onceden olusturulmus bir volume erine bir path'i volume olarak veririz.
+docker exec -it nginx-default bash                  # bash'te it olarak baglanmayi execute eder. Duran cont'a baglanmaz.
+
+
+
+
+
+
+
+

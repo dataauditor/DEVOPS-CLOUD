@@ -1,0 +1,323 @@
+1.Genel:
+https://prometheus.io
+https://prometheus.io/docs/instrumenting/exporters
+  - exporterlara buradan ulasilir.
+https://prometheus.io/docs/prometheus/latest/querying/basics/
+  - query yazilma usulu ve ornekleri buradan bakilir.
+https://prometheus.io/docs/prometheus/latest/querying/operators/
+  - fonksiyonlari buradan buluruz.
+https://grafana.com/grafana/dashboards/
+- Prometheus is an open-source system monitoring and alerting toolkit.
+- Prometheus pulls metrics (key/value) and stores the data as time-series, allowing users to query data and alert in a real-time fashion.
+- It communicates to targets at given intervals to collect metrics, aggregate data, show data, or even alert if some thresholds are met.
+- It has become the most popular tool for monitoring Kubernetes workloads.
+Prometheus Temel Ozellikleri:
+  * a multi-dimensional data model with time series data identified by metric name and key/value pairs
+  * uses PromQL that is a flexible query language to leverage this dimensionality
+  * time-series collection happens via a pull model over HTTP
+  * targets are discovered via service discovery or static configuration
+  * multiple modes of graphing and dashboarding support
+Componentleri:
+  * The main Prometheus server which scrapes and stores time-series data
+  * Client libraries for instrumenting application code
+  * A push gateway for supporting short-lived jobs
+  * Special-purpose exporters for services like HAProxy, StatsD, Graphite, etc.
+  * An alert manager to handle alerts
+Monitoring:
+  * Disk full
+  * Software: bug request error.
+  * Uretilen ve tuketilen veri takibi: Gunluk ortalama veri cikisi azalmissa yazilimin patladigi degerlendirilebilir.
+  * Hardware temperature: hardware failure
+  * Network outage: services cannot communicate
+  * Low memory utilization: money wasted
+Monitoring:
+  * metriclering toplanmasi
+  * alertlerin gonderilmesi
+    - kisilere sms, email
+    - automated handler/agent
+  * Support issue resolution (data for root cause analysis)  
+  * analyse trend & effects/impact of change	
+
+- Metricleri tutar, sorgular ve verilen rule'a gore (threshold) ikazlar gonderir.
+Terminoloji:
+- Prometheus Server: 
+  * scraped (metricleri endpointlerden toplamasi) edilmis verileri time series database olarak tutar.
+  * promQL query language ile sorgulama yapar. 
+  * (scrape) metrics ler ile target'tan verileri ceker.
+- Time series Database: Zamana sarih verileri depolar.
+- Scrape: Prometheus metricleri verileri cekmek icin bir method kullanir.
+- Alert Manager: Rule'lara gore sorgular yapar. Threshold disina cikilan durumlari onceden belirtilen sekilde bildirir.
+- Exporter: 
+  prometheus.io/docs/instrumenting/exporters/     adresinden exporterlara ulasilabilir.
+  * Yuklendigi bilgisayardaki applicationdan metricler uretir ve kapinin onune koyar.
+  * K8s ve Docker vb programlari prometheus tanir. Bunlara native program denir. 
+  * Native olmayan programlar icin exporter indirilir. 
+  * <ip address>/metrics onune scrape (copu) birakir target.
+  * Hedef kutuphaneler metricleri degistirir ve Prometheus formatina export eder/yayinlar. 
+  * Copu (metricleri) kapiya birakir. Prometheus (copcu) de toplar. Prometheus copun disari birakildigini bilmesi gerekir. 
+  * Applicationlarin copu kapiya birakma usulleri farklidir.
+  * exporters clients'lara da yuklenir.
+- Instance: endpoint yani ec2 makinesi olarak dusunmek lazim. Icinde iki app calisirsa iki adet target tanimlanir.
+- target: herbir app veya endpoint'in bagli oldugu yazilim gibi dusunulebilir.
+- Job: Ayni gorevi goren instance kumesi. Autoscaling gibi toplu takip edilen gruplar.
+Prometheus Server:
+  * Retrievel: verileri toplar ve TSDB'ye gonderir.
+  * TSDB: Time series database. Verileri depolar.
+  * HTTP Server: TSBD icinde queryler gerceklestirip metricleri yayinlar.
+Metric Types:
+  * Counter: surekli artar. request, request count veya error count vb.
+  * Gauge: artan azalan metric turu. Memory usage, requet number in progress, ...
+  * Histogram: Frekansi gosterir. Metriclere gore veri sikligi (hata sikligi, request sikligi vb)
+prometheus.yml dosyasi ile calisir.
+Prometheus Calisma Sekli:
+  - Targetlari metricleri uzerinden monite eder.
+Targetlar:
+  - OS
+  - Applications,
+  - db vb services,
+  - Web servers ...vb.
+Metrics:
+  - CPU/RAM/Disk Usage,
+  - Exceptions count,
+  - Requests count,
+  - Request duration ... vb.
+Metriclerin Cekilmesi:
+  http://hostaddress:[port]/metrics
+  http://112.33.4.234/9100/metrics, http://112.33.4.234/9100/api/metrics ... vb uygulamaya gore degisir.
+  
+<metric name>{<label name><label value>, ...}
+api_http_request_total{method="POST", handler="/messages"}
+
+Exporter: native olarak desteklenmeyen (kubernetes, Docker desteklenir) programlar icin yazilmis scriptler. prometheus.io ile ilgili github sayfasindan nasil indirilecegi aciklanir.
+Grafana: Prometheus ile toplanan metricler Grafana ile grafiksel olarak gosterilir.
+Grafana: Sadece verileri prometheus vasitasiyla alip sergiler.
+
+Portlar:
+- Prometheus 9090 portunu kullanir.
+- Grafana 3000 portunu kllanir.
+- Exporter'le metricleri 9100 portundan gorur/cekeriz.
+
+!!!
+2.Kullanimi:
+> Control node'a prometheus yuklenir.
+> instance'a application yuklenir (db, webservice, ... vb.).
+> instance'a apllicationun exporteri yuklenir (native olanlar icin yuklenmez.) ve uygun port ve uzanti (ip address:port/mehmet/metrics) ile export edecek sekilde konfigure edilir.
+> control node ile targettan copler cekilir ve grafanaya aktarilir.
+> Grafana verileri istenilen grafik ile sergiler. Grafana'da hostlarda yuklu exportera havi hazir dashboard import edilerek izleme yapilir. 
+> prometheus.yml (target secimi, periyot, alert manager tetikleme tresholdlar ... vb.)
+  > global: 
+    - scrape interval: scrape (copleri alma) zaman araligi. Or: 15s
+    - eveluation interval: Kurulan rule'lari degerlendirme araligi. Or: 15s
+  > rule_files: alarm verilmesine yonelik kurallar. Ayri bir dosya olusturulup atanir (first_rules.yml, second_rules.yml) (best practice) ve burada kurallar degistirilebilir.
+  > scrape_configs:
+    - job_name: prometheusun monitor edecegi endpointleri tanimlariz. 
+    - static_configs:
+      - targets: scrape edilecek targetlarin endpoints tanimlanir. Or: ['localhost:9090']
+> Alert manager: kod girilerek bize mesaj/sms ile belirlenen aralik asilinca bilgilendirme gonderir.
+> PromQL: Visualization ve sorgulama yapilir.
+
+ 
+
+3.Intallation:
+- Windows icin:
+  * https://prometheus.io/download/  indir.
+  * unzip yap.
+  * prometheus.exe dosyasini PATH'e ekle veya tasi.
+
+
+
+4.Hands-on:
+Prometheus:
+  > control noda prometheus kurulur 
+  > ... control node ve targetlara kurulur.
+  > ... targetlardan default olarak verileri export ederler.
+  > prometheus.yml ile control node'a target'lar ip ile tanitilir.
+  > endpointler uzerinden .yml file'da targetlari tanitarak export edilen veriler control node toplanir.
+  > prometheus 'a control node ip:9100 uzerinden baglanilir.
+  > komutlarla istenilen veriler filtrelenerek cekilir.
+
+AWS-Consol:
+2xlinux2 ac (t2.micro, 22, 3000, 9090, 9100) 
+  - Birine prometheus yukleriz. 
+  - Her ikisine node exporter yukleriz. Metricleri cekmek icin.
+
+VSC:
+!!!
+wget https://github.com/prometheus/prometheus/releases/download/v2.31.0-rc.0/prometheus-2.31.0-rc.0.linux-amd64.tar.gz
+tar xvfz prometheus-*.tar.gz
+  - ilgili dosyayi actik.
+cd prometheus-*
+ll
+cat prometheus.yml
+export PS1="\[\e[31m\]\u\[\e[32m\]@\h-\w:\[\e[36m\]\\$\[\e[m\] "
+!!!
+./prometheus --config.file=prometheus.yml
+  - prometheus'u calistirdik.
+
+Browser:
+http://<public ip>:9090
+prometheus_target_interval_length_seconds
+  - expression console'a gir.
+  - yukarda girilen bir metric ismidir.
+  - bu metric isminin farkli labellarda (etiket) time series'lerini gosterir. 
+  - Bu labellar farkli gecikme sureleri ve target grubu araliklarini belirtir.
+> Status > Targets > Endpoint / http://localhost:9090/metrics scrape edilecek targeti gosterir. Metriclerin gelecegi targeti (buradan prometous'un kendi bilgisayari) gosterir.
+> Prometheus > up (query yazdik) > acik bilgisayarlari gosterir.
+> Prometheus > up > Graph (gorsel olarak sunucu sunar.)
+> Prometheus > up==1 (tek makine mi acik) > acik tek makineyi gosterir.
+> Prometheus > up==1 > sonuc gostermez.
+> Prometheus > prometheus_target_interval_length_seconds (the actual amount of time between target scrapes) > 
+
+VSC node-exporter:
+wget https://github.com/prometheus/node_exporter/releases/download/v1.2.2/node_exporter-1.2.2.linux-amd64.tar.gz
+tar xvfz node_exporter-*.*-amd64.tar.gz
+cd node_exporter-*.*-amd64
+./node_exporter
+  - node exporter calistirildi. Ctrl + c ile cikilirsa calismaz.
+  - prometheus calistirildiktan sonra Ctrl - c ile cikilmaz. Baska bir terminal acilarak islemlere devam edilir.
+curl http://localhost:9100/metrics
+  - bu sekilde veya browserdan gorulebilir metricler.
+cd ..
+vim prometheus.yml
+-----------------------------------------------------------------
+  - job_name: node
+    static_configs:
+      - targets: ['54.34.55.6:9100']
+-----------------------------------------------------------------
+  - Bu job'u sona ekleyerek ilgili exporteri target olarak tanitiriz.
+./prometheus --config.file=prometheus.yml
+  - degisikligi gormesi icin yeniden baslatilir.
+!!!
+ps aux | grep prometheus.yml
+  - prometheus.yml'i kullanan service'in numarasini (408) aliriz. (./prometheus --config.file=./prometheus.yml
+kill -1 408
+  - ./prometheus processini son configurasyon ayarlari ile restart eder.
+
+VSC node2:
+wget https://github.com/prometheus/node_exporter/releases/download/v1.2.2/node_exporter-1.2.2.linux-amd64.tar.gz
+tar xvfz node_exporter-*.*-amd64.tar.gz
+cd node_exporter-*.*-amd64
+./node_exporter
+
+VSC node exporter:
+vim prometheus.yml
+-----------------------------------------------------------------
+  - job_name: node
+    static_configs:
+      - targets: ['54.34.55.6:9100']
+        labels:
+        env_name: 'test'
+        name: 'node-2'
+      - targets: ['3.96.123.112:9100']
+        labels:
+        env_name: 'test'
+        name: 'node-1'
+-----------------------------------------------------------------
+  - Bu target'i node exporter job'unun sonuna ekleyerek node2'deki ilgili exporteri target olarak tanitiriz.
+  - targetlari labellayarak metricleri node bazinda gorebiliriz.
+
+Browser node-exporter:
+http://<public ip>:9100
+> metrics > metricleri listeler.
+  - tum metricleri sergiler filtreleme yapmaz. Filtrelemeyi metricleri ceken prometheus veya grafana'da yapariz.
+node_cooling_device_cur_state
+  - seklinde herhangi bir node-exporter metricini kopyalariz.
+
+Browser prometheus:
+> node_cooling_device_cur_state > execute > sorgulama yapar.
+> Status > targets > prometheus.yml dosyasi ile tanitilmis exporterlari gosterir.
+
+VSC rules:
+cd prometheus-2.31.0-rc.0.linux-amd64/
+vim node-down.yml
+-----------------------------------------------------------------
+groups:
+- name: node
+  rules:
+  - alert: InstanceIsDown
+    expr: up{} == 0
+    for: 60s
+    labels:
+      severity: critical
+    annotations:
+      description: "{{ $labels.name }} instance is down"
+-----------------------------------------------------------------
+  - ilgili rule tanimlama file'i ile prometheus.yml da degisiklik yaparak rule olusturacagiz.
+vim prometheus.yml
+-----------------------------------------------------------------
+rules_files:
+  - "node-down.yml"
+-----------------------------------------------------------------
+  - yukardaki rule'un path'ini 'rules_files:' altina ekledik.
+
+VSC prometheus:
+prometheus'u calistirdigimiz terminali Ctrl + c yaparak ile durdururuz.
+./prometheus --config.file=prometheus.yml
+  - 'prometheus.yml' dosyasindaki degisikligi almasi icin tekrar baslatiriz.
+
+Browser:
+> Status > Rules > rule'u gorduk.
+> Alerts > rule yonelik alrm durumu yesil problem yok ilgili rula'a havi.
+
+AWS:
+- node2'i stop edildi.
+
+Browser:
+public IP:9090 (prometheus)
+> Alerts > InstanceIsDown alarmini gosteriyor. 
+> Prometheus > up {} == 0 (node2'nin down oldugunu gosterir.)
+
+AWS grafana:
+wget https://dl.grafana.com/enterprise/release/grafana-enterprise-8.2.2-1.x86_64.rpm
+sudo yum install grafana-enterprise-8.2.2-1.x86_64.rpm
+sudo systemctl start grafana-server.service
+
+Browser grafana:
+public ip:3000
+> username: admin / pasword: admin
+> Configuration > Add data source > Prometheus > URL: public IP:9090 > save
+> Dashboard Settings : yenileme/refresh sureleri vb tanimlanabilir.
+> Dashbords > Add an empty panel > Metrics browser: up {} > apply > save Dashboard >
+  > Add panel > Add an empty panel > Metrics browser: node_filesystem_avail_bytes (node_exporterdan sectik (ip address:9100)) 
+  > title: elif > apply > save dashboard
+  - once dashboard olusturulur. Icinde de paneller olusturulur.
+  - node ve port bazinda makileri gosterir.
+  - Busada manual olarak panalleri ile bir dashboard olusturduk.
+!!!
+https://grafana.com/grafana/dashboards/
+  - Buradan hazir dashboards'lar yuklenebilir. Manual hazirlamak yerine.
+  - Node exporter yuklu oldugu icin Node exporter'a yonelik dashboard arariz.
+!!!
+> https://grafana.com/grafana/dashboards/12486 (browserdan sectik) > Dashboards > Manage > Import 
+  > 12486 (netteki ID girilir) > load > prometheus: prometheus > import > save dashboard
+  > Node exporter icin hazir bir dashboard acildi.
+  > Host: istenen instance secilebilir.
+
+VSC:
+sudo stress --cpu 8 --timeout 20
+sudo yum install -y stress
+  - veya asagidaki stres testi yapilir ve grafanada gozlemleriz.
+sudo amazon-linux-extras install epel -y
+sudo yum install -y stress
+stress --cpu 80 --timeout 20000
+
+kill -1 408^C
+  - programi kapatir. 0nceki halinde calistirir.
+ansible all -i inventory_aws_ec2.yml -m ping --key-file "~/playbook/ugur.pem"
+
+
+
+
+5.Hands-on:
+roller: ns capinda
+cluster-role: tum clusterda gecerlidir.
+
+
+
+
+
+
+
+
+
+

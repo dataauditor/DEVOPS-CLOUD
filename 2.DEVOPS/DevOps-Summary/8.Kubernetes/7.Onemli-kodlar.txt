@@ -1,0 +1,136 @@
+1.apiVersion arama:
+kubectl api-resources
+  - apiVersion'u aliriz.
+
+
+2.alias:
+alias k=kubectl
+
+
+5.Pod'a Baglanma:
+kubectl exec -it <pod-name> -- bash
+kubectl exec <pod-name> -- date
+kubectl exec <pod-name> -- cat /usr/share/nginx/html/index.html
+  - Pod'a baglanmadan icinde kod calistirilir.
+
+
+4.Rollout:
+kubectl set image deploy clarus-deploy container-info=clarusways/container-info:2.0 --record=true
+kubectl rollout history deploy clarus-deploy
+kubectl rollout history deploy clarus-deploy --revision=1
+  - revision numarasi ile incelenebilir.
+kubectl rollout undo deploy clarus-deploy --to-revision=1
+kubectl delete deploy -l app=container-info
+  - label'i ile deployment silinir.
+
+
+
+
+6.Scale:
+kubectl scale deploy nginx-deployment --replicas=5
+
+
+7.Label:
+kubectl get deploy,rs,po -l app=container-info
+
+
+8.Namespace:
+kubectl create namespace yeni-namespace
+kubectl create deployment clarus-deployment2 --image=nginx -n=yeni-namespace
+  - clarus-namespace'te deployment olusturduk.
+
+
+6.Genel:
+k create -f forcurl.yaml 
+k apply -f . 
+kubectl get nodes
+kubectl delete node worker
+kubectl describe pods/nginx-pod
+kubectl delete pod nginx-pod -n clarus-namespace
+kubectl get deploy,rs,po -o wide -n clarus-namespace
+kubectl logs <pod-name> 
+
+
+
+10.RollingUpdate, maxSurge, maxUnavailable:
+vim web-flask.yaml
+--------------------------------------------------------------------
+apiVersion: apps/v1 
+kind: Deployment 
+metadata:
+  name: web-flask-deploy
+spec:
+  replicas: 3 
+  selector:  
+    matchLabels:
+      app: web-flask
+  minReadySeconds: 10 
+  strategy:
+    type: RollingUpdate 
+    rollingUpdate:
+      maxUnavailable: 1 
+      maxSurge: 1 
+  template: 
+    metadata:
+      labels:
+        app: web-flask
+        env: front-end
+    spec:
+      containers:
+      - name: web-flask-pod
+        image: clarusway/cw_web_flask1
+        ports:
+        - containerPort: 5000
+--------------------------------------------------------------------
+
+
+11.restartPolicy: Always, imagePullPolicy: IfNotPresent
+vim forcurl.yaml
+--------------------------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: forcurl
+spec:
+  containers:
+  - name: forcurl
+    image: clarusway/forping
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+--------------------------------------------------------------------
+  - "restartPolicy: Always": Stop durumunda systemd gibi tekrar calistirir.
+kubectl create -f forcurl.yaml
+  - "imagePullPolicy: IfNotPresent": localde yoksa download eder image'i.
+  - "imagePullPolicy: Always": Her yeni kurulumda indirir.
+k get po -o wide
+kubectl exec -it forcurl -- sh
+  - yukardan aldigin ip addreslerine ping atabilirsin.
+ping 172.54.6.0
+
+
+12.Service:
+vim web-svc.yaml
+--------------------------------------------------------------------
+apiVersion: v1
+kind: Service   
+metadata:
+  name: web-flask-svc
+  labels:
+    app: web-flask
+spec:
+  type: ClusterIP  
+  ports:
+  - port: 3000  
+    targetPort: 5000
+  selector:
+    env: front-end 
+--------------------------------------------------------------------
+  - selector ile podlarin labellarindan yakalar ve podlari clusterIP (bridge)ye katar.
+  - ClusterIP: yalniz icerde calisir. dis dunyaya cikis yapmaz.
+  - targetPort, podlarin; port, ClusterIP'nindir. 
+  - Endpoint: <pod ip>:targetPort
+kubectl get svc -o wide
+kubectl describe svc web-flask-svc
+
+
+

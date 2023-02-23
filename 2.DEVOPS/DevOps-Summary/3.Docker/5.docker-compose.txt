@@ -1,0 +1,342 @@
+1.Genel:
+- docs.docker.com  sayfasindan Reference > Compose file reference > sag tarafta kullanilan objeler (dockerfile, build, start, network vb) bulunur. Buradan incelenebilir.
+- YAML filedir. Applicationu calistirmak uzere servislerin detaylarini, networks, volumes bilgilerini icerirler.
+- Containerler yalitilmis olarak calisirlar.
+- Declarative Imperative:
+  - Imperative: komut yazip birebir islem yaparak ilerlemedir.
+  - Declarative: Yaml dosyasinda isterleri yaziyoruz ve dosyayi yukleyince herseyi aciyor.
+- Microservisler bazinda her microservice'e bir container tanimlanabilir.
+- Docker Compose: multi container Docker applicationlarin calistirilmasi icin bir tooldur.
+- docker-compose.yml: configuration file
+- Compose temelde 3 asamalidir.
+  - App'in environmentini Dockerfile ile tanimla. Boylece baska yerde de uretilebilir olur.
+  - App'i olusturan servisleri docker-compose.yml ile tanimla. Boylece herbiri isole containerlerde calisir.
+  - run docker-compose up ile compose calismaya baslar ve app calisir.
+>docker-compose up -d          # docker-compose'u olusturur.         
+>./run_tests 
+>docker-compose down           # docker-compose'u destroy eder. 
+- docker-compose'da build demek docker'daki run demektir. Yani container acar.  
+>docker-compose down, image ve volume'lari silmez.
+!!!
+>docker-compose komutu yaml dosyasinin konumunda calistirilmali. Dockerfile veya image ve app dosyasi da olmali.
+
+2.Installation:
+- Windows ve Mac'te Docker'i yukleyince iner.
+- Linux:
+sudo yum update -y
+sudo amazon-linux-extras install docker -y
+sudo usermod -aG docker ec2-user
+newgrp docker
+sudo curl -L "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose                # yuklemede problem varsa adreslemeyi degistir.
+docker-compose --version
+
+3.Docker Compose File:
+- Docker Compose file:
+  - version yazilir.
+  - services yazilir.
+    - containerler burada tanimlanir.
+    - volumes ve network'ler containerlerin altina iliskilendirilir.
+    - volume'da tanimlanmayan docker engine'deki bir folder da burada iliskilendirilebilir.
+    - asagida tanimlanan network burada containerlerine altina yazilarak iliskilendirilir.
+    - port tanimlanir.
+  - volumes yazilir.
+    - service'in altinda tanimlanan containerler'in altina buradaki volume tanimlanir.
+    - volume'un path'inin altina alt path yazilabilir.
+  - network tanimlanir.
+    - ilgili network ismi ve ne tur oldugu belirtilir.
+- Farkli imagelerden iki container olusturuyoruz.
+- 2.si 1'ye bagli.
+- Volume tanimliyoruz.
+
+4.Ornek Docker Compose File:
+---------------------------------------
+version: "3"
+services:
+  es:                             # es 
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.3.2  # es bilgisayarini bu imajdan uret.
+    container_name: es          
+    environment:
+      - discovery.type=single-node
+    ports:
+      - 9200:9200
+    volumes:
+      - esdata1:/usr/share/elasticsearch/data
+  web:
+    image: prakhar1989/foodtrucks-web
+    command: python app.py
+    depends_on:
+      - es
+    ports:
+      - 5000:5000
+    volumes:
+      - ./flask-app:/opt/flask-app
+volumes:
+    esdata1:
+      driver: local
+---------------------------------------
+version: "2"
+services: 
+  db:
+    image: mongo:latest     # her defasinda son versiyonu yukler.
+    container_name: db
+    networks:
+      - todonet
+  web:
+    build: ../.             # bir ust dosyadaki Dockerfile'i kullanarak container olustur.
+    netwoks:
+      - todonet
+    ports:
+      - "3000"
+networks:
+  todonet:
+    driver: bridge
+-----------------------------------------
+version: "3.8"
+services:
+  web:
+    build: .        # web containerini mevcut konumdaki Dockerfile veya image'ten olustur.
+    depends on:     # asagidakiler olusmadan web'i olusturma.
+      - db
+      - redis
+  redis:
+    image: redis    # redis'i olusturmak icin redis image'i kullan.
+  db:
+    image: postgress
+-----------------------------------------
+
+
+4.Ders:
+- Microservice mimarilerinde her defasinda teker teker container kaldirip, port, network kurmamak icin yaml file ile bunu template seklinde kurup otomatize etmektir.
+- Docker Swarm birden fazla instance'da docker compose tek instance'da birden fazla container acar.
+- Mutlaka versiyon verilir. Her docker engine her engine'i calistirmaz.
+- Default path of compose file: ./docker-compose.yml
+- 3 temel objesi (basligi) var:
+  - services: containers
+  - networks : bridge, 
+  - volumes 
+--------------------------------------------------------------
+   services # containerler
+     web   # container
+       build:. # imageten olusturur.
+       depends on:
+         db
+         redis
+       ports:  # 
+         - "5000:5000"  # port tanimlanir.
+       volumes:
+         logvolume01:/var/log  # docker volume'a baglar
+         .:/code
+      redis  # yeni container
+        image: redis:LATEST  # redis imagini kullan       
+      db  # yeni container
+        image: postgres  # postgres imagini kullan
+   volumes:
+     logvolume01: {}  # docker volume tanimladik.
+--------------------------------------------------------------
+
+5.Hands-on:
+>docker-compose --version
+  - yuklu degil
+>sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" \
+-o /usr/local/bin/docker-compose
+  - docker-compose yukledik.
+>sudo chmod +x /usr/local/bin/docker-compose
+  - executive hale getirdik.
+>docker-compose --version
+>mkdir composetest && cd composetest
+>vim app.py
+-------------------------------------------------------------
+import time
+
+import redis
+from flask import Flask
+
+app = Flask(__name__)
+cache = redis.Redis(host='redis', port=6379)
+
+
+def get_hit_count():
+    retries = 5
+    while True:
+        try:
+            return cache.incr('hits')
+        except redis.exceptions.ConnectionError as exc:
+            if retries == 0:
+                raise exc
+            retries -= 1
+            time.sleep(0.5)
+
+
+@app.route('/')
+def hello():
+    count = get_hit_count()
+    return 'Hello World! I have been seen {} times.\n'.format(count)
+-------------------------------------------------------------
+>cat app.py
+  - ilgili dosyanin icine yuklenmis mi kontrol ettik.
+-------------------------------------------------------------
+echo '
+flask
+redis
+' > requirements.txt
+-------------------------------------------------------------
+echo '
+FROM python:3.7-alpine
+WORKDIR /code                                      # /code klasorunde calisacagiz.
+ENV FLASK_APP app.py                               # env variable tanimladik. export FLASK_APP=app.py
+ENV FLASK_RUN_HOST 0.0.0.0                         # env variable tanimladik. export FLASK_RUN_HOST=0.0.0.0
+RUN apk add --no-cache gcc musl-dev linux-headers  # apk add: yum install gibi. --na-cache cachleme yapma. gcc, musl-dev, linux-headers kutuphanelerini yukle.
+COPY requirements.txt requirements.txt             # requirements.txt'yi imajin icine kopyalar.
+RUN pip install -r requirements.txt                # requirements.txt'deki programlari -r ile read (oku) pip install ile yukler.
+EXPOSE 5000                                        # 5000 portundan cikis yap.
+COPY . .                                           # Buradaki herseyi /code dosyasinda olusacak imajin icine kopyala. ikinci "." /code dosyasini ifade eder.
+CMD ["flask", "run"]
+' > Dockerfile
+-------------------------------------------------------------
+echo '
+version: "3"
+services:
+  web:
+    build: .                                       # Dockerfile'dan image olusturup container acar. (docker-compose da build=run)
+    ports:
+      - "5000:5000"
+  redis:
+    image: "redis:alpine"
+' > docker-compose.yml
+-------------------------------------------------------------
+>docker-compose up
+  - compose'u icra eder.
+- Browserdan instance'in 5000 portunu acarak public ip ile baglaniriz.
+>Ctrl + c 
+  - containerleri durdurur.
+>docker-compose help | less
+>docker-compose ps
+  - calisan servisleri gosterir.
+  - ilgili dosya icinde yazilir.
+>docker-compose config
+  - docker-compose file'i tersten gosterir.
+>Ctrl + c 
+  - containerleri durdurur.
+>docker ps -a
+  - containerleri durmus olarak goruruz.
+>docker-compose down
+  - herseyi siler.
+>docker images
+  - olusan imajlari silmez "down" komutu.
+>vim app.py
+------------------------------------------------------------------
+@app.route('/')
+def hello():
+    count = get_hit_count()
+    return 'Hello World! This is modified app. I have been seen {} times.\n'.format(count)
+------------------------------------------------------------------
+  - yukardaki kisimda degisiklik yapiyoruz. (This is modified app.)
+>docker-compose up
+- Browserdan kontrol edince degisikligin islenmedigini goruruz.
+  - eski hazir imaji kullanmaya devam ediyor.
+  - eski image ile container acar.
+>docker-compose down
+!!!
+>>docker-compose up --build
+  - Dockerfile'dan yeniden image olusturup o imajdan container acar.
+  - yeni image ile container kurmadan once eski image'ten acilan containerler silinir.
+>docker-compose down
+
+
+6.Hands-on:
+- .py dosyasi ile api dosyasinin isterlerini requirements.txt ile yukleriz.
+- 
+>cd ..
+>mkdir to-do-api && cd to-do-api
+>vim to-do-api.py
+-------------------------------------------------------------------
+hands-on/docker-07 icindeki .py dosyasi 
+-------------------------------------------------------------------
+>vim requirements.txt
+-------------------------------------------------------------------
+flask
+flask-mysql
+-------------------------------------------------------------------
+vim Dokerfile
+-------------------------------------------------------------------
+FROM python:alpine
+COPY . /app
+WORKDIR /app
+RUN pip install -r requirements.txt
+EXPOSE 80
+CMD python ./to-do-api.py
+-------------------------------------------------------------------
+  - Dockerfile olusturarak .py dosyasini image icine atar, baslatiriz.
+>vim docker-compose.yml
+-------------------------------------------------------------------
+version: "3.7"
+services:
+    database:
+        image: mysql:5.7                     # ilgili imajdan servisi olustur.
+        environment:
+            MYSQL_ROOT_PASSWORD: R1234r
+            MYSQL_DATABASE: todo_db
+            MYSQL_USER: clarusway
+            MYSQL_PASSWORD: Clarusway_1
+        networks:
+            - clarusnet
+    myapp:
+        build: .                             # Dockerfile'dan container olusturuyor.
+        restart: always                      # her durdugunda yeniden baslat.
+        depends_on:
+            - database                       # database olusmadan baslatma
+        ports:
+            - "80:80"
+        networks:
+            - clarusnet
+networks:
+    clarusnet:
+        driver: bridge
+-------------------------------------------------------------------
+- docker-compose yazmak yerine docker komutlari kullansaydik:
+  >docker build .
+  >docker network create --driver-bridge clarusnet
+  >docker container run --name database --network clarusnet --env MYSQL_ROOT_PASSWORD=R1234r --env MYSQL_DATABASE=todo_db --env MYSQL_USER=clarusway --env MYSQL_PASSWORD=Clarusway_1 mysql:5.7
+  >docker container run --name myapp --network clarusnet --restart=always -p 80:80 appimage     # build ile olusan imaji kullanacak sekilde isim duzeltilir.
+>docker-compose up -d        
+  - detach modda
+>docker container ls
+>docker image ls
+  - compose'da build ile yapilan image ve sonrasi containerler icin yeni container kurarken --build attribute'ini kullaniriz. oncesinde eskileri sileriz.
+- Browserdan ilgili ip ile gireriz. Sonra /todos ekini gireriz.
+>curl curl http://3.92.179.177/todos
+  - browserdan http://3.92.179.177/todos sayfasina girince alinan veri gelir.
+>curl curl http://3.92.179.177/todos/3
+>curl -H "Content-Type: application/json" -X POST -d '{"title":"Get some REST", "description":"REST in Peace"}' http://3.92.179.177//todos
+>curl -H "Content-Type: application/json" -X DELETE http://3.92.179.177/todos/1
+>docker-compose down
+>docker network ls
+  - bridge'ler silinmemis.
+
+
+7.Hands-on:
+- Replica
+-----------------------------------------------
+services:
+  app:
+    image: nginx
+    deploy:
+      mode: replicated
+      replicas: 2 
+  backend:
+    image: mysql:5.7
+    volumes:
+      - data:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: set
+      MYSQL_DATABASE: set
+      MYSQL_USER: set
+      MYSQL_PASSWORD: set
+     
+volumes: 
+  data: {} 
+---------------------------------------------------
+docker-compose up
+  - 2 adet frontedn 1 adet mysql containeri olusur.

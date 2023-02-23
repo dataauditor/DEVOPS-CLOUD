@@ -1,0 +1,169 @@
+1.Genel:
+- Environmenti hazirlama ve build process'i icrada etkilidir.
+- Projenin basinda developerlar tarafindan:
+  - super pom (default pom) ve project pom (bizim pom) birlestirilerek effectiv pom dosyasi olusturulur. Bu dosya Maven'in en onemli dosyasidir.
+- Effective Pom: Tum configurasyon dosyasi burada olur. Profile'larda burada yazilir.
+- Lifecycle:
+  - Default build lifecycle 23 adet
+  - Clean lifecycle 3 adet (temizleme islemlerini yapar.)
+  - Site lifecycle 4 adet (ilgili dosya sonuclarini web sitesi seklinde Maven gosterir)
+- Komutla lifecycle icinde ornegin compile adimini talep edebilirsin ve compile adimina kadar olan bolumu yapar.
+- Main ve child pom dosyalari olur. Main olan pom dosyasi islemleri baslatir. Microservice seklinde yazilan yazilimlarda main pom dosyasini referans vererek child pom dosyalari kullanilir microservis yazilimlarda.
+- DevOps'cular genelde kurulu Maven dosyasina plugin ekleyip ilgili pluginlerin sonuclarini sisteme aktarma islemini yaparlar.
+- Developmentteki (her development icin de ayri profile olusturulabilir), testteki ve production icin 3 farkli profile olustururuz.
+- Test ederken build ederken test veritabani uzerinden de calisilabilir. genelde farkli veritabanlari olur.
+- Ayni build configurationlarini farkli profile'ler ile active edebiliriz.
+- 5 farkli Profile:
+  - Explicit Profile: Calisirken istedigimiz profille calistirmak icin kullanilir. mvn package -P test  : Profile id = env/test, test environmentini kopyalar genelde run'in altinda. 
+  - Home directory altinda .m2 folder olusur. settings.xml icine profile yazarak da calistirabiliriz.
+  - -Ddebug 
+- Alfa test: sirket bunyesinde yapilir. Kullanicilar sirkete gelerek test eder.
+- Beta test: kullanicilar uzaktan servera girip test ederler ve test esnasinda loglar toplanip developerlara gonderilir.
+- Profilelar ile ayni pomu kullanip farkli settingslerle farkli davranislar sergilemesini test environmentini kullanmasini tek microservice kullanmasini saglar.
+- Profiller ve safhalari (develop, testing, production) pom dosyasinda tanimlanir.
+- Dokumantasyona bakip isterlere bakip, su dosyadan su veritabanini cekecek, testing icin veri tabani cakecek, biz build edecegiz, farkli profilleri pom dosyasina yazacagiz. 
+- Test safhasinda ilgili veri tabani ile baslayacak yaziyorsa mavene yazacagiz.
+- tum profilelar ve configurasyonlari ayni anda pom da mi yaziyor ve biz sadece profile'i seciyoruz
+!!!
+- Pom dosyasina profile'leri biz ekliyoruz.
+Profilleri cagirma: Olusturulan profiller 5 farkli sekilde cagrilabilir.
+  - <activeByDefault> flagi yazip true ile calistirabiliriz.  Ornegin 3 profile var ve dev profiline bu sekilde yazilirsa -P test vb yazilmadikca default olarak dev profili calisir. profile > id ile gosterilir.
+  - Explicit Profile Activation: maven project -P profile1,profile2  : sirayla calismak uzere ilgili profile ile build eder.
+    * mvn package -P test
+  - localdeki .m2 dosyasinda settings.xml'e istedigi bir profile yazarak calisir. Biz bunu kullanmayiz.
+  - profile > activation > property altinda: <name>environment</name>  <value>test</vakue>  
+    * mvn package -Devironment=test 
+  - profile > activation > <os> altinda OS'a gore farkli profile <id>test</id> belirleyerek farkli profile'lar kullanilir.
+  - profile > activation > <file> > <missing> ilgili dosya yoksa su sekilde calis gibi dependency tanimlanabilir.
+  - profile > activation > property > name altinda yazan debug varsa: 
+    * mvn clean -Ddebug 
+Repositories: 
+  - ilgili dependenciesleri, resourcelari ve jar dosyasini .m2 dosyasini uretip icine atar.
+  - Local, central ve 3 party repository'si vardir.
+  - Maveni calistirirken oncelikle localden (atrifact- uygulamanin calismasi icin ilgili tum dosyalarin bulundugu dosya) calistirmaya calistirir. Eger dosya eksikse remotedan .m2'ye indirerek calistirir.
+  - Remote repository central ve 3rd party (sirketin belirledigi)
+  - .m2 silinirse de her build ederken maven tekrar guncelleyerek olusturur.
+  - 3rd party repository'nin configurasyonunu yapmaliyiz kullanacaksak ve bu durumda maven buradan indirme yapar. 
+  - Repository'ler bir sistemin calismasi icin ihtiyac duyulan tum dosyalarin bulundugu artifact deposudur.
+- Plugin:
+  - Cagrilirsa calisir.
+  - Jar dosyasi olusturma, compiling code, compiling unit test code, Dokumantasyon hazirlama, reporting, clean vb islemler pluginler ile yapilir.
+  - mvn plugin:goal (mvn clean compiler:compile)  once plugini yazariz sonra goalini yazariz.
+  - her plugin altinda groupid ve artifactid ve version olmali.
+  - 
+
+2.Installation:
+- https://maven.apache.org/download.cgi
+- Operatin System	File to Download
+  Windows	  	apache-maven-3.6.3-bin.zip
+  Linux			apache-maven-3.6.3-bin.tar.gz
+  Mac			apache-maven-3.6.3-bin.tar.gz
+- Ilk once dosya extract edilir. 
+- Second, add M2_HOME, M2 variables into your environment variables with the values shown below.
+  - For Windows :
+    M2_HOME=<path_to_your_apache-maven_directory>
+    M2=%M2_HOME%\bin
+  - For Linux :
+    export M2_HOME=<path_to_your_apache-maven_directory>
+    export M2=$M2_HOME/bin
+  - For macOS :
+    export M2_HOME=<path_to_your_apache-maven_directory>
+    export M2=$M2_HOME/bin
+- When you set all the variables, as shown above, you are ready to set the $PATH variable.
+  - For Windows :
+    Append the string %M2% to the end of the system variable path.
+  - For Linux :
+    export PATH=$M2:$PATH
+  - For MacOS :
+    export PATH=$M2:$PATH
+- Now you're good to go. For verifying the installation, try the command mvn --version.
+
+3.POM File (Project Object Model):
+- It's the starting point for a maven project.
+- It is an XML file that contains details about the project and configurations consumed by Maven for project building processes. 
+- It has the values for a standard project which can be changed according to user preferences.
+- When executing a task or goal in Maven terminology, Maven searches for the POM file in the current directory.
+- Maven consumes the POM, fetches the needed configuration detail, then executes the goals.
+- POM can define the project dependencies, the plugins or goals to be executed, the build profiles, and more. Other information like the project version, description, developers, mailing lists, and such can also be specified.
+- There has to be a POM file in every Maven project and all POM files need at least the project tag and four other inner tags named as modelVersion, groupId, artifactId, and version (Last three called as GAV in short).
+- The project tag is the root of the file. In the project tag, you need to describe the basic schema settings such as apache schema and w3.org specification.
+- Group Id is the id of the project's group (Simply it shows the company or the organization or the owner of the project). This should be long enough to give uniqueness to the project.
+- Artifact id is the id for specifying the project among others belonging to the same group. It mainly shows the name of the project like pet-clinic-server.
+- Version defines the version number of the project. Together with the groupId, it is used within an artifact's repository to separate versions.
+- To target Java 9 or later, you should at least use version 3.6.0 of the maven-compiler-plugin and set the maven.compiler.release property to the Java release you are targetting (e.g. 9, 10, 11, 12, etc.).
+- The Super POM is Maven's default POM. All POMs extend the Super POM unless explicitly set. This means that the configuration of the Super POM is inherited by the pom.xml file that the developer creates for the project. 
+- Together with super POM, project POM creates the Effective POM which is the overall configuration file. Effective POM can be examined by easily running the following command in your project's root directory: mvn help:effective-pom. 
+- POM files can also be inherited by other POM files. Child POM has the opportunity to either inherit from a parent POM or override the features coming from its parent. 
+- Specifically, a parent POM can be a company's default project structure or a general template for project building.
+- Notable elements that are not inherited include artifactId, name, and prerequisites.
+- A project with modules (children) is called a multi-module, or aggregator project.
+- Modules are projects that a parent POM file specifies, and those all modules are built together as a group.
+- An aggregator POM should have the package tag with "pom" expression in it and modules tag specifying the relative paths to the directories or the POM files of those projects.
+
+4.Build Lifecycle:
+- There are three built-in lifecycles in Maven: These are default, clean, and site.
+  - Default is the main life cycle as it's responsible for project deployment. 
+  - Clean is used for cleaning the project from all the files generated by the previous build or builds. 
+  - Site lifecycle is used for building your project's website documentation.
+- The default build lifecycle has 23, the clean lifecycle has 3 and the site lifecycle has 4 phases.
+
+5.Build Profiles:
+- A Build profile is a kind of mechanism for triggering a set of build configurations. 
+- These configurations mainly determine the values for different build environments like production, stage, test, or development environment. 
+- There are three types of build profiles. Which are "Per Project", "Per User" and "Global". 
+- The project type of profile is specified in the project's POM file.
+- Profiles can be active by default using a POM file configuration.
+- All profiles that are active by default are automatically deactivated when a profile in the POM file is activated on the command line or through its activation config.
+- Maven Build Profiles can be activated in five different ways. Which are using explicit profile activation, maven settings, environment variables (user/system variables), Operating System Settings, present/missing files.
+- Profiles can be explicitly triggered using the -P option in a CLI command. This option takes an argument that is a comma-delimited list of profile-ids. When this option is used, the profile(s) specified in the CLI command will be activated.
+>mvn groupId:artifactId:goal -P profile-1,profile-2
+- When you install Maven to your local environment, a directory named .m2 is created under your Home Directory. Under this directory, there should be a file named settings.xml. If it's not there, you can create one.
+- To activate a profile with settings.xml, the profile id should be declared under <activeProfile> tag in the settings.xml file.
+- After this declaration, you don't need to specify -P option while you're executing mvn commands. Your profile will be automatically in use.
+- Similar to explicit profile activation, you can also activate your profile using <activation> tag in your POM file under <profile> tag.
+- Activation with Operating System is specified under <os> tag. The below example requires Windows XP operating system and other features declared in the configurations. 
+
+6.Repository:
+- Repository is a source where all library jars, plugins, dependencies, or any other project-specific artifacts are stored. While your project runs, these resources are used silently.
+- There are two types of repositories in Maven. One is local and the other one is remote repository. 
+- While a local repository is your own computer, a remote repository can be separated into two. These are the central repository and a third-party repository.
+- Maven creates this directory and it continuously develops it whenever you use a resource from a remote repository.
+- After adding a resource into your POM file, Maven automatically downloads all the dependency jars into your local repository.
+- After adding a resource into your POM file, Maven automatically downloads all the dependency jars into your local repository.
+- The local repository is created under your Home Directory by default. 
+- Maven central repository is the default repository provided by Maven.
+- When Maven cannot find a dependency of a project (specified in the POM file) in the local repository, it starts searching for it inside the central repository which is located in https://repo.maven.apache.org/maven2/ URL.
+- For being able to use this repository, you just need to be connected to the internet. There is no need to make any configuration for this.
+- Any organization or any individual can host a remote repository. As long as you define this new repository in your POM file, you can download and keep for future use in your own local repository.
+- If you specify repositories in profiles you must remember to activate that particular profile!
+>mvn -P myprofile
+
+7.Plugin:
+- Maven Plugin is the heart of the Maven framework. A unit work in Maven or a single output is produced by a specific Maven Plugin.
+- Plugins do the works like creating jar files, war files, compiling code, compiling unit test code, creating project documentation or JavaDoc (Java Documentation), and so on.
+- Almost any action that you can think of performing on a project is implemented as a Maven plugin.
+- Plugins run in the context of POM descriptions. The behaviors of a plugin can be customized by these descriptions. 
+- All plugins should have the minimum requirement of having the groupId, artifactId, and version elements.
+- Maven's core plugins comprise 9 different plugins which are clean, compiler, deploy, failsafe, install, resources, site, surefire, and verifier. 
+- There are two types of plugins. These are Build Plugins and Reporting Plugins. 
+  - Build plugins are configured under <build> tag and run during the build time. 
+  - Reporting Plugins are configured under <reporting> tag and run while you are generating the site for the project.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

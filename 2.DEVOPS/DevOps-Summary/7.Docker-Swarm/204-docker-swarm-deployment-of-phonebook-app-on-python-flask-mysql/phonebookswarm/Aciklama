@@ -1,0 +1,25 @@
+* Infrustructure:
+
+    - public github repo olusturulur ve buradan veriler cekilir.
+    - docker swarm
+        - 3 manager
+        - 2 worker
+            - herbiri arasinda baglanti olsun
+            - ec2instance connect cli 
+            - IAM policy 
+        - Leader manager ECR'den imaj cekebilmeli. 
+        - ECR full access icin policy 
+        - Diger manager ve worker'lar da ECR'den imaj cekebilmeli.  
+    - Image repo olarak AWS ECR olusturulacak.
+    - main.tf
+
+* Application:
+
+    - Dockerfile
+        - app-server icin kullanilacak image bununla olusturulur.
+        -             - phonebook-app.py
+            - requirements.txt
+            - templates
+    - docker-compose.yml
+        - services: app-server ve mysql
+        - app-server imajı ECR'dan çekilecek

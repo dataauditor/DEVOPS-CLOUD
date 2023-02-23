@@ -1,0 +1,653 @@
+1.Genel:
+!!!!!!!!!!!!!!!!!!!!!!!
+- kubectl api-resources
+- Kubernetes is an open-source container orchestration tool or system.
+- It is used to automate tasks such as the management, monitoring, scaling, and deployment of containerized applications.
+- Ozellikleri:
+  - Autoscaling ozelligi: dusen container yerine yenisini acar ve ihtiyaca gore sayiyi artirip azaltir.
+  - Load balancing: network tarfigini dengeli paylastirir.
+  - Containerler DNS name ile veya IP'si ile expose olabilir.
+  - Storage: Otomatik olarak istegine gore bir storage'i (local, cloud) mount eder. 
+    - Yalnizca ayni poddaki containerler ile storage volume'u paylasabilir.
+  - Rollback/Roollout: Desired state'i tanimlayarak otomatik olarak onceki/yeni versiyona dondurur. Kesinti olmadan eskileri sirayla kapatip yenileri acar.
+  - Automatic pin packing: Containerlerin ne kadar RAM ve CPU kullanacaklarina gore node'lara dagitir.  
+  - Self-healing: Fail olan containerleri restart yapar. kullanicinin tanimladigi health check'e respond vermeyen containeri replace / kill yapar.
+  - Secret and configuration management: gizli verileri saklar. (passwords, tokens, SSH keys). 
+    - Container image'ini rebuild etmeden gizli verileri deploy ve update edebilirsiniz.
+- Infrastructure as a Service: Cloud servisleri Kuberneti IaaS olarak sunar.
+- Components/Bilesenler:
+  - En az bir master node ve en az bir worker node olmali.
+    - Master: kubectl - usercommands. Ayarlama yapilirsa burada da container kurulabilir.
+    - Nodes: Worker nodes.
+  - The worker node(s) host the Pods that are the components of the application workload. 
+  - The control plane manages the worker nodes and the Pods in the cluster. 
+  - In production environments, the control plane usually runs across multiple computers and a cluster usually runs multiple nodes, providing fault-tolerance and high availability.
+  - kube-apiserver: Kubernetes control plane'in bilesenidir ve kubernetin api'sini expose eder.
+    - Kubernetes control plane'in front end'idir.
+  - etcd: Key value'ler icin kalici ve ulasilabilir store'dur. Cluster datayi saklar.
+    - Kubernetes cluster backing store etcd'yi kullaniyorsa, back up plani hazirlamalisin ilgili veri icin.
+  - kube scheduler: Controller processleri calistirir.
+    - Her controller ayri process'dir.
+    - Controller:
+      - Node controller: Nodes'larin fail durumuna karsi tespit ve mudahale sorumlulugu.
+      - Replication controller: Her replication controller object icin pods sayisinin takibinden sorumlu.  
+      - Endpoints controller: Endpoint objesini yerlestirir. 
+      - Service Account & Token controllers: Yeni namespaces icin default acconts ve API access tokens olusturur.
+  - cloud-controller-manager: 
+    - clusteri cloud API'sine baglar.
+    - cloud ile baglanti kuran componentleri digerlerinden ayirir.
+    - Cloud provider icin onemli olan controlleri calistirir.
+    - Cloud Provider Dependencies ihtiyaci olabilen controller:
+      - Node controller: Cvp vermiyorsa node'un cloudda silinip silinmedigini kontrol eder.
+      - Route controller: Cloudda Route set up yapmak icin.
+      - Service controller: Load balancer'i olusturmak, update, delete icin.
+  - Node component: HEr node'ta calisir ve pods'larin calismasini maintain eder ve Kubernetes runtime env saglar.
+  - kubelet:    
+
+- Google tarafindan yapilsada CNCF (Cloud Native Computing Foundation) tarafindan yonetilmektedir. Open source'tur.
+- Kubernetes Go/Golang dilinde yazilmis olup configuration icin yaml kullanilir. 2015'te V1 olarak piyasaya cikmistir.
+- kubectl: CLI komutu yazarken kodun onune yazariz.
+- Node: worker machine'lere verilen isimdir. Fiiliyatta clusterin calistigi tum bilgisayarlar.
+- 5000 node'u koordine edebilir.
+- 1 master node 1000'lerce worker nodu koordine ediyor.
+- Horizontal scaling: ihtiyaca gore yeni container acilip kapanir.
+- Kubernetes: Containerlerin update, acilip kapanmasi vb islemleri network (service) ile koordine eder.
+  - belli bir network altyapisi ile sistemi donatir.
+- Control Plane: Icinde birden fazla Worker node bulunur.
+- Containerler podlarin icinde ayaga kaldirilir.
+- Her pod'a bir container olacak sekilde acilmasi iyidir.
+> UI/CLI > kubectl-command > API > master > nodes (image registry'den cekilir image'lar.)
+- Node: VM veya bilgisayar. Tum node'lar master node tarafindan yonetilir. 5000'e kadar nodu yonetebilir master node.
+  - Herbir node service icerir pod'larin ihtiyaci olan.
+- Pod: containerlerin icinde bulundugu yapi. Containerleri VM gibi kontrol edilebilir yapar.
+- Kubernetes: container calistirmaz, onlarin calismasi ve koordinesi icin ortam sunar.
+- Pod'lar icinde bulunduklari node'un privat ip'sini kullanirlar.
+- Service : A service is responsible for making our Pods discoverable inside the network or exposing them to the internet. There are 3 types of services:
+  - ClusterIP
+  - Node Port
+  - Load Balancer
+
+- Components: 4 temel component vardir (kube-api-server, kube-scheduler, kube-controller-manager ve etcd). Componentler pod'lar icinde container olarak calisirlar.
+  - kube-api-server: beyindir. sinir aglaridir. kube scheduler, etcd, ... gelen istekleri koordine eder.
+    - disardan gelen ve disari giden ve icerdeki talep/komutlarin transferini yapar.
+    - rest-api kullanir.
+    - gate-keeper olarak da gorev yapar. authentication ve authorization yapar.
+    - etcd'ye veri yazilma islemini yapar.
+    - json dilindedir.
+  - etcd: clusterdaki veriler ve degisimler burada yedeklenir.
+    - key-value olarak saklar.
+    - tum clusterin bilgisi buradadir. Backup ile ayni clusteri buradan yapabiliriz.
+    - etcd uzerine datayi yazan birim kube-api-server'dir. Ornegin yeni bir pod acilirsa gider yazar... vb.
+  - kube-scheduler: planlamayi yapar. operasyon yapmaz. su kodu su node'ta acmalisin vb.
+    - bin-packaging yapar. kaynaklari maksimum verimlilikle kullanir.
+    - pod'lari istemediginiz node'larda calistirmayabilirsiniz.
+    - podlarin hangi nodlarda acilacagini planlar. Ilgili planlamayi kube-api-server'a gonderir. Oradan da kube kontroller manager'a gider.
+    - icraci degildir sadece planlama yapar.
+  - kube-controller-manager: schedulerden alinan planlamayi uygular/icra eder. api-server aracilik eder. Komutu api-server kubelet ile node'lara iletir. 
+    - Farkli joblara gore (replica setler, daemon) birer tane kontroller-manager bulunur. Birden fazla olabilir.
+    - daemon (arka tarafta calisan service) olarak calisir. desired durumu takip eder. Pod olurse yenisini kaldirir.
+    - etcd'de state'i takip eder. api-server orada degisiklik yapinca kontroller da etcd'yi takip ettigi icin uygular.
+  - cloud-controller manager: cloud ile etkilesimi saglar.
+    - cloud oraminda kullanilacak componentleri koordine eder.
+    - load balancer'i burdan olustururuz.
+  - nodes: uygulayicilar.
+  - kubelet: api-serverdan gelen emri noda uygulatici birimdir. 
+    - Master node ile Worker node arasindaki iletisim Kube-api-server ve kubelet arasinda saglanir.
+    - Herbir node'ta bir tane bulunur.
+    - Node icindeki pod'larin yasam dongusunu takip eder.
+    - Container-runtime engine'e talimat verir ve containerleri acar, kapatir ve calismasini takip eder.
+    - Kubernetes tarafindan olusturulmayan containerleri kontrol etmez.
+    - her node'ta bir kubelet vardir.
+  - kube-proxy: node icerisinde networku, iletisimi saglar. 
+    - her node icin bir tane pod ayaga kalkar.
+    - Node icindeki pos'lar arasi routing'i koordine eder.
+    - Load balancing yapar.
+    - Ilgili pod'a IP atar. Pod icinde ip table olusturur.
+  - Container Runtime engine: herbir node uzerinde containerleri ayaga kaldirir.
+    - podlara dagitir. 
+    - image'larini koordine eder. Imagelari ceker ve kontainere sevk eder.
+  - kubectl: Mastera komutlarin girildigi CLI tool component.
+    - $HOME/.kube directory'sinde config isimli file'i arar.
+  - flannel: cluster icindeki iletisimi saglar.
+    - master ile workerlar arasi iletisimi saglar.
+    - her node icin bir tane pod ayaga kalkar.
+
+Objeler:
+- Konfigurasyon file'lari ile created, updated, and deleted edilebilirler bir directory'de.
+- "kubectl apply" ile kontrol edilirler.
+- Zorunlu alanlar:
+----------------------------------------------------------------------
+    apiVersion:
+    - Hangi Kubernetes API versionu ile object olusturuyorsun. 
+    - Sistemden komutla bakilarak girilir.
+    kind:
+    - Objenin cinsi: Deployment, Pods, ReplicaSet vb.
+    metadata: objeyi uniq olarak betimleyen bilgiler. Isim vb.
+    - name:
+    - UID:
+    - namespace:
+    spec: 
+    - desired durum yazilir.
+-----------------------------------------------------------------------
+- clarus-deploy.yaml : 
+-----------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clarus-deploy
+  labels:
+    app: container-info
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: container-info                      # asagidaki ile ayni olmali ki replicalar asagida belirlene ozellikte olsun.
+  template:
+    metadata:
+      labels:
+        app: container-info
+    spec:
+      containers:
+      - name: container-info                   
+        image: clarusways/container-info:1.0
+        ports:
+        - containerPort: 80
+-----------------------------------------------------------------------
+- selector ve 
+- status: Bunlarin disinda K8s'in specs disinda ekledigi status bolumu vardir. Burasi ise specs'te belirtilen desired duruma gore kapanan objeler yerine yenisini acar.
+* PODS:
+  - icinde birden fazla container olabilir ama biri ana container digerleri yardimci, kucuk containerlerdir (monitor vb).
+  - Olusturulurken ana containerle acilir ve kapatilirken birlikte kapatilir.
+* ReplicaSets:
+  - Podlarin sayisini tutar.
+  - Olunce yerine yani container yapar. 
+* Deployment:
+  - Applicationlari kontrol eder.
+  - Deklaratif olarak app'i update eder veya rollback yapar.
+  - Bir nginx containeri olusturunca deployment'in icine konur.
+* Name-Spaces:
+  - Farkli env (dev, devops) icin farkli sanal-cluster olusturur.
+  - Sanal clusterlardir.
+* Object-Model:
+  - Tum islemler yml file ile yapilir. Istisnalar var.
+  - 4 spec field'inden olusur.
+  - Spic bizim olusturdugumuz, status kubernetes tarafindan olusturulur.
+  - Spic'te belirtilen durumun altina dusurulurse statusten kubernetes desired durumuna gore yeni resource acar.
+
+
+Kodlama:
+>kubectl [command] [TYPE] [NAME] [flags]
+>kubectl get pod pod1
+kubectl get pod example-pod1 example-pod2
+>kubectl get pod/example-pod1 replicationcontroller/example-rc1
+  - command komutunu ayni anda birden fazla resource'a uygulayabiliriz.
+>kubectl run nginx-server --image=nginx  --port=80
+>kubectl expose pod nginx-server --port=80 --type=NodePort
+>kubectl get service -o wide
+>kubectl delete service nginx-server
+>kubectl delete pods nginx-server
+>kubectl get deploy,rs,po -l app=container-info
+  * ilgili labeli olan objeleri gosterir.
+>kubectl describe deploy clarus-deploy | grep "Image"
+  * image'i gosterir.
+>kubectl set image deploy clarus-deploy container-info=clarusways/container-info:2.0 --record=true
+  * upgrade  
+>kubectl rollout history deploy clarus-deploy
+>kubectl rollout undo deploy clarus-deploy --to-revision=1
+  * belirtilen revisyon 1 yuklenir.
+>kubectl get namespace
+
+
+Labels:
+- Deploymentte
+
+
+Services:
+- Pod'larin menagerleridir. 
+- Selector label yayinlar ve bu sekilde podlari kontrol eder.
+container-to-container communication: lan kullaniyor ve siz birsey yapmaniz gerekmiyor.
+Pod-to-pod communication:
+Pod-to-Service communication: 
+  - Service tarafindan saglanir.
+  - Pod olusunca ip atanir ve cluster'a yayilir ve node'un ip table'ina yazilir.
+  - Deploymentler birbiri ile service'ler uzerinden haberlesirler.
+  - Label ile service podlari altina alir.
+  - App'lerin database'e baglanmasi icin endpoint gerekir. hostname olarak service ismi verilir.
+  - Service bir DNS yayinlar bu sekilde service DNS (endpoint) uzerinden ulasilir.
+  - Service'ler node'lardan bagimsizdir. Farkli node'larda pod'lari olabilir.
+  - Service tum cluster genelinde yayin yapar.
+  - kube-proxy: service'ler ile calisir ve ip table kurallarini yapilandirir ve ec2'nun route table'a ekler/kaldirir. Daemon settir.
+  - Service yalniz bir port/DNS'ten yayin yapar.
+Service Labellama:
+  - Service > spec > selector altindaki tum labellar; Deployment > spec > template > labels altinda olursa service ile podlar gorusebilir.
+
+
+2.Hands-on:
+- nginx yuklu bir kubernetes yukluyoruz. Bir master bir worker.
+- Master: 
+  - ortak olan kubernetes, docker ile master'a has kube-controller-manager, kube-api-server, kube-scheduler, kube-etcd yuklenecek.
+  - kube-init calistirarak master olarak yapilandiracagiz.
+  - token'i alacagiz.
+  - Worker baglandiktan sonra nginx yukleyecegiz ama pod worker'da kurulacak.
+- Worker: 
+  - kubernetes, docker yuklenecek.
+  - token ile master'a cluster'a dahil edecegim.
+
+AWS Consol:
+SG-Master:
+|TCP|Inbound|6443|Kubernetes API server|All|
+|TCP|Inbound|2379-2380|`etcd` server client API|kube-apiserver, etcd|
+|TCP|Inbound|10250|Kubelet API|Self, Control plane|
+|TCP|Inbound|10251|kube-scheduler|Self|
+|TCP|Inbound|10252|kube-controller-manager|Self|
+|TCP|Inbound|22|remote access with ssh|Self|
+|UDP|Inbound|8472|Cluster-Wide Network Comm. - Flannel VXLAN|Self|
+
+SG-Worker:
+|TCP|Inbound|10250|Kubelet API|Self, Control plane|
+|TCP|Inbound|30000-32767|NodePort Services†|All|
+|TCP|Inbound|22|remote access with ssh|Self|
+|UDP|Inbound|8472|Cluster-Wide Network Comm. - Flannel VXLAN|Self|
+
+free -m
+sudo swapoff -a && sudo sed -i '/ swap / s/^/#/' /etc/fstab
+  - Swap: RAM yetersiz olursa harddiskten yer kullanmak icin ayarlama yapilir. Swap off edilmeli (AWS haricinde).
+  - AWS swap'a izin vermedigi icin burada kullanmadik.
+
+AWS Consol EC2:
+ubuntu 20.04 > t2.medium > Kubernetes-Master-SG > launch
+ubuntu 20.04 > t2.medium > Kubernetes-Worker-SG > launch
+
+VSC Master:
+- Componentler yuklenir ve init ile kurulur.
+- token alinir.
+sudo hostnamectl set-hostname master
+bash
+sudo apt-get update && sudo apt-get install -y apt-transport-https gnupg2
+  - Kubernetes icin anahtar yakalamayi saglayan bir paket
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+  - Kubernetes'in remote reposunun anahtarini uretir.
+  - key'i package manager'imize, shell'e ekler. 
+  - apt reposunda kubernetes yok, biz kubrnetes reposunu kendi repomuza ekleyecegiz.
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
+  - Yukarda elde edilen key'i kullanarak kubernetes reposuna girerek kendi repomuza ekler.
+  - ilgili adresin icine girilip kubernetis'in binary'sini alip benim package managere ekleyecek.
+  - yukari dogru 3 komut package managere kubernetis'i eklemek icin kullanilir.
+sudo apt-get update
+sudo apt-get install -y kubectl kubeadm kubelet kubernetes-cni docker.io
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo systemctl status docker
+sudo usermod -aG docker $USER
+newgrp docker
+cat << EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+  - instance'in baska node'lara request gonderebilmesi icin ilgili satirlari gireriz.
+sudo sysctl --system
+  - ilgili satirlarin girildigi kontrol edilir.
+  - yukarki komutu uygular.
+sudo kubeadm config images pull
+  - ana image'leri (kube-scheduler, controller, api-server, proxy, etcd vb) kubernetes'in repo'sundan ceker..
+echo '{"exec-opts": ["native.cgroupdriver=systemd"]}' | sudo tee /etc/docker/daemon.json
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+sudo systemctl restart kubelet
+  - Kubernetes, cgroup driver; docker ise systemd kullanir. 
+  - configuration file ekleyerek docker'i da bu sisteme ekleriz.
+sudo kubeadm init --apiserver-advertise-address=<ec2-master-private-ip> --pod-network-cidr=10.244.0.0/16
+  - Master'in private IP'si girilir.
+  - certifikate'leri olusturur.
+  - baglanti icin workerlara girilecek kodu verir.
+cd /etc/kubernetes/manifests | ls
+  - etcd.yaml, kube-apiserver.yaml, kube-controller-manager.yaml, kube-scheduler.yaml'leri gorebiliriz.
+  - kubernetes'de bir bozulma meydana gelirse veya bu yapilarda degisiklik yapmak isterseniz manifest file'lar uzerinden yaparsiniz.
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  - kubernetes config file'ini .kube dosyasinin altina koyariz.
+  - kubeadm'in authorization ve authentication icin baktigi yerdir.
+  - kubectl calisabilmek icin config dosyasina bakar. Bu manada kubectl artik calisir.
+  > sudo kubeadm join 172.31.31.147:6443 --token i8bsjp.bo2f0dpk1bvb4um3 \
+        --discovery-token-ca-cert-hash sha256:d952ccb4935eacfa5673c3f19be9fa7989b421cc96b462a42bc9949f517d94b4 
+    - kodunu eklemek istedigimiz noda uygulariz.
+kubectl apply -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel.yml
+  - flanel ile network altyapisi kuruldu.
+
+
+VSC Worker:
+- token ile Master'a baglantisi saglanir.
+sudo hostnamectl set-hostname <node-name-master-or-worker>
+sudo apt-get update && sudo apt-get install -y apt-transport-https gnupg2
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update
+sudo apt-get install -y kubeadm kubelet kubernetes-cni docker.io
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker $USER
+newgrp docker
+cat << EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sudo sysctl --system
+echo '{"exec-opts": ["native.cgroupdriver=systemd"]}' | sudo tee /etc/docker/daemon.json
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+sudo kubeadm join 172.31.31.147:6443 --token i8bsjp.bo2f0dpk1bvb4um3 \
+>         --discovery-token-ca-cert-hash sha256:d952ccb4935eacfa5673c3f19be9fa7989b421cc96b462a42bc9949f517d94b4
+  - hata verirse once "sudo kubeadm reset" olmazsa yukardaki 3 satiri (ben tum satirlari) yenile.
+
+
+VSC Master:
+kubectl get nodes
+  - node'lari "ready" gosterir.
+kubectl get pod
+  - default namespace bos. Diger namespaceleri gormek icin belirtilir.
+kubectl get pod -n kube-system
+  - "-n": namespace name
+  - izole ortamdaki componentlerin podlarini gosterir.
+docker container ls
+  - containerleri gosterir.
+!!!
+sudo kubeadm token create --print-join-command
+  - token istemek icin kullanilir diger cihazlari clustere baglamak icin.
+kubectl get nodes
+  - worker'i bagladiktan sonra master'a baglandigini kontrol ederiz.
+kubectl get nodes -o wide
+  - node'lar hakkinda detayli bilgi verir.
+  - "-o wide" detayli bilgi verir.
+kubectl get pods
+  - pod'lari gosterir. nginx containerin podunu goruruz.
+kubectl get pods -o wide --all-namespaces
+  - componentlerin dahil butun namespaceler altinda calisan podlari gosterir.
+kubectl run nginx-server --image=nginx  --port=80
+  - "kubectl run" pod ayaga kaldirir. 
+  - podun ismi nginx-server olsun. 
+  - "--image=nginx" nginx image'ini kullanan bir container ac podun icinde. 
+  - "--port=80" containerden cikis portu (targetport) 80 olsun.
+  - component pod'lari disindaki tum podlar default olarak Worker pod uzerinde olusturulur.
+kubectl get pods -o wide
+  - default namespace'teki podlari gosterir. 
+  - Diger namespacelerdeki podlari gormek icin ya ilgili namaspace yazilir ya da "--all-namespaces" ile tum podlar gorulur.
+kubectl expose pod nginx-server --port=80 --type=NodePort
+  - '-port': clusterIP veya port. podun port:80'i target port, burdaki port: 80 ise port clusterIP.
+  - Port'u Node port'a bagliyor. 80 > 80 > Nodeport
+  - port'u yayinla denir.
+kubectl get service -o wide
+  - yayinladigi portu gosterir.
+!!!
+alias k=kubectl
+  - kubectl komutu k seklinde kullanilabilir.
+
+Browser:
+- Worker'in public ip:ilgili port ile nginx sayfasina ulasilir.
+- Default olarak yalnizca podun yayinlandigi Worker ve Master'dan ulasilabilir ama ayarlama ile digerlerinden de ulasilabilir.  
+- Master noddan da ulasilabilir ama ilgili portun acilmasi gerek.
+
+VSC Master:
+- Worker'i silmek icin komutlar.
+kubectl get nodes
+kubectl drain worker --ignore-daemonsets --delete-local-data
+kubectl cordon worker
+kubectl delete node worker
+
+VSC Master-Worker:
+- Hata verirse: 
+sudo kubeadm reset
+  - reset atip asagidaki komutlari yeniden gireriz.
+sudo kubeadm config images pull
+echo '{"exec-opts": ["native.cgroupdriver=systemd"]}' | sudo tee /etc/docker/daemon.json
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+sudo systemctl restart kubelet
+sudo kubeadm init --apiserver-advertise-address=<ec2-private-ip> --pod-network-cidr=10.244.0.0/16
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+kubectl apply -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel.yml
+
+
+
+3.Hands-on:
+- kubernetes-02
+- Podes:
+
+AWS CloudFormation:
+- .cfn dosyasi ile bir master bir de worker olusturulur. 
+
+VSC:
+!!!!!!!!!!!!!!!!!!!!!!!
+kubectl api-resources
+  - apiVersion bilgilerini (V1, V2... vb.) aliriz tum resources'lar icin ve .yaml file'larinda kullaniriz.
+kubectl explain nodes
+  - dokumantasyonlarini gosterir.
+kubectl explain pods
+  - dokumantasyonlarini gosterir.
+vim mypod.yaml
+--------------------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    app: nginx
+spec:
+  containers:
+  - name: mynginx
+    image: nginx
+    ports:
+    - containerPort: 80
+--------------------------------------------------------------
+  - containerPort: pode'dan cikis portudur. Bir manada target porttur.
+kubectl create -f mypod.yaml
+  - "kubectl create -f ." ile mevcut konumdaki tum yaml file'lar olusturulur.
+kubectl describe pods/nginx-pod
+kubectl get pods/nginx-pod -o yaml
+  - yaml formatinda ilgili podun detaylarini gosterir.
+kubectl delete -f mypod.yaml
+  - yaml file uzerinden olusan podu siler.
+kubectl delete pod nginx-pod
+  - ilgili isimdeki podu siler.
+
+
+
+4.Hands-on:
+- kubernetes-02
+- ReplicaSets (rs):
+
+VSC:
+kubectl explain replicaset
+vim myreplicaset.yaml
+----------------------------------------------------------------
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-rs
+  labels:
+    environment: dev
+spec:
+  # modify replicas according to your case
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+      kedi: tekir
+  template:
+    metadata:
+      labels:
+        app: nginx
+        kedi: tekir
+        rana: ugur
+    spec:
+      containers:
+      - name: mynginx
+        image: nginx
+        ports:
+        - containerPort: 80
+----------------------------------------------------------------
+  - selector altindaki matchLabels, ReplicaSet'in labelidir. Burada belirtilen tum labellar template altinda bulunan labels'da bulunmali.
+  - En bastaki metadata altindaki labels bu replicaSet'i yukarida baska birseye baglamak icin kullanilir.
+  - 'replicas:' ile pode adedini belirtir.
+kubectl apply -f myreplicaset.yaml
+kubectl get rs,po -o wide 
+kubectl describe replicaset/nginx-rs
+kubectl delete rs nginx-rs
+
+
+
+5.Hands-on:
+- kubernetes-02
+- Deployment:
+
+VSC:
+kubectl explain deployments
+vim mydeployment.yaml
+-----------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    environment: dev
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+-----------------------------------------------------------------
+kubectl apply -f .
+kubectl get deployments
+kubectl describe deploy/nginx-deployment
+kubectl logs <pod-name>
+kubectl logs <pod-name> -c <container-name>
+  - Pod icinde birden fazla container varsa kullanilir.
+  - container-name yaml'dan alinir veya 'docker ps -a' ile alinir.
+!!!!!!!!!!!!!!!!!!!!!!!!
+kubectl exec <pod-name> -- date
+  - "--"tan sonra gelen komut icra edilir. Tarihi gosterir.
+kubectl exec <pod-name> -- cat /usr/share/nginx/html/index.html
+  - index.html'i gosterir.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+kubectl exec -it <pod-name> -- bash
+  - shell acariz.
+kubectl get rs
+  - Deployment ayni zamanda rs'dir.
+!!!
+kubectl scale deploy nginx-deployment --replicas=5
+  - pod sayisini degistiririz.
+kubectl delete pod <pod-name> <pod-name>
+kubectl delete deploy <deployment-name>
+
+
+
+6.Hands-on:
+- kubernetes-02
+- "set" ile deploymente yeni bir image yukleme upgrade etme.
+- "rollout" ile deploymentin versiyonlarini gorup degistirme. 
+
+VSC:
+mkdir deployment-lesson ; cd deployment-lesson
+vim clarus-deploy.yaml
+----------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clarus-deploy
+  labels:
+    app: container-info
+  annotations:
+    kubernetes.io/change-cause: deploy/clarus-deploy is set as container-info=clarusway/container-info:1.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: container-info
+  template:
+    metadata:
+      labels:
+        app: container-info
+    spec:
+      containers:
+      - name: container-info
+        image: clarusway/container-info:1.0
+        ports:
+        - containerPort: 80
+----------------------------------------------------------------
+  - kubernetes.io/change-cause: buraya degisim sebebi yazilir ve her bir deployment icin ayri ayri aciklama yazilmali.
+kubectl apply -f clarus-deploy.yaml
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+kubectl get deploy,rs,po -l app=container-info
+  - Belirtilen label'a sahip hem deployment, hem replicaset hem de pod'lari liste halinde gosterir.
+kubectl describe deploy clarus-deploy
+kubectl rollout history deploy/clarus-deploy
+  - Eski versiyonlari numarasi (V1, V2 vb.) ile gosterir.
+!!!
+kubectl rollout history deploy clarus-deploy --revision=1
+  - revision numarasi ile incelenebilir.
+!!!
+kubectl set image deploy clarus-deploy container-info=clarusway/container-info:2.0
+  - image'i upgrade eder. Containerin isim=image'i yazilir.
+kubectl edit deploy/clarus-deploy
+  - image'i upgrade eder. Sistemdeki yaml file'i acilir. Buradan update tehlikeli.
+kubectl rollout history deploy clarus-deploy
+kubectl rollout history deploy clarus-deploy --revision=1
+kubectl get deploy,rs,po -l app=container-info
+kubectl rollout history deploy clarus-deploy
+  - Buradan version'lar gorulur.
+!!!
+kubectl rollout undo deploy clarus-deploy --to-revision=1
+  - 1. versiyona donulur. Her version uniktir. 
+kubectl delete deploy -l app=container-info
+  - label'i ile deployment silinir.
+
+
+
+7.Hands-on:
+- kubernetes-02
+- Namespaces:
+  - default: tanimlanmayan objeler gonderilir.
+  - kube-system: The namespace for objects created by the Kubernetes system
+  - kube-public: readable by all users.
+  - kube-node-lease: This namespace for the lease objects associated with each node which improves the performance of the node heartbeats as the cluster scales.
+
+VSC:
+vim my-namespace.yaml
+-----------------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: clarus-namespace
+-----------------------------------------------------------------
+kubectl apply -f ./my-namespace.yaml
+  - ilgili dosyadan namespace olusturur.
+kubectl create namespace yeni-namespace
+  - bu sekilde komutla da dosyasiz olusturulabilir.
+kubectl create deployment default-deployment --image=nginx
+  - default namespace'te deploymenti baska image ile upgrade ederek olusturduk.
+!!!
+kubectl create deployment clarus-deployment2 --image=nginx -n=clarus-namespace
+  - clarus-namespace'te deployment olusturduk.
+kubectl get deployment
+  - sadece default namespace'teki deploymentleri gosterir.
+!!!
+kubectl get deployment -n clarus-namespace
+  - clarus-namespace namespace'teki deploymentleri gosterir.
+  - "-n=clarus-namespace" seklinde de yazilabilir.
+!!!
+kubectl get deployment -o wide --all-namespaces
+  - tum namespace'lerdeki deploymentleri gosterir.
+kubectl delete namespaces clarus-namespace

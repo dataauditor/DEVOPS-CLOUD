@@ -1,0 +1,260 @@
+1.Genel:
+- https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#connecting-to-hosts-behavioral-inventory-parameters
+- https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#inventory-basics-formats-hosts-and-groups
+- https://www.eksworkshop.com
+- Ansible: acik kaynak IT automation tool'dur. Sistemleri configure eder, software deploy eder ve CD gibi ileri seviye IT gorevlerini orkestre eder.
+- Ansible agentless automation tool'dur. Default olarak cihazlara SSH protocolu ile baglanir.
+- Yuklendikten sonra database eklemez ve daemon'a gerek duymaz calismaya devam etmek icin.
+- Yukledigin cihaz uzerinden diger cihazlari yonetir. 
+- Configuration Management (CM) toollari kod ve templateleri baska serverlarda kullanmamiza izin verir.
+- Ornegin database configuration her servere deploy edilebilmeli. 
+- Detabase template'i su bilgileri icerebilir:
+  * provisioning the server using a cloud provider of choice,
+  * installing the database,
+  * configuring it with details like usernames, passwords
+  * the proper permissions for the accessibility to other infrastructure components like web servers.
+- CM is the automated control of:
+  * Deployed artifacts,
+  * Configuration files,
+  * System packages,
+  * User configurations,
+  * Services,
+  * Dependencies
+- Tek makineye yuklenir ve diger makineleri yonetir. 
+- Script ile yapilan islemleri Ansible ile yapmak cok daha kolay.
+
+2.Installation:
+https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html
+  * Buradan istenilen cihazin yuklemesi bulunur.
+sudo amazon-linux-extras install ansible2
+sudo yum -y install ansible
+  * yum ile yukleme.
+  * Ansible'i bir paket ile yuklediysek son ansible.cfg file'i /etc/ansible folderinde mevcut olmali.
+sudo apt-get -y install ansible
+  * apt-get ile yukleme.
+  * Ansible'i bir paket ile yuklediysek son ansible.cfg file'i /etc/ansible folderinde mevcut olmali.
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+sudo apt install python3-pip
+sudo apt-get update -y
+python get-pip.py --user
+pip install --user ansible
+  * Pip ile yukleme.
+  * Pip ile yuklendiyse default settingleri kullanmamak icin ansible.cfg olusturulur.
+ansible --version
+- Windows'a ansible yuklenemese de ansible yuklu makine tarafindan yonetilebilir.
+- Oncesinde python yuklu olmali control-node'da.
+
+3.Kullanim:
+!!!
+- Genel olarak yapilan islemler:
+  * Control-consol'a ansible  yuklenir.
+  * hosts'a (inventory file) '/etc/ansible/hosts' baglamak istedigimiz node'larin private ip'leri ile pem dosyasinin control consoldaki yeri yazilir.
+  * pem dosyasi gonderilir ve execute yetkisi verilir.
+  * ansible.cfg'a '/etc/ansible/ansible.cfg' ikazlari kaldiracak komutlar eklenir.
+  * ansible [pattern] -m [module] -a "[module options]" 
+
+- Degisiklikler ansible.cfg marifetiyle asagidaki sira ile yapilir:
+  * ANSIBLE_CONFIG (environment variable if set)
+  * ansible.cfg (in the current directory)
+  * ~/.ansible.cfg (in the home directory)
+  * /etc/ansible/ansible.cfg
+- Control Node:
+  * Ansible yuklu makinedir. Komut ve playbooks'lari /usr/bin/ansible veya /usr/bin/ansible-playbook cagirarak run edebiliriz.
+  * Windows disinda her OS' python'da calisir ve multiple control node olabilir.
+- Managed Node:
+  * Control node tarafindan kontrol edilen ve ansible yuksuz cihaz/server'lar. Bazen host denir.
+- Inventory file:
+  * Managed nodes'larin listesidir. 'hosts' olarak da bilinir.
+  * '/etc/ansible/hosts' adresinde bulunur.
+  * Herbir managed node'un ip adresini tutar.
+  * Kolay scale icin managed nodes'lari orgenize eder, olusturur ve yerlestirir.
+  * Inventory'nin default locationu '/etc/ansible/hosts'. command line'a -i < path > yazarak farkli bir adres tanimlanabilir. Birden fazla inventory file da tanimlanabilir.
+  * Inventory plugins'leri bagli olarak farkli formatta olabilir. En cok kullanilanlar: INI ve YAML. 
+- Modules:
+  * Ansible'in execute ettigi code uniti/kumesidir.  
+  * Herbir module'un farkli kullanimi vardir.
+  * Task ile bir veya playbook ile bircok module kaldirabilirsiniz.
+- Tasks:
+  * Eylem birimidir. ad-hoc komutu ile bir single task olusturulabilir.
+  * Her play tasks listesi ihtiva eder. Task'lar sirayla ve birer birer icra edilirler.
+  * Bir play icrasinda tum host'lar ayni task gorevlerini alirlar. 
+  * Hata veren host rotation'dan atilir.
+  * Task'in amaci module execute etmektir.
+  * Her task'in ismi olur.
+- Playbooks:
+  * Kayitli task listesidir. Bunula birlikte variable'leri de tutarlar.
+  * YAML ile yazilir. Okumasi, yazmasi ve paylasimi kolaydir.
+  * hosts: bir veya birkac bilgisayarin ismi veya grup  ismi yazilir.
+    - Onceden host veya group ismi oncesinde inventory file'da tanimlanmis olmali.
+  * remote_user: user account 
+  * Play'ler yukardan asagi icra edilir. Iclerinde task listesi bulunur ve tasklari sirayla icra ederler.
+  * handlers: task listesidir.
+  * Playbook marifetiyle managed nodes yonetilir.
+  * Playbook'lar play'lerden. Play'ler task'lardan. Task'lar modullerden (script) olusur.
+- Groups: 
+  * Iki default group vardir: all ve ungrouped. all tum hostlari, ungrouped ise grupsuz olan hostlari kapsar.
+  * Managed nodes'lari webserver, dbserver seklinde inventory dosyasinda grup kurup bunlara dahil edebiliriz.
+  * Task'lari playbooks ile grup'a verebiliriz.
+- Ad-hoc:
+  * Tek kullanimliktir.
+!!!  
+  * ansible [pattern] -m [module] -a "[module options]"
+
+
+
+
+
+4.Hands-on:
+- 1 Control node ve 2 managed node olusturulur. 
+- 22, 80 port'lari acik ve ugur.pem secili olarak.
+- Control node'a ansible kurulur.
+- Inventory olusturulur. Node1 ve 2 nin ip'leri eklenir. Dilersek control node'da eklenebilir. Gruplama yapilir.
+- adhoc ile komutla yonetilir. all denirse tum makineler. 
+
+AWS-EC2:
+> 3 ec2 olusturuldu. (22 acik)
+
+VPC:
+sudo yum update -y
+sudo amazon-linux-extras install ansible2
+ansible --version
+  - config file'i, module'leri ... dosyalarini gosteriyor.
+!!!
+sudo vim /etc/ansible/hosts
+------------------------------------------------------------------------
+[webservers]
+node1 ansible_host=172.31.90.2 ansible_user=ec2-user
+node2 ansible_host=172.31.81.255 ansible_user=ec2-user
+
+[all:vars]
+ansible_ssh_private_key_file=/home/ec2-user/ugur.pem
+
+[devserver]
+node[1:2]
+
+[test:children]
+webservers
+devserver
+------------------------------------------------------------------------
+  - user olarak home altindaki dosya yazilir. Burada ec2-user, sonrakinde ubuntu olacak.
+  - Inventory file'a baglanip node'lari ekledik. Dilersek control node'u da bir gruba ekleyebiliriz.
+  - sonuna yukarki komutlar yazilarak node'lar baglanir.
+  - node1 ismini biz veririz. ip adresleri AWS icinde degismesin diye privat ip'dir. 
+  - [all:vars] yerine [webservers:vars] da denilebilir.
+  - ayni nodu birden fazla gruba ekleyebiliriz.
+  - pem dosyasinin control node'daki konumu da belirtilir.
+!!!
+scp -i ~/.ssh/ugur.pem ~/.ssh/ugur.pem ec2-user@55.3.45.7:/home/ec2-user
+  - ilk pem ile izin verir ikincisi gonderilecek dosyayi belirler.
+  - veya ugur.pem dosyasini VSC'de ec2'ya /home/ec2-user/ adresine atabiliriz. 
+ansible webservers --list-hosts
+  - webservers grubuna tanimli node'lari gosterir.
+ansible all --list-hosts
+  - inventory ile tanimli node'lari gosterir.
+!!!
+chmod 400 ugur.pem
+  - execute yetkisi verdik.
+  - ilgili konumu gostererek.
+ansible webservers -m ping
+  - 'pong': ping'e pong cvbi geliyorsa basarilidir.
+ansible node1 -m ping
+ansible all -m ping -o
+  - '-o': cvbi tek satirda gosterir.
+ansible-doc ping
+  - 'ansible-doc': sonrasinda gelen komutu aciklar.
+!!!
+sudo vim /etc/ansible/ansible.cfg
+------------------------------------------------------------------------
+interpreter_python=auto_silent
+------------------------------------------------------------------------
+  - [defaults] altina eklenir.
+  - Ansibal'in yaptigi uyarilari kaldirir.
+ansible --help
+  - gerekli komutlari gorebiliriz.
+ansible webservers -m ping 
+  - node'lar pinglenir.
+ansible webservers -a "uptime"
+  - islem yaptigi icin sari renk dondu.
+ansible webservers -m shell -a "systemctl status sshd"
+  - -m modules  -a arguments
+ansible webservers -m command -a 'df -h'
+  - dosya sistemini gorur.
+  - mount'lar da burada olur.
+  ! '-m shell -a' =~ '-m command -a'
+ansible webservers -a 'df -h'
+  - default module= -m command oldugu icin -m kullanilacaksa tanimlamaya gerek yok.
+- /home/ec2-user de testfile ve deneme olusturduk.
+!!!
+ansible webservers -m copy -a "src=/home/ec2-user/testfile dest=/home/ec2-user/testfile1"
+ansible webservers -m copy -a "src=deneme dest=/home/ec2-user/testfile"
+  - dosya ile ayni konumdaysak bu sekilde de yazilabilir.
+  - node1 ve node2'ye ayni veya farkli isimle gonderebiliriz.
+!!!
+ansible node1 -m shell -a "echo Hello Clarusway > /home/ec2-user/testfile2 ; cat testfile2"
+
+AWS-Consol:
+- Ubuntu makine acildi. 22, 80 portu acik.
+
+VSC:
+sudo vim /etc/ansible/hosts
+-------------------
+[ubuntuserver]
+node3 ansible_host=<node3_ip> ansible_user=ubuntu
+------------------
+  - ekledik.
+ansible all --list-hosts
+ansible all -m ping -o
+ansible all -m shell -a "echo Hello Clarusway > /home/ubuntu/testfile3"
+  - node1 ve node2 hata verir cunki ubuntu klasorleri yok. Node3'e transfer olur.
+ansible all -m shell -a "echo Hello Clarusway > ~/testfile3"
+  - bu sekilde hepsine gider.
+ansible node1:node2 -m shell -a "echo Hello Clarusway > /home/ec2-user/testfile3"
+  ! node'lari birlikte secme usulu.
+ansible webservers -b -m shell -a "amazon-linux-extras install -y nginx1 ; systemctl start nginx ; systemctl enable nginx"
+  ! '-b': root yetkisi veriyor.
+ansible node3 -b -m shell -a "apt-get update -y ; apt-get install -y nginx ; systemctl start nginx ; systemctl enable nginx"
+ansible webservers -b -m shell -a "yum -y remove nginx"
+ansible-doc yum
+  - yum hakkinda bilgi verir.
+ansible webservers -b -m yum -a "name=nginx state=present"
+  - shell komutlari yerine baska bir module actik. Farkli usulle yukledik. 
+ansible node3 -b -m shell -a "apt -y autoremove nginx"
+ansible webservers -b -m yum -a "name=nginx state=present"
+ansible -b -m package -a "name=nginx state=present" all
+  - ubuntu veya linux bilinmezse tum OS'lere islem yapar.
+  - yesil renk: onceden kurulmus islem yapmadi.
+  - sari renk: yeni kurdu, degisiklik var.
+cd
+vim inventory.txt
+--------------------------------------------------
+[webservers]
+node1 ansible_host=<node1_ip> ansible_user=ec2-user
+
+[webservers:vars]
+ansible_ssh_private_key_file=/home/ec2-user/<YOUR-PEM-FILE-NAME>.pem
+--------------------------------------------------
+  - farkli bir inventory yapiyoruz.
+ansible -i inventory -b -m yum -a "name=httpd state=present" webservers
+  - '-i': inventory file'i belirtir. Farkli bir hosts file olusturdugumuzda kullaniriz. 
+  - yalniz node1'de islem yapti
+  ! inventory tanittik. Hosts inventory default oldugu icin degisiklikleri tanitmaya gerek yoktu. Farkli konumdaki ve isimdeki inv ise tanitilir.
+sudo ansible -i inventory -b -m yum -a "name=httpd state=absent" node1
+  - Apache'yi sildi.
+
+
+!!!!!!!!!!
+scp -i oliver.pem ~/.ssh/lms.pem ec2-user@ec2-54-242-33-17.compute-1.amazonaws.com:/home/ec2-user
+scp -i oliver.pem -r folder1 ec2-user@ec2-54-242-33-17.compute-1.amazonaws.com:/home/ec2-user
+  - '-r': folder gonderir.
+scp -i oliver.pem ec2-user@ec2-54-242-33-17.compute-1.amazonaws.com:/home/ec2-user/playbook8.yml .
+!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+

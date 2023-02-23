@@ -1,0 +1,23 @@
+Host *
+  ServerAliveInterval 120
+
+Host master
+  HostName 	44.192.34.56
+  IdentityFile C:\Users\Test\.ssh\ugur.pem
+  User ubuntu
+
+Host Instance
+  HostName 107.20.55.226
+  IdentityFile C:\Users\Test\.ssh\ugur.pem
+  User ec2-user
+
+Host worker
+  HostName 34.236.170.116
+  IdentityFile C:\Users\Test\.ssh\ugur.pem
+  User ubuntu
+
+  Host Jenkins
+  HostName ec2-52-90-14-112.compute-1.amazonaws.com
+  IdentityFile C:\Users\Test\.ssh\ugur.pem
+  User ec2-user 
+

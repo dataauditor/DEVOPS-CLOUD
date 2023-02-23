@@ -1,0 +1,101 @@
+1.DevOps ve WaterFall Yaklasimlari:
+- WaterFall:
+  - Tum surecin bitmesi gerktiginden hata maliyeti yuksektir.
+  > Plan > Code > Build > Test safhalarindan olusur. (Developer tarafi)
+- DevOps:
+  - Surekli server ihtiyaci oldugundan maliyetlidir.
+  - > Plan > Code > Build > Test > Release > Deploy > Operate > Monitor > ... Plan
+  - Safhalar arasinda ihtiyac duyuldugunda tum surecin bitmesi gerekmez. Bunun yerine yeni bir ticket acilir ve ayrica devam eder.
+  - DevOps tm safhalari kapsamayabilir. Parca parca da olabilir.
+
+2.Workflow (GitFlow):
+- Github, Gitlab vb ile birden fazla feature/bug icin ayri calisma gruplari kurulur.
+- Gruplarin futurelari bitince veya hatayi ayiklayinca master klasoru ile merge edilir.
+
+
+3.DevOps'un Asamalari:
+- Tum asamalar sirayla ilerler. 
+  - Version Control
+  - Continuous Integration
+  - Continuous Delivery
+  - Continuous Deployment
+- Continuous Monitoring
+
+a.Version Control:
+- Source Code Management
+- Future ve bug icin calisan ekiplerin kontrolu (workflow).
+- Farkli versiyonlarin yonetimi.
+- Github, Gitlab, Bitbucket, Codecommit AWS vb kullanilir.
+
+b.Continuous Integration:
+- Continuous build
+- Compile, validate (dogrulugunun kontrolu), code review (developerlarin yazdiklari kodlari baska developerlara kontrol ettirmeleri veya otomatize sistemde kontrol etmesi), unit testing, integration testing
+- Makine dilleri compile ve interpreter olarak ikiye ayrilir. 
+- Interpreter dillerde satir satir kontrol eder ve hata bulunca ilgili satirda durur.
+- Compile dillerde tum source codu yukler ve bir kerede calistirir. Bununla beraber syntax hatalarini bir kerede tum hatali satirlari gostererek yapar. Ayrica mantik hatalarini da verir. 0'a bolunme hatasi gibi.
+- Unit test: developer yazar. Unitler herbir satir veya fonksiyon veya source code seklinde belirlenebilir.
+- Integration test: tum unitlerin, kaynak kodlarin bir arada uyumunun testidir. Test ekibi tarafindan test hazirlanir.
+- Test ekibi: Functional test, Integration test, User acceptance testleri (UAT) hazirlar. Daha sonra bize verirler ve biz de devops saykilina entegre ederiz.
+- Testlerde hata cikarsa dogrudan developerlara gonderilir.
+- Bu asamada uygulama calistirilmaz.
+- Developer tarafindan her kod yuklendiginde veya gunde bir defa vb seklinde calistirilir.  
+- CI ile yapmanin faydalari:
+  - daha az hata
+  - duzenli working releases
+  - Kolat ve efektif entegrasyon
+  - Bugi erkenden bulma
+  - Hatalari gidermek daha kolaydir
+  - Iyi proje gorunurlugu
+> Pipeline ile developerin kodu cekilir > compile edilir (Maven) > build toollarla validate edecek (Maven) > Otomatik code review yapilir > unit testing (basic test) yapilir (Maven) > integration testing yapilir
+
+c.Continuous Delivery:
+- Continuous testing
+- Temel testleri gecince advanced testler icra edilir. User acceptance, kalite kontrol testleri.
+- Deployment: Ilgili testlerin icrasi icin ilgili applicationun servere yuklenmesidir.
+> Pipeline ile developerin kodu cekilir > compile edilir (Maven) > build toollarla validate edecek (Maven) > Otomatik code review yapilir > unit testing (basic test) yapilir (Maven) > integration testing yapilir > Deployment (manual)
+
+d.Continuous Deployment:
+- Configuration management and containerization
+- Testleri tamamlanan applicationun production servere deploy edilmesidir.
+- Continuous Delivery'den tek farki Production ortamina otomatik gonderilmesidir.
+> Pipeline ile developerin kodu cekilir > compile edilir (Maven) > build toollarla validate edecek (Maven) > Otomatik code review yapilir > unit testing (basic test) yapilir (Maven) > integration testing yapilir > Deployment (otomatik)
+
+4.Pipeline:
+- Yukardaki 4 asama da birer pipelinedir.
+- Yukarda sayilan asamalari arka arkaya dizip otomatize olarak calismasi icin set ettigimiz kombinasyonlar.
+- Pipelinelar bastan sona olabilecegi gibi parca parca da olabilir.
+- Tum Maven, Docker vb toollari sirayla kullanmaya imkan verir.
+- CI/CD serveri blutakurarak (EC2) pipeline olustururuz.
+- Pipeline'in bel kemigi CI/CD severlardir:
+  - Jenkins: Acik kaynak kodlu pipelene toolu CI/CD server. 
+  - Gitlab: Enterprise icin pipeline toolu CI/CD server. Serverinize kendiniz kuruyorsunuz.
+  - Teamcity: Ucretli CI/CD server.
+> Version control > Build > Unit Test > Deploy > Auto Test > Deploy to Production > Measure/Validate
+
+- Pipeline: 
+  - EC2'ya Jenkins kurulur.
+  - Version Control: GitHub'tan Jenkins applicationu ceker.
+  - Build: Maven ile build toollari developerlar yukler. Biz Jenkinsi yukleyip ilave ozellikleri bu kombinasyona ekleriz.  Gradle cok benzerdir. 
+  - Unit Test:
+    - JUnit: Unit testleri yapar. Jenkins onceden tanimli unit testleri yapar.
+    - JACOCO: Unit testleri developerlarin belli oranda yazmasi gerekir (or: %70). Bu tool unit testlerin ilgili source kodu kapsama oranini verir. ilgili orana ulasamayan developerlara geri gonderim yapilir.
+  - Deploy: Docker, Ansible, Kubernetes 
+    - Sadece developer ve testerlarin ulasabildigi containere uygulama yuklenir.
+    - Terraform: Herbir bulutta resourcelari ayaga kaldirmaya yarar.
+    - Ansible: Olusan infrastructure'da configurasyonlari ayarlamaya yarar. Ilgili program yukleme, yetkilendirmeler vb ayarlari.
+    - Docker: Container
+    - Kubernetes: Advanced Container
+    - Container: Python ile application yazarsam calistirmak icin:
+      > Pc > OS (alpine linux: 4mb) > python interpreter > dependencies (libraries) 
+      - Sanal bir OS'dir ve sanal makineye ihtiyac duymuyor. Tek makinede 10'larca container olusturulabilir.
+      - Birden fazla containeri koordineli kullanabilmek icin Kubernetes, Docker Svarm kullanilir.
+      - Once py'ye docker kurulur. Docker Hub'tan bir imaj cekilir. Applicationu calistiririz. Bunlar Jenkins ile yapilir.
+      - VM'de: Eger VM kullanirsaniz herbir OS icin bir sanal makineye ihtiyac olur.
+        - sanal makine var.
+        - sanal OS var.
+  - Auto Test: Testerlarin sorumlulugundadir.
+  - Deploy to Production: Deploy safhasi ile ayni toollar kullanilir. Burada musterinin ulasabilecegi servera deploy edilir.
+  - Measure + Validate:
+    - Donanim ve yazilimi monite ederler.
+    - Promethous, Grafana, Nagios
+    - 

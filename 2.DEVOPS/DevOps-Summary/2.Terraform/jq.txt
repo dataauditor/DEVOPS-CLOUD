@@ -1,0 +1,85 @@
+1.Veriyi json dosyasi haline getirme:
+sudo apt-get install -y jq
+terraform providers schema -yaml | jq '.' > schema.yaml
+  - schema.yaml: bu dosyada json formatinda bug aramasi icin tum veriler var, ama cok uzun.
+
+
+2.sensitive = true iken resource datayi gorme:
+- Normalde gostermez. 
+sudo apt-get install -y jq
+terraform output -json | jq '."instances".value"'
+  - yalniz instance ip'leri goruruz.
+terraform output -json | jq
+  - tum veriyi gorebiliriz.
+
+
+3.data kullanma:
+data "aws_ami" "server_ami" {
+    most_recent = true 
+    owners = ["099720109477"]
+
+    filter {
+        name = "name"
+        values = ["ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*"]
+    }
+}
+
+   - normalde isim: ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-20211129 seklinde ama 
+
+
+
+4.uuid Function:
+- Generates a unique identifier
+uuid()
+  - "c139a70d-0cb5-3fd4-4e95-077f1e09802a" 
+
+
+5.substr Function:
+- verilen degerin istenen karakterinden itibaren verilen uzunluktaki bolumunu secer. 
+- Verinin disina cikacak sekilde bir uzunluk verilirse son degerde durur.
+- offset: baslangic noktasi
+substr(string, offset, length)
+substr("hello world", 1, 4)
+  - "ello"
+substr("12345678", 2, 3)
+  - "345"
+substr("12345678", 6, 3)
+  - "78"
+substr(uuid(), 0 ,3)
+  - "499"
+
+
+6.Lifecycle:
+- surekli degisen bir veri yuzunden resourceun yikilmasini engeller.
+resource "aws_lb_target_group" "mtc_tg" {
+  name     = "mtc-lb-tg-${substr(uuid(), 0, 3)}"
+  port     = var.tg_port     # 80
+  protocol = var.tg_protocol # "HTTP"
+  vpc_id   = var.vpc_id
+  lifecycle {
+      ignore_changes = [name]
+      create_before_destroy = true
+  }
+  health_check {
+    healthy_threshold   = var.lb_healthy_threshold   # 2
+    unhealthy_threshold = var.lb_unhealthy_threshold # 2
+    timeout             = var.lb_timeout             # 3
+    interval            = var.lb_interval            # 30
+  }
+}
+
+
+7.Ilgili db instance check:
+- Belirtilen bolgede istenen db instance'in mevcut olup olmadigini (kiralanabilir) sorgular.
+aws rds describe-orderable-db-instance-options --engine mysql --db-instance-class db.t2.micro --region eu-north-1
+
+
+8.Baglanma:
+ssh -i ~/.ssh/ubuntu/public-keyim umit@hostname
+
+
+9.Outputa Girmek istenen Veriyi Secme:
+State file uzerinden bakilabilir.
+terraform state show module.loadbalancing.aws_lb.mtc_lb
+
+

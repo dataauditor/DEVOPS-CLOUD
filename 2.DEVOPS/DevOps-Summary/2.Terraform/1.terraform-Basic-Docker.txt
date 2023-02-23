@@ -1,0 +1,2210 @@
+1.Terraform Yukleme:
+https://learn.hashicorp.com/tutorials/terraform/install-cli
+curl http://169.254.169.254/latest/meta-data/public-ipv4
+  - kendi ip'ni cekme.
+
+
+2.Docker:
+
+c9:
+mkdir terraform-docker
+cd terraform-docker/
+touch main.tf
+  - ismi onemli degil ama ".tf" uzantili olmali.
+vim main.tf
+--------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+    }
+  }
+}
+
+provider "docker" {}
+--------------------------------------------------------
+sudo apt install tree
+terraform init
+  - .terraform dosyasi olustu.
+  - .terraform.lock.hcl dosyasi olustu,
+> .terraform > terraform-provider-docker_v2.15.0 
+  - Bu provider filedir.
+tree -a
+
+
+3.Dependency:
+
+c9:
+- Sol tarafta .terraform.lock.hcl
+  - "2.15.0" seklinde versiyonu gosterir. Yuklenen hash dosyasinin versiyonunu gosterir.
+  - terraform init ile olusur.
+vim main.tf
+--------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "2.12.0"
+    }
+  }
+}
+
+provider "docker" {}
+--------------------------------------------------------
+  - eski bir versiyon tanimladik. Versiyon tanimlanmazsa versiyonu surekli gunceller.
+terraform init
+  - ilk initte "2.15.0" versiyonu ".terraform.lock.hcl" dosyasinda indirildigi/tanimlandigi icin hata verir. 
+terraform init -upgrade
+  - ".terraform.lock.hcl" dosyasindaki versiyonu main.tf dosyasi ile upgrade eder.
+  - Artik ".terraform.lock.hcl" dosyasinda "2.12.0" versiyonu yazar.
+vim main.tf
+--------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 2.12.0"
+    }
+  }
+}
+
+provider "docker" {}
+--------------------------------------------------------
+  - "~>": sondaki 0 patcinin son versiyonunu ifade eder.
+terraform init -upgrade
+  - "~>": ".terraform.lock.hcl" dosyasinda "2.12.2" versiyonu olusur.
+vim main.tf
+--------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 2.12"
+    }
+  }
+}
+
+provider "docker" {}
+--------------------------------------------------------
+  - son patch verilmezse yine "~>" devreye girer ve son rakam 12'yi mumkun son rakama cikarir ve "2.15 yapar".
+terraform init -upgrade
+  - "2.15.0" son versiyon (12 icin son) olustu.
+  - Herhangi versiyon yazilmazsa son versiyon alir.
+vim main.tf
+--------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 2.15.0"
+    }
+  }
+}
+
+provider "docker" {}
+--------------------------------------------------------
+terraform init -upgrade
+  - "2.15.0" son patch versiyonu yuklendi.
+
+
+
+4.Docker:
+- init / fmt / plan / apply / destroy
+- nodered.org 
+
+Browser:
+terraform.io/docs/providers/docker/
+  - Docker ile ilgili ornekleri gosterir.
+- https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs seklinde degismis.
+
+vim main.tf
+--------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+    name = "nodered/node-red:latest"
+}
+--------------------------------------------------------
+terraform init
+  - ".terraform.lock.hcl" dosyasinda "2.7.2" oldu.
+terraform fmt -diff
+  - format hatalarini duzeltir ve farki gosterir.
+terraform plan
+  - olusacak resourcelari gosterir.
+terraform apply
+  - image olusturduk.
+docker image ls
+  - image'i goruruz.
+terraform plan
+  - ilgili resource'u id'siyle gosterir ve degisiklik yok der.
+terraform destroy
+terraform plan -out=plan1
+  - plan ile olusacak durumu plan1 dosyasina yukler. Normal okunmaz.
+!!!
+terraform apply plan1
+  - plan1 dosyasini olusturur.
+terraform plan --help
+!!!
+terraform plan -destroy
+
+
+
+5.Referance:
+- Docker container deployment.
+https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs/resources/container
+https://www.terraform.io/configuration/expressions
+
+vim main.tf
+-----------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "docker_container" "nodered_container" {
+    name = "nodered"
+    image = docker_image.nodered_image.latest
+    ports {
+        internal = 1880
+        external = 1880
+    }
+}
+-----------------------------------------------------------
+  - .latest: image'in ID'sini verir.
+terraform fmt
+terraform plan
+terraform apply
+docker ps
+  - container gorulur.
+
+
+6.Deploy:
+
+curl http://169.254.169.254/latest/meta-data/public-ipv4
+  - local bilgisayarin public IP'sini ve username'ini verir.
+  - nodered ile deploy yapilir.
+
+
+7.Terraform state:
+- Detayli olarak olusan resourcelar ve bilgilerini verir.
+terraform destroy -auto-approve
+  - "terraform.tfstate" dosyasinin ici silinir, disi kalir ama son haliyle "terraform.tfstate.backup" dosyasi olustururak kaydeder.
+rm -rf terraform.tfstate
+rm -rf terraform.tfstate.backup
+terraform apply -auto-approve
+  - "terraform.tfstate" olustu. Default olarak kriptosuzdurlar.
+terraform destroy -auto-approve
+  - "terraform.tfstate.backup" olustu. "terraform.tfstate" dosyasi da durur.
+sudo apt install jq
+terraform show -json | jq
+  - "format_version": "0.1" seklinde verdi.
+  - "terraform.tfstate" dogrudan acmadan json formatinda gosterir. 
+terraform apply -auto-approve
+terraform state list
+  - olusan resourcelari yalnizca verir. (image ve container)
+
+
+
+8.Console ve Output:
+- https://www.terraform.io/language/values/outputs
+- https://www.terraform.io/cli/commands/console
+terraform show
+  - "terraform.tfstate" gosterir. metadatayi verir.
+terraform show | grep ip
+  - ip adreslerini verir.
+terraform show | grep name
+terraform state list
+terraform console    # exec komutu gibi dogrudan veri cekebiliriz.
+> docker_container.nodered_container.name
+  - nodered verir.
+> docker_container.nodered_container.ip_address
+  - "172.17.0.2"
+> exit
+vim main.tf
+--------------------------------------------------------------
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "docker_container" "nodered_container" {
+  name  = "nodered"
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    external = 1880
+  }
+}
+
+output "IP-Address" {
+    value = docker_container.nodered_container.ip_address
+    description = "The IP address of the container"
+}
+
+output "container-name" {
+    value = docker_container.nodered_container.name
+    description = "The name of the container"
+}
+--------------------------------------------------------------
+terraform apply
+  - olustuktan sonra resourcelar ve output degerlerini goruruz.
+terraform output
+  - outputlari gosterir.
+
+
+!!!
+9.Join Function:
+- join function. seperator ("-" vb) ve listeden olusur.
+terraform console
+> join(";", ["thing", 1])
+  - "thing;1"
+> join(";", ["thing ", 1])
+  - "thing ;1"
+> join(":", ["x", "y"])
+  - "x:y"
+> join(":", ["x"], ["y"])
+  - "x:y"
+join(":", [3, 2])
+  - "3:2"
+> join("-", ["this", "sentence", "has", 2 + 2, "dashes"])
+  - "this-sentence-has-4-dashes"
+> docker_container.nodered_container.ports
+  tolist([
+    {
+      "external" = 1880
+      "internal" = 1880
+      "ip" = "0.0.0.0"
+      "protocol" = "tcp"
+    },
+  ])
+  - "terraform.tfstate"den alinacak verinin adini "ports" vererek port verisini alabiliriz.
+!!!!!!
+!!!!!!
+> docker_container.nodered_container.ports[0].external
+  - 1880 verir. 
+  - liste olunca [0], [1] seklinde de gosterilmeli. Sadece .external seklinde yetmiyor.
+> docker_container.nodered_container.ip_address
+  - "172.17.0.2"
+!!!
+> join(":", [docker_container.nodered_container.ip_address, docker_container.nodered_container.ports[0].external])
+  - "172.17.0.2:1880" seklinde endpoint verir.
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "docker_container" "nodered_container" {
+  name  = "nodered"
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    external = 1880
+  }
+}
+
+output "IP-Address" {
+    value = join(":", [docker_container.nodered_container.ip_address, docker_container.nodered_container.ports[0].external])
+    description = "The IP address and external port of the container"
+}
+
+output "container-name" {
+    value = docker_container.nodered_container.name
+    description = "The name of the container"
+}
+--------------------------------------------------------------
+  - ip address:port verir.
+terraform output
+  - degisikligi vermedi, apply gerekli.
+terraform apply -auto-approve
+terraform output
+
+
+
+10.Random Resource:
+- https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/string
+terraform apply -auto-approve
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "docker_container" "nodered_container" {
+  name  = "nodered"
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    external = 1880
+  }
+}
+
+resource "docker_container" "nodered_container2" {
+  name  = "nodered"
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    # external = 1880
+  }
+}
+
+output "IP-Address" {
+    value = join(":", [docker_container.nodered_container.ip_address, docker_container.nodered_container.ports[0].external])
+    description = "The IP address and external port of the container"
+}
+
+output "container-name" {
+    value = docker_container.nodered_container.name
+    description = "The name of the container"
+}
+--------------------------------------------------------------
+  - bir external portun verisini girmedik.
+terraform apply -auto-approve
+terraform destroy --auto-approve
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "random_string" "random2" {
+    length = 4
+    special = false
+    upper = false 
+}
+
+
+resource "docker_container" "nodered_container" {
+  name  = join("-",["nodered", random_string.random.result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    external = 1880
+  }
+}
+
+resource "docker_container" "nodered_container2" {
+  name  = join("-",["nodered", random_string.random2.result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    # external = 1880
+  }
+}
+
+output "IP-Address" {
+    value = join(":", [docker_container.nodered_container.ip_address, docker_container.nodered_container.ports[0].external])
+    description = "The IP address and external port of the container"
+}
+
+output "container-name" {
+    value = docker_container.nodered_container.name
+    description = "The name of the container"
+}
+
+output "IP-Address2" {
+    value = join(":", [docker_container.nodered_container2.ip_address, docker_container.nodered_container2.ports[0].external])
+    description = "The IP address and external port of the container"
+}
+
+output "container-name2" {
+    value = docker_container.nodered_container2.name
+    description = "The name of the container"
+}
+--------------------------------------------------------------
+  - random sayi ekleyecek resource ekledik. 11'de anlatilan random sayi ile count daha kullanisli.
+terraform init
+terraform apply -auto-approve
+terraform state list
+terraform show
+  - result seklinde ciktiyi goruruz random'un.
+
+
+!!!
+11.Multiple Resources and Count:
+- count, [count.index] ve [0],[1]... ile coklu resourcelari isimlendirir.
+terraform destroy --auto-approve
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = 2
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = 2
+  name  = join("-",["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    # external = 1880
+  }
+}
+
+output "IP-Address" {
+    value = join(":", [docker_container.nodered_container[0].ip_address, docker_container.nodered_container[0].ports[0].external])
+    description = "The IP address and external port of the container"
+}
+
+output "container-name" {
+    value = docker_container.nodered_container[0].name
+    description = "The name of the container"
+}
+
+output "IP-Address2" {
+    value = join(":", [docker_container.nodered_container[1].ip_address, docker_container.nodered_container[1].ports[0].external])
+    description = "The IP address and external port of the container"
+}
+
+output "container-name2" {
+    value = docker_container.nodered_container[1].name
+    description = "The name of the container"
+}
+--------------------------------------------------------------
+  - count = 2 : random_string.random[0] ve random_string.random[1] seklinde iki deger verir.
+  - count: yalniza module, resource ve data'da kullanilabilir. Outputta kullanilamaz.
+terraform apply --auto-approve
+terraform show
+
+
+
+12.Splat Expression:
+- [*] kullanimi.
+- https://www.terraform.io/configuration/expressions#splat-expressions
+terraform destroy --auto-approve && terraform apply --auto-approve
+terraform console
+> docker_container.nodered_container[*].name
+> docker_container.nodered_container.*.name
+  - ikisi de ayni isi yapar. Isimleri verir.
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = 2
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = 2
+  name  = join("-",["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    # external = 1880
+  }
+}
+
+output "IP-Address" {
+    value = join(":", [docker_container.nodered_container[0].ip_address, docker_container.nodered_container[0].ports[0].external])
+    description = "The IP address and external port of the container"
+}
+
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "IP-Address2" {
+    value = join(":", [docker_container.nodered_container[1].ip_address, docker_container.nodered_container[0].ports[0].external])
+    description = "The IP address and external port of the container"
+}
+--------------------------------------------------------------
+  - [*] islemi burada "IP-Address" icin uygulanamaz cunki pespese iki [*] hata verir. value = join(":", [docker_container.nodered_container[*].ip_address, docker_container.nodered_container[*].ports[*].external])
+
+
+
+!!!
+13.For Loops:
+- https://www.terraform.io/configuration/expressions#for-expressions
+terraform console
+> [for i in [1, 2, 3]: i + 1]
+  [
+    2,
+    3,
+    4,
+  ]
+[for i in docker_container.nodered_container[*]: i.name]
+  [
+    "nodered-8dre"
+    "nodered-9ds8"
+  ]
+!!!
+> [for i in docker_container.nodered_container[*]: i.ports[0]["external"]]
+  [
+    49157,
+    49156,
+  ]
+    - port numaralarini (external) aldik.
+> [for i in docker_container.nodered_container[*]: i.ports[0].external]
+  [
+    49157,
+    49156,
+  ]
+    - yukariyla ayni calisir.
+> [for i in docker_container.nodered_container[*]: i]
+    - Her iki containerin tum bilgilerini verir.
+!!!
+> [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],[i.name])]
+  [
+    "172.17.0.3:nodered-xrq1",
+    "172.17.0.2:nodered-2rk8",
+  ]
+> [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+  [
+    "172.17.0.3:49157",
+    "172.17.0.2:49156",
+  ]
+> exit
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = 2
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = 2
+  name  = join("-",["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    # external = 1880
+  }
+}
+
+
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "ip-address" {
+     value = [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+     description = "The IP address and external port of the container"
+}
+--------------------------------------------------------------
+terraform apply --auto-approve
+  container-name = [
+    "nodered-xrq1",
+    "nodered-2rk8",
+  ]
+  ip-address = [
+    "172.17.0.3:49157",
+    "172.17.0.2:49156",
+  ] 
+
+
+
+
+14.Tainting and Updating Resources:
+- Tainting: bir resource'u muteakip apply'da zorla destroy edip yeniden kurmak icin isaretlemektir. Reboot gibi dusunulebilir. Konfigurasyon degisikliklerinde kullanilir.
+- taint ile silmek uzere bir resource isaretlenince bagli resource var mi baska hatalara sebebiyet veriyor mu diye "plan" ile kontrol edilir. Hata verirse untaint yapilarak iptal edilir.
+terraform destroy --auto-approve && terraform apply --auto-approve
+terraform state list
+terraform taint random_string.random[0]
+  - isaretlendi.
+terraform plan
+  - random_string.random[0] silinecegi icin ona bagli calisan container de kapanir ve yeni bir container acilir.
+terraform untaint random_string.random[0]
+terraform apply --auto-approve
+terraform destroy --auto-approve
+
+
+
+15.State Locking and Breaking State:
+- Genel. detayina girmedik. sonra girecek.
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = 1
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = 1
+  name  = join("-",["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    # external = 1880
+  }
+}
+
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "ip-address" {
+     value = [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+     description = "The IP address and external port of the container"
+}
+--------------------------------------------------------------
+terraform destroy --auto-approve
+- yeni terminal actik.
+- terminali mouse ile tasiyarak sag tarafa cektik. Iki terminali ayni anda gorebiliyoruz.
+2>cd terraform-docker
+    - 2.bash
+1>terraform apply --help
+1>terraform plan
+1>terraform apply --auto-approve -lock=false
+2>terraform apply --auto-approve 
+  - 1 ve 2 nolu terminale birlikte enter dersek farkli ip, port ve isimler verirler.
+1>terraform state list
+  - sadece 1 container gosterir. -lock=false edilen tarafi gosterir. Ancak iki container olustu. Digeri state file'a tabi olmaz.
+docker ps -a
+  - her iki containeri de gosterir.
+
+
+
+16. Terraform Import:
+- State dosyasinda olmayan resource'lar ID numarasiyla state dosyasina tanitilir.
+- State dostasina dahil olmayan disardaki resourcelar once docker ps -a ile alinan isimleriyle main.tf dosyasina kaydedilir. Daha sonra ID numaralari ile state dosyasina kaydedilir. 
+1>terraform apply --auto-approve -lock=false
+2>terraform apply --auto-approve
+  - ayni anda baslatilir iki terminalde. Ikisi de farkli container olusturur.
+1>docker ps -a
+  - 2 container var.
+2>terraform state list
+  - 1 container gosterir.
+2>terraform show
+2>terraform output
+  - terraform'a kayitli containeri goruruz.
+2>docker ps -a
+  - diger container name: "nodered-9lgm"
+  - her iki containeri goruruz. terraform state disindakinin ismini alip main.tf dosyasina ekleriz asagida.
+1>vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = 1
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = 1
+  name  = join("-",["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    # external = 1880
+  }
+}
+
+resource "docker_container" "nodered_container2" {
+  name = "nodered-9lgm"
+  image = docker_image.nodered_image.latest
+}
+
+
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "ip-address" {
+     value = [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+     description = "The IP address and external port of the container"
+}
+--------------------------------------------------------------
+  - disarda kalan container docker ps -a ile alinan ismiyle main.tf'e kaydedilir. Ama import islemi icin ID gerekli.
+docker inspect --format="{{.ID}}" nodered-9lgm
+  - containerin ID'sini verir.
+!!!
+terraform import docker_container.nodered_container2 $(docker inspect --format="{{.ID}}" nodered-9lgm)
+terraform state list
+  - her iki container de state dosyasina dahil olmus.
+terraform destroy --auto-approve
+
+
+
+17. Refresh and State rm:
+- refresh, main.tf dosyasinda yapilan degisikleri outputta sergiletir ama state dosyasi ve docker ps -a ciktisi degismez.
+- Bununla birlikte kendiliginden kapanan veya docker'la kapatilan resourcelar refresh edilince state dosyasina islenir.
+- terraform.tfstate.167544344.backup dosyasi manual hatalar yapildiginda kullanilir. 
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = 1
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = 1
+  name  = join("-",["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    # external = 1880
+  }
+}
+
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "ip-address" {
+     value = [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+     description = "The IP address and external port of the container"
+}
+--------------------------------------------------------------
+terraform apply --auto-approve 
+terraform state list
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = 1
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = 1
+  name  = join("-",["nodereeeed", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    # external = 1880
+  }
+}
+
+
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "ip-address" {
+     value = [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+     description = "The IP address and external port of the container"
+}
+--------------------------------------------------------------
+  - container name degistirildi.
+terraform refresh
+  - container_name degisti gozukur outputta ama docker'da ve state file'da degismez degismez.
+docker ps -a
+  - isim degismemis.
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = 2
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = 2
+  name  = join("-",["nodereeeed", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    # external = 1880
+  }
+}
+
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "ip-address" {
+     value = [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+     description = "The IP address and external port of the container"
+}
+--------------------------------------------------------------
+  - 2 container olusacak.
+terraform apply --auto-approve 
+docker ps -a
+docker rm -f nodered-hqswa
+  - olusan bir container silindi.
+docker ps -a
+  - tek container var.
+terraform state list
+  - iki container gosterir ama aslinda bir.
+terraform refresh  
+terraform state list
+  - refresh sonrasi tek container gosterir.
+terraform state rm random_string.random[1]
+  - random_string.random[1] silindi.
+terraform state list
+  - gercek durumu gosteriyor.
+terraform destroy --auto-approve
+
+
+
+18. Variables:
+- https://www.terraform.io/language/values/variables
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+variable "ext_port" {}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = 2
+    length = 5
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = 2
+  name  = join("-",["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = 1880
+    external = var.ext_port
+  }
+}
+
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "ip-address" {
+     value = [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+     description = "The IP address and external port of the container"
+}
+--------------------------------------------------------------
+terraform plan
+  > var.ext_port
+     Enter a value: 1880
+       - value tanimlanmadigi icin bir deger ister.
+!!!
+terraform plan -var ext_port=1880
+  - bu sekilde de tanimlanabilir.
+export TF_VAR_ext_port=1880
+  - env variable tanimlayabiliriz.
+terraform plan
+  - yukardaki gibi de tanimlanabilir.
+unset TF_VAR_ext_port
+  - tanimladigimiz variable'i sileriz.
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+variable "ext_port" {
+  type = number
+  default = 1880
+}
+
+variable "int_port" {
+# type = number
+ default = 1880
+}
+
+variable "container_count" {
+  type = number
+  default = 1
+}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = var.container_count
+    length = 5
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = var.container_count
+  name  = join("-",["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = var.int_port
+    external = var.ext_port
+  }
+}
+
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "ip-address" {
+     value = [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+     description = "The IP address and external port of the container"
+}
+--------------------------------------------------------------
+terraform plan
+terraform apply --auto-approve
+
+
+19.Variable Validation:
+- https://www.terraform.io/language/values/variables#custom-validation-rules
+vim main.tf
+--------------------------------------------------------------
+variable "int_port" {
+# type = number
+ default = 1881
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+--------------------------------------------------------------
+  - sadece burasi degisti.
+  - error_message: Buyuk harfle baslayip "." veya "?" ile bitmeli.
+terraform plan
+  - "The internal port must be 1880" hatasi verir.
+  - default = 1880 yaparak duzeltilir.
+vim main.tf
+--------------------------------------------------------------
+variable "ext_port" {
+  type = number
+  default = 71867
+  
+  validation {
+    condition = var.ext_port <= 65535 && var.ext_port > 0
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+}
+--------------------------------------------------------------
+  - error_message verir.
+  - default = 33000 yaparak duzeltilebilir.
+vim main.tf
+--------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+variable "ext_port" {
+  type = number
+  default = 33333
+  
+  validation {
+    condition = var.ext_port <= 65535 && var.ext_port > 0
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+}
+
+variable "int_port" {
+ type = number
+ default = 1880
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+
+variable "container_count" {
+  type = number
+  default = 1
+}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = var.container_count
+    length = 5
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = var.container_count
+  name  = join("-",["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = var.int_port
+    external = var.ext_port
+  }
+}
+
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "ip-address" {
+     value = [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+     description = "The IP address and external port of the container"
+}
+--------------------------------------------------------------
+  - var.container_count ile tum adetler tanimlanmis.
+terraform plan
+
+
+20.Variables and Output Files Validation:
+- main.tf ile ayni konumda olduktan sonra diger .tf dosyalari da calisir. Esas olan provider datasinin hangi dosyada bulundugu. Cunki o baslatir.
+vim variables.tf
+--------------------------------------------------------------
+variable "ext_port" {
+  type = number
+  default = 33333
+  
+  validation {
+    condition = var.ext_port <= 65535 && var.ext_port > 0
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+}
+
+variable "int_port" {
+ type = number
+ default = 1880
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+
+variable "container_count" {
+  type = number
+  default = 1
+}
+--------------------------------------------------------------
+vim outputs.tf
+--------------------------------------------------------------
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "ip-address" {
+     value = [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+     description = "The IP address and external port of the container"
+}
+--------------------------------------------------------------
+terraform plan
+terraform destroy --auto-approve && terraform apply --auto-approve
+terraform show | grep 1880
+  - olusmus
+
+
+!!!
+21.Sensitive Variables and .tfvars files:
+- sensitiv veriler terraform.tfvars dosyasina yazilir.
+vim terraform.tfvars
+--------------------------------------------------------------
+ext_port = 1880
+--------------------------------------------------------------
+vim variables.tf
+--------------------------------------------------------------
+variable "ext_port" {
+  type = number
+
+  validation {
+    condition = var.ext_port <= 65535 && var.ext_port > 0
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+}
+
+variable "int_port" {
+ type = number
+ default = 1880
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+
+variable "container_count" {
+  type = number
+  default = 1
+}
+--------------------------------------------------------------
+  - variables.tf dosyasindan default = 1880 degerini sildik. .tfvars dosyasindan cekecek.
+terraform destroy --auto-approve && terraform apply --auto-approve
+
+
+
+
+22..tfvars files Oncelik Durumu:
+- ayni anda birden fazla .tfvars file varsa kullanimi nasil olur.
+- Oncelik terraform.tfvars. Ama digerlerini CLI ile cagirabiliriz.
+vim west.tfvars
+------------------------------------------------------------
+ext_port = 1980
+------------------------------------------------------------
+  - iki adet .tfvars file olusturmus olduk.
+terraform plan
+  - default olarak terraform.tfvars'taki 1880 verisini cekti. west.tfvars'i cekmedi.
+terraform plan --var-file west.tfvars
+  - diger .tfvars'lari cekme usulu.
+vim central.tfvars
+------------------------------------------------------------
+ext_port = 1990
+------------------------------------------------------------
+terraform plan
+  - default olarak terraform.tfvars'taki 1880 verisini cekti. 
+terraform plan --var-file central.tfvars
+terraform plan -var ext_port=1780
+  - dogrudan da variable atanabilir.
+terraform plan -var ext_port=1780 --var-file central.tfvars
+  - en sondaki veriyi isleme koyar. central.tfvars'dan veri ceker.
+
+
+
+
+23.Hiding Sensitive Variables From CLI:
+- sensitive = true hem variable.tf hem de outputs.tf'e eklenmeli ayni variable icin.
+- docker ps -a ve terraform.tfstate file ile sensitive veriler gorulebilir. Baska turlu ulasim olmaz.
+vim variables.tf
+------------------------------------------------------------
+variable "ext_port" {
+  type = number
+  # default = 33333
+  sensitive = true
+  
+  validation {
+    condition = var.ext_port <= 65535 && var.ext_port > 0
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+}
+
+variable "int_port" {
+ type = number
+ default = 1880
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+
+variable "container_count" {
+  type = number
+  default = 1
+}
+------------------------------------------------------------
+  - sensitive = true ekledik.
+vim outputs.tf
+------------------------------------------------------------
+output "container-name" {
+    value = docker_container.nodered_container[*].name
+    description = "The name of the container"
+}
+
+output "ip-address" {
+     value = [for i in docker_container.nodered_container[*]: join(":", [i.ip_address],i.ports[*]["external"])]
+     description = "The IP address and external port of the container"
+     sensitive = true
+}
+------------------------------------------------------------
+  - ilgili variable'in kullanilacagi outputa da eklemek zorunlu.
+terraform apply --auto-approve
+  - ip-address = sensitive seklinde verir.
+terraform output
+  - ip-address = sensitive seklinde verir.
+
+
+
+24.Bind Mount and Local Exec:
+- Local exec, ansible gibi calisir ama tavsiye edilmez.
+- local-exec'i bir provisioner gibi tanitiriz resource icinde.
+- buradaki host_path statictir. 27'de dynamic olani var.
+- https://www.terraform.io/language/resources/provisioners/local-exec
+- https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs/resources/container.html
+- https://nodered.org/docs/getting-started/docker
+vim main.tf
+------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = var.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = var.container_count
+  name  = join("-", ["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = var.int_port
+    external = var.ext_port
+  }
+  volumes {
+      container_path = "/data"
+      host_path = "/home/ubuntu/environment/terraform-docker/noderedvol"
+  }
+}
+------------------------------------------------------------
+terraform init
+terraform apply --auto-approve
+curl http://169.254.169.254/latest/meta-data/public-ipv4
+  - 54.90.103.175 olarak ec2'nun ip'sini aliriz.
+
+Browser:
+54.90.103.175:1880
+> inject al > debug al > deploy tikla > debug messages tikla (deploy altinda) > timestamp tikla 
+
+c9:
+terraform destroy --auto-approve && terraform apply --auto-approve
+
+Browser:
+54.90.103.175:1880
+  - onceden yapilan islemler duruyor.
+
+
+
+25.Locals, List:
+- locals, liste seklindeki variable veya .tfvars dosyasinin length ile uzunlugunu hesaplar.
+- veriler [] seklinde yazilirsa type = list olmali.
+vim variables.tf
+------------------------------------------------------------
+variable "ext_port" {
+  type = list
+  
+#  validation {
+#    condition = var.ext_port <= 65535 && var.ext_port > 0
+#    error_message = "The external port must be in the valid port range 0 - 65535."
+#  }
+}
+
+variable "int_port" {
+ type = number
+ default = 1880
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+
+variable "container_count" {
+  type = number
+  default = 3
+}
+------------------------------------------------------------
+  - type list yaptik. validationu kaldirdik. sayiyi 3 yaptik.
+vim terraform.tfvars
+------------------------------------------------------------
+ext_port = [1880, 1881, 1882]
+------------------------------------------------------------
+  - [] seklinde liste gorunumune aldik.
+vim main.tf
+------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = var.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = var.container_count
+  name  = join("-", ["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = var.int_port
+    external = var.ext_port[count.index]
+  }
+  volumes {
+      container_path = "/data"
+      host_path = "/home/ubuntu/environment/terraform-docker/noderedvol"
+  }
+}
+------------------------------------------------------------
+  - external = var.ext_port[count.index] seklinde degistirdik.
+terraform plan | grep external
+  - 1880, 1881, 1882 gorduk.
+
+vim variables.tf
+------------------------------------------------------------
+variable "container_count" {
+  type = number
+  default = 4
+}
+------------------------------------------------------------
+  - yukarki degisiklik yapilirsa hata verir. yeterince port tanimli degil.
+terraform plan | grep external
+  - hata verir.
+
+Locals ile Cozumu:
+vim variables.tf
+------------------------------------------------------------
+variable "ext_port" {
+  type = list
+  
+#  validation {
+#    condition = var.ext_port <= 65535 && var.ext_port > 0
+#    error_message = "The external port must be in the valid port range 0 - 65535."
+#  }
+}
+
+variable "int_port" {
+ type = number
+ default = 1880
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+
+locals {
+    container_count = length(var.ext_port)
+}
+------------------------------------------------------------
+  - locals tanimlandi. Ustteki "variable "container_count" yerine tanimlandi.
+vim main.tf
+------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = local.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = local.container_count
+  name  = join("-", ["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = var.int_port
+    external = var.ext_port[count.index]
+  }
+  volumes {
+      container_path = "/data"
+      host_path = "/home/ubuntu/environment/terraform-docker/noderedvol"
+  }
+}
+------------------------------------------------------------
+  - var.container_count > local.container_count seklinde degistirilir.
+  - local listenin uzunlugundan adedi belirler.
+terraform plan | grep external
+  - 3 portta gorulur.
+terraform apply --auto-approve
+
+
+
+26.Min and Max Functions and Expand:
+terraform console
+> max(1, 2, 3)
+  - 3
+> max([10, 20, 30])
+  - list oldugu icin hata verir.
+> max([10, 20, 30]...)
+  - 30 "..." ile cozduk.
+> min([10, 20,2, 30, 40]...)
+  - 2
+vim variables.tf
+------------------------------------------------------------
+variable "ext_port" {
+  type = list
+  
+  validation {
+    condition = max(var.ext_port...) <= 65535 && min(var.ext_port...) > 0
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+}
+
+variable "int_port" {
+ type = number
+ default = 1880
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+
+locals {
+    container_count = length(var.ext_port)
+}
+------------------------------------------------------------
+  - min/max ile listeyi conditiona tanimladik.
+
+
+
+
+27.Dynamic Volume:
+- "path.cwd": volume olustururken dynamic olarak mevcut konumu tanimlamak icin kullanilir.
+terraform console
+> path.cwd
+  "/home/ubuntu/environment/terraform-docker"
+    - localdeki konumi gosterir. pwd ile ayni.
+> path.root
+  "/home/ubuntu/environment/terraform-docker"
+    - genelde path.cwd ile ayni calisir.
+> path.module
+  "/home/ubuntu/environment/terraform-docker"
+    - genelde path.cwd ile ayni calisir.
+> "${path.cwd}/noderedvol"
+  "/home/ubuntu/environment/terraform-docker/noderedvol"
+vim main.tf
+------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+
+resource "random_string" "random" {
+    count = local.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = local.container_count
+  name  = join("-", ["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = var.int_port
+    external = var.ext_port[count.index]
+  }
+  volumes {
+    container_path = "/data"
+    host_path = "${path.cwd}/noderedvol"
+  }
+}
+------------------------------------------------------------
+  - host_path = "${path.cwd}/noderedvol" seklinde volume dynamic tanimlandi.
+terraform plan
+terraform apply --auto-approve  
+terraform destroy --auto-approve
+
+
+
+28.Maps and Lookups: The Image Variable:
+- Production ve Development Environmentslar.
+- Once env tanimladik/mapledik sonra Lookup ile env'a gore clusteri kurmak icin farkli veri cektik.
+vim terraform.tfvars
+------------------------------------------------------------
+ext_port = [1880]
+------------------------------------------------------------
+  - ornekte az ornekle calismak icin tek port verdik.
+vim variables.tf
+------------------------------------------------------------
+variable "env" {
+    type = string
+    description = "Env to deploy to"
+    default = "dev"
+}
+
+variable "image" {
+    type = map
+    description = "image for container"
+    default = {
+        dev = "nodered/node-red:latest"
+        prod = "nodered/node-red:latest-minimal"
+    }
+}
+
+variable "ext_port" {
+  type = list
+  
+  validation {
+    condition = max(var.ext_port...) <= 65535 && min(var.ext_port...) > 0
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+}
+
+variable "int_port" {
+ type = number
+ default = 1880
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+
+locals {
+    container_count = length(var.ext_port)
+}
+------------------------------------------------------------
+  - env variable'i tanimladik.
+  - image'i env'a goree tanimladik.
+terraform console
+> lookup({dev = "image1", prod = "image2"}, "dev")
+  "image1"
+> lookup({dev = "image1", prod = "image2"}, "prod", "image3")
+  "image2"
+> lookup(var.image, "dev")
+  "nodered/node-red:latest"
+> lookup(var.image, "prod")
+  "nodered/node-red:latest-minimal"
+>lookup({"dev" = "ami-456", "prod" = "ami-123"}, "stage", "ami-xyz")
+  - ilki (stage) aranilacak key, ikincisi ("ami-xyz") default degerdir. stage olmadigi icin default deger cikti verir.
+vim main.tf
+------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+resource "docker_image" "nodered_image" {
+  name = lookup(var.image, var.env)
+}
+
+resource "random_string" "random" {
+    count = local.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = local.container_count
+  name  = join("-", ["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = var.int_port
+    external = var.ext_port[count.index]
+  }
+  volumes {
+    container_path = "/data"
+    host_path = "${path.cwd}/noderedvol"
+  }
+}
+------------------------------------------------------------
+  - lookup ile alternatifli veri tanimlamayi yaptik.
+terraform plan -var="env=prod" | grep name 
+  - name   = "nodered/node-red:latest-minimal"
+  - env=prod veya env=prod seklinde de calisti.
+  - image variable'i prod map'li olarak calisir.
+
+
+
+29.Maps and Lookups: External Ports:
+- Environment (development ve production) bazinda port mapledik.
+vim terraform.tfvars
+------------------------------------------------------------
+ext_port = {
+  dev = [1980, 1981]
+  prod = [1880, 1881]
+}
+------------------------------------------------------------
+  - mapledik.
+vim variables.tf
+------------------------------------------------------------
+variable "env" {
+    type = string
+    description = "Env to deploy to"
+    default = "dev"
+}
+
+variable "image" {
+    type = map
+    description = "image for container"
+    default = {
+        dev = "nodered/node-red:latest"
+        prod = "nodered/node-red:latest-minimal"
+    }
+}
+
+variable "ext_port" {
+  type = map
+  
+  validation {
+    condition = max(var.ext_port["dev"]...) <= 65535 && min(var.ext_port["dev"]...) >= 1880
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+  
+  validation {
+    condition = max(var.ext_port["prod"]...) <= 2080 && min(var.ext_port["prod"]...) > 0
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+}
+
+variable "int_port" {
+ type = number
+ default = 1880
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+
+locals {
+    container_count = length(lookup(var.ext_port, var.env))
+}
+------------------------------------------------------------
+  - lookup kurduk ve map kurduk. farkli conditionlar tanimladik.
+vim main.tf
+------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+resource "docker_image" "nodered_image" {
+  name = lookup(var.image, var.env)
+}
+
+resource "random_string" "random" {
+    count = local.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = local.container_count
+  name  = join("-", ["nodered", random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = var.int_port
+    external = lookup(var.ext_port, var.env)[count.index]
+  }
+  volumes {
+    container_path = "/data"
+    host_path = "${path.cwd}/noderedvol"
+  }
+}
+------------------------------------------------------------
+  - lookup kurduk.
+terraform plan | grep external
+  - external = 1980
+  - external = 1981
+terraform plan -var="env=prod" | grep external 
+  - external = 1880
+  - external = 1881
+
+
+
+30.Workspaces:
+- Izole environmentler. Farkli env'lar kurmaya yarar.
+- terraform.tfstate.d altinda olusur workspaceler.
+- workspace ile calisinca env ile calismaya gerek kalmaz.
+- https://www.terraform.io/language/state/workspaces
+terraform workspace new dev
+  - olusturduk.
+terraform workspace new prod
+terraform workspace show
+  - mevcut wokspace'i gosterir.
+terraform workspace list
+  - tum workspaceleri gosterir. Uzerinde calisilani isaretler.
+terraform workspace select prod
+  - workspace degistirme.
+terraform workspace select dev
+terraform apply --auto-approve -var="env=dev"
+  - dev environmenti ile dev workspace'inde calistiriyoruz.
+  - terraform.tfstate.d altindaki dev workspace'inde terraform.tfstate dosyasi olusur. Mevcut terraform.tfstate, default workspace'inkidir.
+terraform workspace select prod
+terraform apply --auto-approve -var="env=prod"
+  - prod workspace'inde prod env ile cluster kuruldu.
+  - terraform.tfstate.d altindaki dev workspace'inde terraform.tfstate dosyasi olusur.
+  
+
+
+31.Workspace Referencing:
+terraform console
+> terraform.workspace
+  "prod"
+vim variables.tf
+------------------------------------------------------------
+variable "image" {
+    type = map
+    description = "image for container"
+    default = {
+        dev = "nodered/node-red:latest"
+        prod = "nodered/node-red:latest-minimal"
+    }
+}
+
+
+variable "ext_port" {
+  type = map
+  
+  validation {
+    condition = max(var.ext_port["dev"]...) <= 65535 && min(var.ext_port["dev"]...) >= 1880
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+  
+  validation {
+    condition = max(var.ext_port["prod"]...) <= 2080 && min(var.ext_port["prod"]...) > 0
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+}
+
+variable "int_port" {
+ type = number
+ default = 1880
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+
+locals {
+    container_count = length(lookup(var.ext_port, terraform.workspace))
+}
+------------------------------------------------------------
+  - var.env'lar terraform.workspace olarak degistirildi.
+vim main.tf
+------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+resource "docker_image" "nodered_image" {
+  name = lookup(var.image, terraform.workspace)
+}
+
+resource "random_string" "random" {
+    count = local.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = local.container_count
+  name  = join("-", ["nodered", terraform.workspace, random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = var.int_port
+    external = lookup(var.ext_port, terraform.workspace)[count.index]
+  }
+  volumes {
+    container_path = "/data"
+    host_path = "${path.cwd}/noderedvol"
+  }
+}
+------------------------------------------------------------
+terraform plan | grep external
+  - external = 1880
+  - external = 1881
+terraform workspace select dev
+terraform plan | grep external
+  - external = 1980
+  - external = 1981
+
+
+
+32.Map Keys:
+- Lookup yerine Map Key kullanimi.
+terraform workspace select prod
+terraform destroy --auto-approve
+terraform workspace select dev
+terraform destroy --auto-approve
+vim main.tf
+------------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+resource "docker_image" "nodered_image" {
+  name = var.image[terraform.workspace]
+}
+
+resource "random_string" "random" {
+    count = local.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = local.container_count
+  name  = join("-", ["nodered", terraform.workspace, random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = var.int_port
+    external = var.ext_port[terraform.workspace][count.index]
+  }
+  volumes {
+    container_path = "/data"
+    host_path = "${path.cwd}/noderedvol"
+  }
+}
+------------------------------------------------------------
+  - lookup'lar degistirildi.
+vim variables.tf
+------------------------------------------------------------
+variable "image" {
+    type = map
+    description = "image for container"
+    default = {
+        dev = "nodered/node-red:latest"
+        prod = "nodered/node-red:latest-minimal"
+    }
+}
+
+variable "ext_port" {
+  type = map
+  
+  validation {
+    condition = max(var.ext_port["dev"]...) <= 65535 && min(var.ext_port["dev"]...) >= 1880
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+  
+  validation {
+    condition = max(var.ext_port["prod"]...) <= 2080 && min(var.ext_port["prod"]...) > 0
+    error_message = "The external port must be in the valid port range 0 - 65535."
+  }
+}
+
+variable "int_port" {
+ type = number
+ default = 1880
+ 
+ validation {
+   condition = var.int_port == 1880
+   error_message = "The internal port must be 1880."
+ }
+}
+
+locals {
+    container_count = length(var.ext_port[terraform.workspace])
+}
+------------------------------------------------------------
+  - lookup'lar degistirildi.
+terraform apply --auto-approve
+
+

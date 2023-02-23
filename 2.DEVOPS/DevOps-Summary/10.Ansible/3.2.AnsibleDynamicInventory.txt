@@ -1,0 +1,240 @@
+1.Genel:
+https://clarusway.com/ansible-working-with-dynamic-inventory-using-aws-ec2-plugin/
+https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#connecting-to-hosts-behavioral-inventory-parameters
+  - dynamicinventory parameters web sitesi
+https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#inventory-basics-formats-hosts-and-groups
+  - group name
+https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#assigning-a-variable-to-many-machines-group-variables
+  - group variables
+https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#default-groups
+  - default groups
+- workerlar normal'de hosts'a kaydedilir. Daha sonra 
+- Yeni acilanlar da eklenir.
+- Inventory Cesitleri:
+  * Static: hosts veya baska konumda olusturulan ve icinde node'larin ip'lerini tutan inventory.txt'ler.
+  * Dynamic inventory:
+    - Yeni acilan node'lar pluginler ile tanimli tag'a gore otomatik olarak tespit edilir.
+    - Bir plugin sayesinde tespit edip gunceller. Biz plugin'in ayarlarini Boto ile yapariz.
+    - AWS consolda verilen taglar ile cekiyor.
+    
+
+!!!
+scp -i ~/.ssh/ugur.pem  -o IdentitiesOnly=yes ~/.ssh/ugur.pem  ec2-user@54.227.14.107:/home/ec2-user/.ssh/
+!!!
+scp -i ~/.ssh/ugur.pem  -o IdentitiesOnly=yes -r ec2-user@54.227.14.107:/home/ec2-user/Ders2 .
+  - '-r': folder gondeririz. Ders2 folderi alinir.
+!!!
+wget http://www... -O /etc/bin
+  - '-O': devaminda yazan adrese depolar.
+
+
+2.Hands-on:
+- Static Inventory:
+  * hosts (inventory) kurulsa da daha sonra istenilen bir yerde baska static inventory kurulur.
+  * Ayni konumda yeni bir ansible.cfg olusturulur.
+
+VSC:
+sudo yum update -y
+sudo amazon-linux-extras install ansible2
+
+VSC local:
+scp -i ~/.ssh/ugur.pem -o IdentitiesOnly=yes ~/.ssh/ugur.pem  ec2-user@54.227.14.107:/home/ec2-user/
+
+VSC:
+chmod 400 ugur.pem
+sudo vim /etc/ansible/hosts
+------------------------------------------------------------------
+[webservers]
+node1 ansible_host=<node1_ip> ansible_user=ec2-user
+
+[dbservers]
+node2 ansible_host=<node2_ip> ansible_user=ec2-user
+
+[all:vars]
+ansible_ssh_private_key_file=/home/ec2-user/<pem file>
+------------------------------------------------------------------
+  - once standart hosts dosyasini olusturduk.
+ansible all -m ping -o
+mkdir dynamic-inventory && cd dynamic-inventory
+vim inventory_aws_ec2.yml
+------------------------------------------------------------------------------
+[servers]
+db_server   ansible_host=<YOUR-DB-SERVER-IP>   ansible_user=ec2-user  ansible_ssh_private_key_file=~/<YOUR-PEM-FILE>
+web_server  ansible_host=<YOUR-WEB-SERVER-IP>  ansible_user=ubuntu  ansible_ssh_private_key_file=~/<YOUR-PEM-FILE>
+------------------------------------------------------------------------------
+ansible-playbook -i inventory_aws_ec2.yml --graph
+ansible-playbook -i inventory_aws_ec2.yml ping-playbook.yml
+nano ansible.cfg
+------------------------------------------------------------------------------
+[defaults]
+host_key_checking = False
+inventory=/etc/ansible/hosts
+interpreter_python=auto_silent
+private_key_file=~/ugur.pem
+------------------------------------------------------------------------------
+  - inventory file olarak hosts'u kullanir. Daha sonra Dynamic olarak degistirilecek.
+ansible all -m ping -o
+  - hosts'a gore ping yapar.
+nano ping-playbook.yml
+------------------------------------------------------------------------------
+- name: ping them all
+  hosts: "*"
+  tasks:
+    - name: pinging
+      ping:
+------------------------------------------------------------------------------
+ansible-playbook ping-playbook.yml
+  - hosts'a gore ping yapar.
+vim /home/ec2-user/dynamic-inventory/ansible.cfg
+------------------------------------------------------------------------------
+[defaults]
+host_key_checking = False
+inventory=/home/ec2-user/dynamic-inventory/inventory_aws_ec2.yml
+interpreter_python=auto_silent
+private_key_file=~/ugur.pem
+------------------------------------------------------------------------------
+  - inventory adresini hosts'dan inventory.txt olarak degistirdik.
+ansible-playbook ping-playbook.yml
+  - isimleri inventory cekti ve degismis.
+
+
+
+3.Hands on:
+- Dynamic Inventory:
+  * pip yuklenecek
+  * pip kutuphanesinden boto3 yuklenecek
+  * EC2 plugini ile 'inventory_aws_ec2.yaml' dynamic inventory kurulacak.
+  * ec2'ya IAM rolu verilecek.
+  * dynamic inventory kurulacak ve tag ile node'lari cekecek.
+
+AWS-IAM:
+> create role > policy > AmazonEC2FullAccess > name: Umit-ec2full > create
+> control node > actions > security > modifiy IAM role > Umit-ec2full > save
+  - tag'li isimleri cekmesi icin rol tanimlanir.
+  - dynamic inventory icin verilir.
+
+VSC:
+sudo yum install pip
+sudo pip install --user boto3 botocore
+  - 'sudo pip3 install --user boto3 botocore' yukardaki calismazsa kullanilir.
+  - tag ile cekmek icin boto3 de gerekli.
+cat /etc/ansible/ansible.cfg
+  - bunu kullaniyor.
+vim ansible.cfg
+-------------------------------------------------------------------------
+[defaults]
+host_key_checking = False
+inventory=/home/ec2-user/dynamic-inventory/inventory.yaml
+interpreter_python=auto_silent
+private_key_file=~/.ssh/ugur.pem
+-------------------------------------------------------------------------
+ansible-inventory -i inventory.yaml --graph
+  - hata verdi.
+mv inventory.yaml inventory_aws_ec2.yaml
+vim ansible.cfg
+-------------------------------------------------------------------------
+[defaults]
+host_key_checking = False
+inventory=/home/ec2-user/dynamic-inventory/inventory_aws_ec2.yaml
+interpreter_python=auto_silent
+private_key_file=~/.ssh/ugur.pem
+
+[inventory]
+plugins_enable = aws_ec2
+-------------------------------------------------------------------------
+ansible-inventory -i inventory_aws_ec2.yaml --graph
+vim inventory_aws_ec2.yaml
+-------------------------------------------------------------------------
+plugin: aws_ec2
+regions:
+  - "us-east-1"
+keyed_groups:
+  - key: tags.Name
+  - key: tags.role
+
+compose:
+  ansible_host: public_ip_address
+-------------------------------------------------------------------------
+ansible-inventory -i inventory_aws_ec2.yaml --graph
+vim inventory_aws_ec2.yaml
+-------------------------------------------------------------------------
+plugin: aws_ec2
+regions:
+  - "us-east-1"
+keyed_groups:
+  - key: tags.Name
+    prefix: "Name"
+  - key: tags.role
+    prefix: "role"
+compose:
+  ansible_host: public_ip_address
+-------------------------------------------------------------------------
+ansible-inventory -i inventory_aws_ec2.yaml --graph
+  - tag'lara gore node'lari siraladi.
+ansible all -m ping --key-file "~/.ssh/ugur.pem"
+  - hata verdi. 
+  - inventory'de 'inventory=/home/ec2-user/dynamic-inventory/inventory_aws_ec2.yaml' seklinde duzeltilir.
+
+
+
+Hands-on:
+- yeni user:
+
+vim user.yaml
+-------------------------------------------------------------------------
+- name: create a user using a variable
+  hosts: all
+  become: true
+  vars:
+    user: lisa
+    ansible_ssh_private_key_file: "/home/ec2-user/<pem file>"
+  tasks:
+    - name: create a user {{ user }}
+      user:
+        name: "{{ user }}"
+-------------------------------------------------------------------------
+  - yeni user 
+ansible-playbook user.yaml
+  - inventory'e bakar.
+  - 3 makinde bu user olusturuldu.
+
+Hands-on:
+- Yeni node ekleme:
+  * instance'yi bir user'a atama
+
+AWS:
+yeni instance ac.
+
+VSC:
+ansible-playbook user.yaml
+  - tum makineler deploy edilir.
+ansible-playbook user.uaml --limit <bir node ip'si>
+  - tek makine deploy edilebilir.
+vim user.yaml
+-------------------------------------------------------------------------
+plugin: aws_ec2
+regions:
+  - "us-east-1"
+keyed_groups:
+  - key: tags.Name
+    prefix: "Name"
+  - key: tags.role
+    prefix: "role"
+filters:
+  instance-state-name : running
+compose:
+  ansible_host: public_ip_address
+-------------------------------------------------------------------------
+ansible-playbook user.yaml -i inventory_aws_ec2.yml
+ansible all -a "tail -2 /etc/passwd"
+ansible all -a "tail -2 /etc/shadow"
+
+AWS:
+- 1 makine stop et.
+
+VSC:
+ansible-playbook user.yaml
+  - 3 makine gosterir.
+
+
+

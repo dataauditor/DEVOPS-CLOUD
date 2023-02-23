@@ -1,0 +1,19 @@
+ELK Stack:
+github.com/shazforiot/Elasticsearch-logstash-Kibana-Docker-Compose
+
+Daha cok log kayitlarinin toplanmasi ve incelenmesi ve musterilerin database seviyesinde yaptigi islemleri incelemeye yarar. Ayrica farkli veri kaynaklarindan da veri cekebilir. Daha genel bilgi verir. Prometheus ise anlik ve spesifik veri gosterir.
+ELK Stack Prometheus'tan daha gucludur.
+Prometheus ve Grafana da ise alarmlar olusturulabilir.
+
+t3a ec2 yuklenir
+sudo apt-get install default 
+  - java yuklenir.
+wget -q0 - https://artifacts.elastic.co/GPG-KEY
+
+
+Birden cok hostun ve birden cok uygulamanin loglarini tek ortamda toplar.
+Agent kurarak calisir.
+Logun mevki belirtilerek logu cekip elestic'e gonderir. 
+Kibana vasitasi ile ilgili durumlar, anomaliler ... monite edilebilir.
+
+

@@ -1,0 +1,349 @@
+1.Microservice:
+Mongo db: 27017 ile cikis yapar.
+
+nodeAffinity ile bazi node'larda pod acilip acilmamasina karar verilebiliyor.
+
+imagePullPolicy: Allways / Newer / ifnotpresent
+
+pod icinde resources ile pod'lara islemci ve ram limiti verilmeli yoksa maksimuma kadar kullanarak node'un tum resource'larini tuketerek node'u cokertebilir.
+resources'lardaki limitler de yetersiz olursa podlar olur oradan da anlasilir.
+request podun gonderilecegi node'taki kapasitelere gore dagitiminda dikkate alinir. resource ise maks limittir.
+
+- Autoscaling: 
+> Podlarin cpu ve ram'i var. Bunlarin agirliklandirilmis verileri var. Tum resource'lardan verileri toplayip resource adedine bolerek gonderilir.
+  > ilk Kubelet > Kube API > Horizontal Pod Autoscaler artirmaya karar verir > Kontroller'a (replica controller ) bildirilir > Api- server > kubelet > yeni bir pod acilir.
+- Olusturma:
+  - imperativ: 
+   !!!
+   kubectl autoscale deployment php-apache --cpu-percent=50 --min=2 --max=10 
+    
+  - declerative: 
+
+
+
+2.Hands-on:
+- iki node kurulacak. Biri web deployment digeri db-deployment icin.
+- Web-service: port: 3000, NodePort olusturulacak ve nodejs yuklenecek.
+- db service: Cluster ip olusturulacak. Port: 27017
+- PHP-Apache ise 3. bir deployment olacak.
+- Service ile baglantilar yapilir ve Node-port yayini yapilir.
+- db-service ile ulasilir.
+
+VSC-master:
+kubectl cluster-info
+kubectl get no
+mkdir microservice && cd microservice && mkdir to-do && cd to-do
+
+
+a.Volumes:
+vim db-pv.yaml
+---------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: db-pv-vol
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/home/ubuntu/pv-data"
+---------------------------------------------------------
+vim dv-pvc.yaml
+---------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: database-persistent-volume-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual
+  resources:
+    requests:
+      storage: 1Gi
+---------------------------------------------------------
+
+
+b.DB Deployment:
+vim db-deployment.yaml
+---------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: mongo
+  template:
+    metadata:
+      labels:
+        name: mongo
+        app: todoapp
+    spec:
+      containers:
+      - image: mongo
+        name: mongo
+        ports:
+        - name: mongo
+          containerPort: 27017
+        volumeMounts:
+          - name: mongo-storage
+            mountPath: /data/db
+      volumes:
+        #- name: mongo-storage
+        #  hostPath:
+        #    path: /data/db
+        - name: mongo-storage
+          persistentVolumeClaim:
+            claimName: database-persistent-volume-claim
+---------------------------------------------------------                      
+vi db-service.yaml
+---------------------------------------------------------                      
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-service
+  labels:
+    name: mongo
+    app: todoapp
+spec:
+  selector:
+    name: mongo
+  type: ClusterIP
+  ports:
+    - name: db
+      port: 27017
+      targetPort: 27017
+---------------------------------------------------------     
+
+
+c.Web Deployment:                 
+vim web-deployment.yaml
+---------------------------------------------------------                      
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: web
+  template:
+    metadata:
+      labels:
+        name: web
+        app: todoapp
+    spec:
+      containers: 
+        - image: clarusway/todo
+          imagePullPolicy: Always
+          name: myweb
+          ports: 
+            - containerPort: 3000
+          env:
+            - name: "DBHOST"
+              value: "mongodb://db-service:27017"  # db-service.mynamespace seklinde de yazilabilir.
+          resources:
+            limits:
+              memory: 500Mi
+              cpu: 100m
+            requests:
+              memory: 250Mi
+              cpu: 80m
+---------------------------------------------------------                      
+vim web-service.yaml
+---------------------------------------------------------                      
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+  labels:
+    name: web
+    app: todoapp
+spec:
+  selector:
+    name: web 
+  type: NodePort
+  ports:
+   - name: http
+     port: 3000
+     targetPort: 3000
+     nodePort: 30001
+     protocol: TCP
+---------------------------------------------------------                      
+kubectl apply -f .
+kubectl get all
+  - kubectl get deploy, svc, pv, pvc
+kubectl describe pv db-pv-vol
+  - bound gorulur.
+
+
+Browser:
+veri gireriz.
+
+VSC:
+kubectl get po
+kubectl delete po db-deployment-8597967796-2c69h 
+kubectl get po
+  - pv sayesinde ayni veriler hala var.
+
+
+Browser:
+demin girilen veriler burada
+
+
+
+d.PHP-Apache Microservice'inin sisteme yuklenmesi:
+- db'siz web-service
+cd ..
+cd ..
+mkdir php-apache && cd php-apache
+vim php-apache.yaml
+---------------------------------------------------------                      
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-apache
+spec:
+  selector:
+    matchLabels:
+      run: php-apache
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: php-apache
+    spec:
+      containers:
+      - name: php-apache
+        image: k8s.gcr.io/hpa-example
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            memory: 500Mi
+            cpu: 100m
+          requests:
+            memory: 250Mi
+            cpu: 80m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-apache-service
+  labels:
+    run: php-apache
+spec:
+  ports:
+  - port: 80
+    nodePort: 30002
+  selector:
+    run: php-apache 
+  type: NodePort
+---------------------------------------------------------                      
+kubectl apply -f .
+  - "---" ayirir.
+kubectl get pod
+watch -n2 kubectl get pod
+
+Browser: 
+- public ip:30002 ile yayini goruruz.
+
+VSC:
+kubectl get all
+
+
+
+3.Hands-on:
+- Autoscaling
+
+VSC:
+cd ..
+mkdir auto-scaling && cd auto-scaling
+kubectl autoscale deployment php-apache --cpu-percent=50 --min=2 --max=10 
+
+kubectl get all -o wide
+cat << EOF > hpa-php-apache.yaml
+
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
+EOF
+
+cat << EOF > hpa-web.yaml
+
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web-deployment
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web-deployment
+  minReplicas: 3
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 50 
+EOF
+kubectl apply -f hpa-php-apache.yaml
+kubectl apply -f hpa-web.yaml
+kubectl get hpa
+watch -n3 kubectl get service,hpa,pod -o wide 
+kubectl get service,hpa,pod -o wide 
+kubectl delete -n kube-system deployments.apps metrics-server
+wget https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.5.0/components.yaml
+vim components.yaml 
+  - args altina:  "- --kubelet-insecure-tls" eklenir.
+kubectl get pod -n kube
+tab ile app'lerin ne kadar ram, cpu tukettigini gorebiliriz.
+kubectl top pods
+kubectl top nodes
+  - verileri verir.
+kubectl get svc
+kubectl run -it --rm load-generator --image=busybox /bin/sh
+# while true; do wget -q -O- http://34.204.190.108:30002/; done
+
+VSC:
+kubectl get service,hpa,pod -o wide
+  - pod sayisindaki degisimleri goruruz.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,49 @@
+ARG NODE_BUILD_IMAGE=node:14
+ARG GOLANG_BUILD_IMAGE=golang:1.16
+ARG APP_BASE_IMAGE=ubuntu:20.04
+
+FROM $NODE_BUILD_IMAGE as nodebuild
+RUN mkdir /tmp/build
+COPY frontend/package.json /tmp/build/package.json
+COPY frontend/package-lock.json /tmp/build/package-lock.json
+WORKDIR /tmp/build
+RUN npm install
+COPY frontend/src/ /tmp/build/src/
+COPY frontend/public/ /tmp/build/public/
+RUN mkdir /tmp/output
+RUN npm install && npm run build
+RUN mv build /tmp/output/
+
+FROM $GOLANG_BUILD_IMAGE as build-env
+RUN mkdir /src
+COPY go.mod /src/go.mod
+COPY go.sum /src/go.sum
+WORKDIR /src
+RUN go mod download
+COPY . /src
+WORKDIR /src/cmd/coordinator
+ARG GIT_COMMIT=develop
+ARG GIT_DATE=00000000
+RUN go build -ldflags "-X main.GitCommit=$GIT_COMMIT -X main.BuildDate=$GIT_DATE" -o coordinator
+
+# final stage
+FROM $APP_BASE_IMAGE
+RUN apt-get update && DEBIAN_FRONTEND=non-interactive apt-get -y install git python3-pip cmake wget libgtest-dev lcov git libtool automake clang-tidy build-essential
+COPY requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+RUN mkdir /root/.ssh && ssh-keyscan -t rsa github.com > ~/.ssh/known_hosts
+WORKDIR /app
+RUN git clone https://github.com/brendangregg/FlameGraph
+COPY --from=build-env /src/cmd/coordinator/coordinator /app/
+COPY --from=nodebuild /tmp/output/build /app/frontend
+CMD ./coordinator
+----------------------------------------------------------------------------------------------
+
+- En alttaki nihayetinde calisir.
+- "--from=build-env": Ustte onceden Container olusturup calisan Dockerfile'larin olusturdugu dosya/artifactlari son Dockerfile'a aktaririz.
+- ARG: Container calisirken kullanilir. Vatiable ise surekli kullanilir.
+
+
+
+docker run --name deneme4 -p 80:80 -d   074683984750.dkr.ecr.us-east-1.amazonaws.com/test-controller:16b79d4a1d98aa86f21d2cf8208dc14c3676e138 tail -f /dev/null
+

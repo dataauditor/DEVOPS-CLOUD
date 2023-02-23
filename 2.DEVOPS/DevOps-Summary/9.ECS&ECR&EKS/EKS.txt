@@ -1,0 +1,308 @@
+1.Genel:
+https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+  - encryption key'i olusturma. Amac key'i cluster disinda tutmaktir.
+Pricing: fiyatlamayi verir.
+- Icinde master ve worker'lar dahil olusturur.
+! Once EKS'de Cluster olusturulur > Config file olusturulur > EKS'de Worker node'lar olusturulup eklenir > Configuring Cluster Autoscaler (deployment file ile yapilir) deploy edilip uzerinde degisiklikler yapilir. > Application Deploy edilir. 
+Config file: bilgisayardan clusteri yonetmemizi saglar.
+Cluster: Control plane'dir. Worker node'lari yonetir.
+- Kullanici Eklemenin Birkac Yolu vardir:
+  * Password Authenticate saglanabilir. Cok kullanilmaz.
+  * OpenID Connect provider URL: Authentication yoludur. Disaridan baglanmanin bir yoludur. Sertifika request (public key) gonderilir. Biz de sertifikayi isleyerek key yapariz ve user olustururuz.
+- Node Group: Bir cluster altinda birden fazla Node gruplari olabilir.
+- Fargate: EC2'dan farkli olarak serverless hizmet verir.
+- config file
+  * endpoint, cluster, cluster ismi vb bilgiler bulunur. 
+  * context altindaki cluster ile user'in isimleri ayni olmali. Ayni olmazsa calismaz.
+  * current-context: mevcut kullanlan clusteri gosterir.
+- Cluster altinda API server endpoint ismi ilr endpoint bulunur.
+- Cluster Autoscaler:
+  * Bir deploymenttir.
+  * Cluster Autoscaler nodunu strese sokarak test ederseniz kill olur.
+  * Node sayisi yetersiz ve acilamayan pode'lar varsa bunlar cluster autoscaler'i tetikler.
+  * Cluster autoscaler da acilamayan pode'lar icin min-max'i da dikkate alarak yeni bir node acar.
+
+2.Kullanim:
+! Add cluster > name: Matts-EKS-Cluster / version: 1.21 / Service role: IAM Console > create role > EKS > EKS cluster > policy otomatik gelir > name > create > EKS'ye don > yaptigin rolu sec > next
+  (> secret encryption > KMS console > create > symmetric secilir ...)  
+  > VPC > Subnetleri sec > SG sec (22-80 port) > Public and private / Advanced Settings: iceri girebilecek IP numaralari girilir. > next
+  > Lgging (default) > next > 
+    - EKS'ye ayri bir VPC, Subnet, roller olustur.
+    - CIDR blogunu genis tut.
+    - Subnetleri belirleyin.
+    - (Configure Kubernetes Service IP address range: 12 - 24 arasi verilir.)
+    - Cluster endpoint access: Public and private secilmeli.
+    - Subnet mesgul hatasi verirse ilgili subneti edit ile kaldir.
+ 
+
+
+3.Hands-on:
+https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html  
+  - bu adresten Windows icin kubectl'i install et.
+  - Asagidaki komutla da halledilebilir. Bunu kullanmadik.
+
+VSC:
+CLI Installation: 
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+  
+Kubectl installation:
+curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.20.4/2021-04-12/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+mkdir -p $HOME/bin && mv ./kubectl $HOME/bin/kubectl && export PATH=$PATH:$HOME/bin
+echo 'export PATH=$PATH:$HOME/bin' >> ~/.bash_profile
+kubectl version --short --client
+
+veya 
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+kubectl version --client
+
+aws configuration:
+aws configure
+aws eks list-clusters
+  - kurmus oldugun EKS clusterini gosterir.
+aws sts get-caller-identity --profile kepteyn
+  - kepteyn hesabinin UserID'sini, accoun numarasini verir.
+
+AWS-EKS:
+- EKS cluster olusturma:
+- EKS icin role olusturma:
+!!!
+> IAM > role > EKS > EKS-Cluster > AmazonEKSClusterPolicy > name: Umit-EKS-Role > create
+!!!
+> EKS > Add cluster > create > name: deneme / version: son / role: Umit-EKS-Role > VPC / Subnets / SG: 22, 80, 443 / Public and private > create
+- Secret encryption: KMS anahtari ister. > KMS console. > Symetric > Alias: umit > create
+- Advanced settings: girmesine izin verilen cloud disindaki IP'ler yazilabilir.
+- VPC'nin CIDR blogu genis tutulur cunki bu kapasitenin uzerine cikamaz EKS.
+- Add Source: benim belirttigim makineler sadece baglanabilir.
+- Authenticator: Disardan girenlerin log kayitlarini tutar.
+
+VSC:
+- config file olusturma:
+- config file home/ec2-user altinda olusan .kube folder'i icindedir. 
+aws sts get-caller-identity
+  - Mevcut hesabin identity'i gosterir.
+!!!
+aws eks --region us-east-1 update-kubeconfig --name deneme
+  - deneme isimli cluster'in config file'ini olusturur. config file mevcutsa gunceller.
+aws eks --region us-east-1 update-kubeconfig --name deneme --profile kepteyn
+  - farkli bir aws hesabindaysan default disinda kepteyn hesabini isaret ederiz. 
+  - Bunu kullanmadik.
+aws eks describe-cluster --name deneme --query cluster.status
+  - cluster'in aktif olup olmadigini sorduk.
+
+AWS-EKS:
+- Cluster altinda node'lar ekleme:
+!!!
+> Clusters > deneme > Configuration > Compute > Add Node Group > name: deneme1 > role: `AmazonEKSWorkerNodePolicy, AmazonEC2ContainerRegistryReadOnly, AmazonEKS_CNI_Policy` policy'leri iceren EKS-role sec. >
+  > IAM console > Roles > EC2 > Add policy: AmazonEKSWorkerNodePolicy, AmazonEC2ContainerRegistryReadOnly, AmazonEKS_CNI_Policy > name: EKS-role
+  > AMI type: 86'li sec / On-Demand / t3-medium / Max/Min/Des sizes: 2/3/2 sectik > Number: 1 (update esnasinda (node'da pod scale edilemiyor) kac node ayni anda sistemden ayrilsin) > next
+  > subnets > Configure SSH access to nodes > ugur.pem / all (sec-grup ile kisitlanabilirdi) > next > create
+kubectl get nodes --watch
+  - node'lari gosterir.
+
+Autoscaling:
+- clustera bagli node'lara autoscaling policy ekleme:
+- Autoscaling icin policy eklenir.
+- Deployment file'a: 
+  - clusterin ismi eklenir.
+  - ek komut eklenir.
+- Dogru versiyonlu autoscaling image yuklenir.
+!!!
+> IAM > Policies > create policy > asagidaki policy eklenir. > next > name: atoscaling-policy > create
+> Clusters > deneme > Configuration > Details > Cluster IAM Role ARN (tikla role) > atoscaling-policy > attach
+
+VSC:
+- autoscaler node olusturma:
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/autoscaler/master/cluster-autoscaler/cloudprovider/aws/examples/cluster-autoscaler-autodiscover.yaml
+  - Cluster Autoscaler deploy ediyoruz.
+-----------------------------------------------------------------
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "autoscaling:DescribeAutoScalingGroups",
+                "autoscaling:DescribeAutoScalingInstances",
+                "autoscaling:DescribeLaunchConfigurations",
+                "autoscaling:DescribeTags",
+                "autoscaling:SetDesiredCapacity",
+                "autoscaling:TerminateInstanceInAutoScalingGroup",
+                "ec2:DescribeLaunchTemplateVersions"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        }
+    ]
+}
+-----------------------------------------------------------------
+  - yukarda deploy edilen dosya yukarida.
+  - bu policy'i de autoscaling icin Node'larin rolune ekleriz. 
+  - uzerinde degisiklikler yaparak clusteri tanimasi saglanir.
+!!!
+kubectl -n kube-system annotate deployment.apps/cluster-autoscaler cluster-autoscaler.kubernetes.io/safe-to-evict="false"
+  - Autoscaling ozelligi ile hem yeni node acarken hem de kapamasini yapar. Autoscaling podu'nun mevcut oldugu nodu scale kapsaminda kapatirken kapatma baska node kapa demektir.
+kubectl -n kube-system edit deployment.apps/cluster-autoscaler
+------------------------------------------------------------------
+<YOUR CLUSTER NAME> silinir deneme yazariz.
+Containers: > command: altina '--skip-nodes-with-system-pods=false' eklenir.
+------------------------------------------------------------------
+- https://github.com/kubernetes/autoscaler/releases  
+  - linkinden cluster autoscaler icin clusterla denk versiyonu bul. K8s icin versiyon: 1.21 ise autoscaler icin de 1.21.1 vb version numarasi olmali.
+!!!
+kubectl -n kube-system set image deployment.apps/cluster-autoscaler cluster-autoscaler=us.gcr.io/k8s-artifacts-prod/autoscaling/cluster-autoscaler:1.21.1
+  - Cluster autoscaler image yuklenir.
+  - Yukarki siteden alinan versiyon da sonuna eklenir.
+  - Autoscalingin versiyonu kubernetesin versiyonu ile uyumlu olmali.
+  - baska region kllaniliyorsa 'us' degistirilir.
+
+Deploy:
+vim genel.yaml
+--------------------------------------------------------------------
+kind: Namespace
+apiVersion: v1
+metadata:
+   name: my-namespace
+   labels:
+      app: container-info
+---
+apiVersion: v1
+kind: Service
+metadata:
+   name: container-info-svc
+   namespace: my-namespace
+   labels:
+      app: container-info
+spec:
+   type: LoadBalancer
+   ports:
+      - protocol: TCP
+        port: 3000
+        nodePort: 30300
+        targetPort: 80
+   selector:
+      app: container-info
+--- 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: container-info-deploy
+  namespace: my-namespace
+  labels:
+    app: container-info
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: container-info
+  template:
+    metadata:
+      labels:
+        app: container-info
+    spec:
+      containers:
+      - name: container-info
+        image: clarusway/container-info:1.0
+        ports:
+        - containerPort: 80
+--------------------------------------------------------------------
+kubectl apply -f genel.yaml
+kubectl -n my-namespace get svc
+  - EKS bize classic load balancer acar.
+  - buradan aldigimiz External IP ile load balancer'a baglanilir.
+  - load balancer port: 3000 (30300 mu olmali dene)
+
+Browser:
+External ip:3000
+  - hata verdi
+
+!!!
+AWS-Load Balancer:
+> Load balancer > ilgili LB > Instances (2 instance eklenmis) > Status (OutOfService) 
+  > Load balancer ile instance'lar farkli AZ'lerde. 
+  > Edit Availibility Zones: yukarda instance'larin bulundugu AZ'ler burada da secilerek eklenir LB'ye > save
+
+
+SecGrup:
+- 3000 portu acilir.
+
+Browser:
+External ip:3000
+
+VSC: 
+- Autoscaling
+kubectl edit deploy container-info-deploy -n my-namespace
+  - deploymenti acip replica=40 deriz.
+  - 2 node'a 40 pode yetmeyince yeni bir node acilir.
+kubectl get po -n mynamespace
+kubectl edit deploy container-info-deploy -n my-namespace
+  - deploymenti acip replica=3 deriz.
+  - 3 node fazla oldugu icin gereksiz olanlar kapanir.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11111
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

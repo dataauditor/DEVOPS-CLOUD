@@ -1,0 +1,28 @@
+1.Hata Kodu:
+"docker: Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Post "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/create": dial unix /var/run/docker.sock: connect: permission denied."
+
+sudo chmod 666 /var/run/docker.sock
+
+
+
+2.Calistirirken Containerin Kapanmamasi Icin: 
+docker run -p 3000:3000 -p 5000:5000 -d 87b39fj743jd8 tail -f /dev/null
+docker run -d ubuntu sleep infinity
+docker run -d -t ubuntu
+docker run -d ubuntu tail -f /dev/null
+Dockerfile
+---------------------------------------------------
+FROM ubuntu:latest
+
+ENTRYPOINT ["tail", "-f", "/dev/null"]
+----------------------------------------------------
+
+
+3.Image Olusturma:
+docker build -t imagename/tag -f Dockerfile .
+docker build -t mynginximage/last -f Dockerfile.agent .
+
+
+
+4.Baglanma:
+docker exec -it node2 bash

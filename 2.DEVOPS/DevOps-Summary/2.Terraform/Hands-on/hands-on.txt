@@ -1,0 +1,633 @@
+1.Hands on:
+- Terraformu dogrudan kendi bilgisayarinizdan kullanabilmek icin AWS CLI'in yuklu olmasi ve AWS credentialsin bilgisayarinizda configure edilmis olmasi gerek.
+- SSH ile ec2-user'a baglanilarak burada Terraform kullanilarak baska bir instance kurulacak:
+- SSH ile baglandigimiz ec2'ya iam role vererek kullanacagiz. Eger dogrudan kendi bilgisayarimizdan credentialslar ile ulassaydik iam role'e gerek yoktu.
+- Terraform komutlarini yazmak icin terraform registry'den "use provider"i almaliyiz. versiyon source vb bilgileri girilmeli basta.
+- Terraform komutlarini registry.terraform.io sitesinde ornegin "aws instance" seklinde aratabiliriz.
+>aws configure   # uzak bilgisayarda Terraform yazilacagi icin configurasyon yoksa da problem yok.
+>sudo yum update -y
+>sudo yum install -y yum-utils    # reporitorrleri kontrol etmek icin yum-config manager yuklenir.
+>sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo  # Use yum-config-manager to add the official HashiCorp Linux repository to the directory of /etc/yum.repos.d.
+>sudo yum -y install terraform
+>terraform version
+>terraform -help  # subcommandslari gosterir.
+>terraform apply -help  # apply subcommandini aciklar flaglari gosterir.
+> IAM > roles > create role > ec2 > amazonec2fullaccess ve amazons3fullaccess > name > save
+> ec2 > actions > security > Modify IAM role > ilgili role > save
+>mkdir terraform-aws && cd terraform-aws && touch main.tf
+>main.tf: 
+----------------------------------------------
+provider "aws" {
+  region  = "us-east-1"
+}
+
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "3.38.0"
+    }
+  }
+}
+
+resource "aws_instance" "tf-ec2" {
+  ami           = "ami-0742b4e673072066f"
+  instance_type = "t2.micro"
+  tags = {
+    "Name" = "created-by-tf"
+  }
+}
+----------------------------------------------
+>terraform fmt                 # format hatalarini duzeltir.
+>terraform validate            # yanlislari gosterir.
+>terraform init                # provider olarak belirlenen aws'nin pluginslerinin indirir. Dosya olusur.
+>terraform plan                # ilgili config dosyasinin hangi resourcelari acacagini, hatalari gosterir.
+>terraform plan -out=instance  # olusan state dosyasini belirtilen file'a kaydeder. ilerde calisan dosyada yapilan degisikliklerle state dosyasi degisse de instance dosyasi bu kaydi tutar.
+>terraform apply               # icra edilir. "yes" diye yazilir.
+>terraform state list          # olusan resourcelari gosterir.
+- ilgili resource'a bir adet s3 eklemek icin onceki ec2'yu silmeden s3'u de ekler calistiririz. Daha once aws'nin pluginsleri indigi icin "init" kullanilmaz.
+>main.tf:
+-----------------------------------------------
+provider "aws" {
+  region  = "us-east-1"
+}
+
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "3.38.0"
+    }
+  }
+}
+
+resource "aws_instance" "tf-ec2" {
+  ami           = "ami-0742b4e673072066f"
+  instance_type = "t2.micro"
+  key_name      = "ugur"          # write your pem file without .pem extension>
+  tags = {
+    "Name" = "tf-ec2"
+  }
+}
+
+resource "aws_s3_bucket" "tf-s3" {
+  bucket = "oliver-tf-test-bucket-addwhateveryouwant"
+  acl    = "private"
+}
+-----------------------------------------------
+>terraform plan
+>terraform apply -auto-approve     # onay istemeden olusturur.
+>(terraform apply instance)        # calistirilsaydi instance dosyasi calistirilir ve s3 kapatilirdi.
+>terraform show                    # plani gosterir.
+- Go to the terminal and run `terraform graph`. It creates a visual graph of Terraform resources. The output of "terraform graph" command is in the DOT format, which can easily be converted to an image by making use of dot provided by GraphViz.
+- Copy the output and paste it to the ` https://dreampuf.github.io/GraphvizOnline `. Then display it. If you want to display this output in your local, you can download graphviz (`sudo yum install graphviz`) and take a `graph.svg` with the command `terraform graph | dot -Tsvg > graph.svg`.
+>terraform graph                   # grafik olarak gosterir. cikan data yukardaki siteye kaydedilince ciktisini gosterir.
+>terraform output                           # arguman girilmezse tum outputlari verir.
+------------------------------------------------
+provider "aws" {
+  region  = "us-east-1"
+}
+
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "3.38.0"
+    }
+  }
+}
+
+resource "aws_instance" "tf-ec2" {
+  ami           = "ami-0742b4e673072066f"
+  instance_type = "t2.micro"
+  key_name      = "ugur"          # write your pem file without .pem extension>
+  tags = {
+    "Name" = "tf-ec2"
+  }
+}
+
+resource "aws_s3_bucket" "tf-s3" {
+  bucket = "oliver-tf-test-bucket-addwhateveryouwant"
+  acl    = "private"
+}
+
+output "tf-example-public-ip" {            # public ip'yi degisken olarak outputa tanimliyoruz main.tf'e ekliyoruz.
+   value = aws_instance.tf-ec2.public_ip
+ }
+>output "tf-example-s3-meta" {              # s3'un regionunu outputa tanimliyoruz.
+   value = aws_s3_bucket.tf-s3.region
+ }
+-------------------------------------------------
+>terraform refresh                          # .tfstate dosyasi ile real worl kiyaslar. ve .tfstate dosyasini gunceller. Guncellemeden son girdileri gostermez.
+>terraform output -json
+>terraform output                           # tum outputlari gosterir.
+>terraform output tf-example-public-ip      # istenen outputu verir.
+>terraform refresh                          # state file ile real world'u karsilastirir. Halihazirda konsolda calisan resourcelari gosterir. Bu esnada terraform.tfstate.backup dosyasi olusur. Olmasi gereken eski state dosyasi.
+>terraform aply -auto-approve               # eksik resourcelari calistirir.
+>terraform console                          # consola dogrudan baglanir ve sorgulamalar yapilabilir.
+  > aws_instance.tf-ec2
+  > aws_instance.tf-ec2.private_ip
+  > min (1,2,3)
+  > lower("HELLO")
+  !!!
+  > file("${path.module}/cloud")
+  > aws_s3_bucket.tf-s3
+  > aws_s3_bucket.tf-s3.bucket
+  > exit or (ctrl+c)
+>terraform apply -refresh=false              # apply uygularken refresh yapip API'yi yorup hata/kisitlama almaz ve hizli donus yapar. Ama resourcelardaki mevcut hatalari goremez.
+ 
+
+2.Hands-on:
+variables, terraform.tfvars, locals, fonksiyon, count, for_each, data, output:
+vim main.tf
+-------------------------------------------------
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.38.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+  # Configuration options
+}
+
+locals {
+    instance-name = "oliver-local-name"
+}
+
+resource "aws_instance" "tf-ec2" {
+  ami           = var.ec2-ami
+  instance_type = var.ec2-type
+  key_name      = "ugur"
+  tags = {
+    "Name" = "${var.ec2-name}-1"
+    "Isim" = "${local.instance-name}-2"
+  }
+}
+
+resource "aws_s3_bucket" "tf-s3" {
+# bucket = var.s3-bucket-name
+# count = var.num-of-buckets
+# bucket = "${var.s3-bucket-name}-${count.index + 1}"
+  acl    = "private"
+# count  = var.num-of-buckets != 0 ? var.num-of-buckets : 3
+  for_each = toset(var.users)
+  bucket = "example-s3-bucket-${each.value}"
+}
+
+output "ef-example-public-ip" {
+  value = aws_instance.tf-ec2.public_ip
+}
+
+output "tf-example-s3-meta" {
+  value = aws_s3_bucket.tf-s3[*].region
+}
+
+output "tf-example-private-ip" {
+  value = aws_instance.tf-ec2.private_ip
+}
+
+output "tf-example-s3" {
+  value = aws_s3_bucket.tf-s3[*]
+}
+-------------------------------------------------
+  - count kullaninca outputta da [1], [*] seklinde belirtmek gerek.
+  !!!
+  - count  = var.num-of-buckets != 0 ? var.num-of-buckets : 3 ifadesinde 0'a esit degilse ":" oncesini 0'a esitse ":" sonrasini icra eder.
+vim variables.tf
+-------------------------------------------------
+variable "ec2-name" {
+  default = "oliver-ec2"
+}
+
+variable "ec2-type" {
+  default = "t2.micro"
+}
+
+variable "ec2-ami" {
+  default = "ami-04505e74c0741db8d"
+}
+
+variable "s3-bucket-name" {
+  default = "umit-tf-test-bucket-addwhateveyouwant-2"
+}
+
+variable "num-of-buckets" {
+  default = 2
+}
+
+variable "users" {
+  default = ["spring", "michael", "orlando"]
+}
+-------------------------------------------------
+  - "s3-bucket-name": tfvars dosyasindan --var-file ile cekiliyor.
+terraform plan -var="s3-bucket-name=umit-tf-test-bucket-addwhateveyouwant-2"
+  - "-var": plan ve apply komutu ile kullanilabilir.
+vim dev.tfvars
+-------------------------------------------------
+s3-bucket-name = "umit-tf-test-bucket-addwhateveyouwant-3"
+-------------------------------------------------
+terraform plan --var-file="dev.tfvars"
+vim terraform.tfvars
+-------------------------------------------------
+s3-bucket-name = "umit-tf-test-bucket-addwhateveyouwant-4"
+-------------------------------------------------
+terraform plan
+  !!!
+  - tfvars file'in ismi "terraform.tfvars" olursa --var-file ile cekmeye gerek yoktur. Otomatik ceker.
+
+EC2:
+> calistigim instance RC > Image and templates > Create image > name: mynewimage-tf > create image
+
+vim main.tf
+-------------------------------------------------
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.38.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+  # Configuration options
+}
+
+data "aws_ami" "tf-ami" {
+  most_recent = true 
+  owners = ["self"]
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+locals {
+    instance-name = "oliver-local-name"
+}
+
+resource "aws_instance" "tf-ec2" {
+# ami           = var.ec2-ami
+  ami           = data.aws_ami.tf-ami.id 
+  instance_type = var.ec2-type
+  key_name      = "ugur"
+  tags = {
+    "Name" = "${var.ec2-name}-1"
+    "Isim" = "${local.instance-name}-2"
+  }
+}
+
+resource "aws_s3_bucket" "tf-s3" {
+# bucket = var.s3-bucket-name
+# count = var.num-of-buckets
+# bucket = "${var.s3-bucket-name}-${count.index + 1}"
+  acl    = "private"
+# count  = var.num-of-buckets != 0 ? var.num-of-buckets : 3
+  for_each = toset(var.users)
+  bucket = "example-s3-bucket-${each.value}"
+}
+
+resource "aws_iam_user" "new-user" {
+#  name = oliver
+  for_each = toset(var.users)
+  name     = each.value
+}
+
+output "ef-example-public-ip" {
+  value = aws_instance.tf-ec2.public_ip
+}
+
+# output "tf-example-s3-meta" {
+#   value = aws_s3_bucket.tf-s3[*].region
+# }
+
+output "tf-example-private-ip" {
+  value = aws_instance.tf-ec2.private_ip
+}
+
+output "tf-example-s3" {
+  value = aws_s3_bucket.tf-s3[*]
+}
+
+output "upper" {
+  value = [for i in var.users : upper(i) if length(i) > 6]
+}
+-------------------------------------------------
+  !!!
+  - data, terraform'un "registry.terraform.io > Browse Prowiders > AWS > Documentation > EC2 > Resource/Data Source" sayfasindaki format ile yapilandirilir.
+  !!!
+  - filtreler ise browsera "aws ec2 describe image" yazarak aws'nin kendi sayfasindaki tanimlamalardan elde edilir.   
+terraform apply
+
+
+
+3.Hands-on:
+- Remote backend, Dynamodb, State-lock, Modules:
+
+3.a.Remote Backend:
+mkdir s3-backend && cd s3-backend && touch backend.tf
+vim backend.tf
+-------------------------------------------------
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_s3_bucket" "tf-remote-state" {
+  bucket        = "tf-remote-s3-bucket-umit-changehere"
+  force_destroy = true
+  versioning {
+    enabled = true
+  }
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+}
+
+resource "aws_dynamodb_table" "tf-remote-state_lock" {
+  hash_key = "LockID"
+  name     = "tf-s3-app-lock"
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+  billing_mode = "PAY_PER_REQUEST"
+}
+-------------------------------------------------
+  - lock olmasi icin "hash_key = "LockID" olmali, attribute de degismemeli DynamoDB'de.
+  - Daha sonra bu backend.tf (bucket name) diger main.tf'e tanitilir.
+
+IAM:
+> Roles > Terraform (mevcut role) > Attach Policies > DynamoDBFullAccess (sec) > Attach Policy
+
+EC2:
+> Ilgili ec2 > Actions > Security > Modify IAM Role > Terraform > Save
+
+vim main.tf
+-------------------------------------------------
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.56.0"
+    }
+  }
+
+  backend "s3" {
+    bucket = "tf-remote-s3-bucket-umit-changehere"
+    key = "env/dev/tf-tf-remote-backend.tfstate"
+    region = "us-east-1"
+    dynamodb_table = "tf-s3-app-lock"
+    encrypt = true 
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+  # Configuration options
+}
+
+data "aws_ami" "tf-ami" {
+  most_recent = true 
+  owners = ["self"]
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+locals {
+    instance-name = "oliver-local-name"
+}
+
+resource "aws_instance" "tf-ec2" {
+# ami           = var.ec2-ami
+  ami           = data.aws_ami.tf-ami.id 
+  instance_type = var.ec2-type
+  key_name      = "ugur"
+  tags = {
+    "Name" = "${var.ec2-name}-1"
+    "Isim" = "${local.instance-name}-2"
+  }
+}
+
+resource "aws_s3_bucket" "tf-s3" {
+# bucket = var.s3-bucket-name
+# count = var.num-of-buckets
+# bucket = "${var.s3-bucket-name}-${count.index + 1}"
+  acl    = "private"
+# count  = var.num-of-buckets != 0 ? var.num-of-buckets : 3
+  for_each = toset(var.users)
+  bucket = "example-s3-bucket-${each.value}"
+}
+
+resource "aws_iam_user" "new-user" {
+#  name = oliver
+  for_each = toset(var.users)
+  name     = each.value
+}
+
+variable "ec2-name" {
+  default = "oliver-ec2"
+}
+
+variable "ec2-type" {
+  default = "t2.micro"
+}
+
+# variable "ec2-ami" {
+#   default = "ami-04505e74c0741db8d"
+# }
+
+variable "s3-bucket-name" {
+  default = "umit-tf-test-bucket-addwhateveyouwant-2"
+}
+
+variable "num-of-buckets" {
+  default = 2
+}
+
+variable "users" {
+  default = ["spring", "michael", "orlando"]
+}
+
+output "ef-example-public-ip" {
+  value = aws_instance.tf-ec2.public_ip
+}
+
+# output "tf-example-s3-meta" {
+#   value = aws_s3_bucket.tf-s3[*].region
+# }
+
+output "tf-example-private-ip" {
+  value = aws_instance.tf-ec2.private_ip
+}
+
+output "tf-example-s3" {
+  value = aws_s3_bucket.tf-s3[*]
+}
+
+output "upper" {
+  value = [for i in var.users : upper(i) if length(i) > 6]
+}
+
+output "s3-arn-1" {
+  value = aws_s3_bucket.tf-s3["spring"].arn
+}
+------------------------------------------------- 
+  !!!
+  - output'ta aws_s3_bucket.tf-s3["spring"].arn 'ta spring yerine asil ismi "example-s3-bucket-spring yazilmamasinin nedeni terraform.tfstate file'de index name index name olarak spring yazdigi icin. Burada index'leme sayi ile olsaydi sayi isimle ise index ismi spring verilir. 
+  - "key" : s3'te hangi dizine state dosyasinin kaydedilecegini gosterir. Farkli remote state dosyalarini farkli dizinlere kaydederiz.
+  - backend, terraform block'u icinde kaydedilir.
+  - backend block'unda, backend.tf ile olusturulan bucket, DynamoDB_table... main.tf'e tanitilir.
+terraform init -upgrade
+  - main.tf ile backend.tf farkli versiyonda olacagi icin gerekli.
+  - state dosyasinin backend'e (s3) gondeririz.
+  - localdeki terraform.tfstate dosyasi bosaldi.
+  - remote backend baglandi, olustu.
+
+s3:
+> tf-remote-s3-bucket-umit-changehere > env/ > dev/ > tf-tf-remote-backend.tfstate > open (remote state dosyasi acilir.)
+
+
+3.b.Modules:
+- configurasyonun oldugu main.tf icin init etmeye gerek yok. Terraform init, apply islemleri brans (dev, prod) uzerinden yapilir.
+cd && mkdir terraform-modules && cd terraform-modules && mkdir dev modules prod && cd dev && touch dev-vpc.tf && cd ../modules && touch main.tf outputs.tf variables.tf && cd ../prod && touch prod-vpc.tf && cd ../modules
+sudo yum install tree
+tree
+vim main.tf
+---------------------------------------------------------
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.56.0"
+    }
+  }
+}
+
+provider "aws" {
+    region = "us-east-1"
+}
+
+resource "aws_vpc" "module-vpc" {
+    cidr_block = var.vpc-cidr-block 
+    tags = {
+        Name = "terraform-vpc-${var.env}"
+    }
+}
+
+resource "aws_subnet" "public-subnet" {
+    cidr_block = var.public-subnet-cidr 
+    vpc_id = aws_vpc.module-vpc.id 
+    tags = {
+        Name = "terraform-public-subnet-${var.env}"
+    }
+}
+
+resource "aws_subnet" "private-subnet" {
+    cidr_block = var.private-subnet-cidr 
+    vpc_id = aws_vpc.module-vpc.id 
+    tags = {
+        Name = "terraform-private-subnet-${var.env}"
+    }
+}
+
+resource "aws_security_group" "vpc-tf-sec-gr" {
+    name = "vpc-tf-sec-gr" 
+    vpc_id = aws_vpc.module-vpc.id
+
+    ingress = [
+        {
+            from_port   = 22
+            to_port     = 22
+            protocol    = "ssh"
+            cidr_blocks = ["0.0.0.0/0"]
+        }
+
+    ]
+
+    egress = [
+        {
+            from_port   = 0
+            to_port     = 0
+            protocol    = -1
+            cidr_blocks = ["0.0.0.0/0"]
+        }
+
+    ]
+}
+
+variable "env" {
+    default = "oliver"
+}
+
+variable "vpc-cidr-block" {
+    default = "10.0.0.0/16"
+}
+
+variable "public-subnet-cidr" {
+    default = "10.0.1.0/24"
+}
+
+variable "private-subnet-cidr" {
+    default = "10.0.2.0/24"
+}
+
+output "vpc-ip" {
+    value = aws_vpc.module-vpc.id 
+}
+
+output "vpc-cidr" {
+    value = aws_vpc.module-vpc.cidr_block
+}
+
+output "public-subnet-cidr" {
+    value = aws_subnet.public-subnet.cidr_block
+}
+
+output "private-subnet-cidr" {
+    value = aws_subnet.private-subnet.cidr_block
+}
+---------------------------------------------------------
+  - "-1": heryer.
+  - security_group'ta problem vardi.
+cd .. && cd dev 
+vim dev-vpc.yf
+---------------------------------------------------------
+module "tf-vpc-dev" {
+    source = "../modules"
+    env = "DEV"
+}
+
+output "vpc-cidr-block-dev" {
+    value = module.tf-vpc-dev.vpc-cidr 
+}
+
+resource "aws_instance" "tf-module-ec2-dev" {
+    ami = "ami-033b95fb8079dc481"
+    instance_type = "t2.micro"
+    vpc_security_group_ids = module.tf-vpc-dev.aws_security_group.vpc-tf-sec-gr.id
+}
+---------------------------------------------------------
+  - Ana module variable degerleri tfvars dosyasi gibi burada verilir: env = "DEV"
+  - module'den outputunu cekerken: ilk mevcut modul yazilir "module.tf-vpc-dev". Sonra istenen output'un ismi eklenir "vpc-cidr": module.tf-vpc.vpc-cidr 
+  - source = ./modules, ../modules veya ../../modules gibi olabilir.
+terraform init
+terraform apply
+
+
+
+
+

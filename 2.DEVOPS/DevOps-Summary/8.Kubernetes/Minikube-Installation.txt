@@ -1,0 +1,18 @@
+https://minikube.sigs.k8s.io/docs/start/
+  - Bu adresten guncel surum indirilebilir.
+
+
+Windows:
+https://storage.googleapis.com/kubernetes-release/release/v1.18.0/bin/windows/amd64/kubectl.exe
+  - veya
+  - curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.18.0/bin/windows/amd64/kubectl.exe
+kubectl version --client
+  - test
+
+Linux:
+curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+sudo mv ./kubectl /usr/local/bin/kubectl
+kubectl version --client
+
+

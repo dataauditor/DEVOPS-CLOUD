@@ -1,0 +1,135 @@
+1.Genel:
+https://galaxy.ansible.com/
+- Roller:
+  * Sadece tek seferlik kullanilabilir.
+  * ansible Galaxy ile herkesle paylasilabilir.
+  * mysql, nginx ... vb configurasyon islemlerinde kullanabiliriz.
+  * Rol file olusturup playbook ile cekebiliriz.
+- www.galaxy.ansible.com
+  - herbiri bir github repo'dur.
+  - indirme sayisina gore indirebiliriz.
+  - rolu inceleriz.
+
+
+
+
+Hands-on:
+Galaxy ansible kullanimi:
+  > python yuklenir.
+  > ansible yuklenir.
+  > inventory ve ansible.cfg hazirlanir. 
+  > ansible.cfg dosyasina 'roles_path = /home/ec2-user/ansible/roles/' tanimlanir.
+  > ansible-galaxy init /home/ec2-user/ansible/roles/apache ile apache rolu indirilir. 
+  > apache dosyasi icindeki tasks altindaki main.yml dosyasina istenen gorevler verilir.
+  > Daha sonra baska bir konumda role1.yml dosyasi ile role apache olarak tanimlanir. Hosts belirlenir. 
+  > Soz konusu apache rolu ansible-playbook role1.yml ile role calistirilir. Role de tasks'lari barindiran main.yml'yi calistirir.
+  > ilgili hosta apache kurulur. 
+
+Browser:
+Linux-2 (22) Control node
+ubuntu 20_04 (22, 80), webserver-1
+Red-Hat (22, 80), webserver-2
+
+VSC-local:
+scp -i ~/.scp/ugur.pem ~/.scp/ugur.pem ec2-user@33.2.45.3:/home/ec2-user
+
+VSC:
+sudo yum install -y cowsay
+  - eglenceli figurler katiyor.
+  - ansible.cfg'ye cow_selection = tux ekle
+export ANSIBLE_NOCOWS=1 
+  - .bashrc dosyasına eklenebilir iptal için
+chmod 400 ugur.pem
+sudo yum install -y python3 
+pip3 install --user ansible
+  - python ve ansible yuklendi.
+ansible --version
+mkdir working-with-roles && cd working-with-roles
+vi inventory.txt
+---------------------------------------------------------------
+[servers]
+web_server_1   ansible_host=172.31.31.27   ansible_user=ec2-user  ansible_ssh_private_key_file=~/ugur.pem
+web_server_2  ansible_host=ip-172-31-22-84.ec2.internal  ansible_user=ubuntu  ansible_ssh_private_key_file=~/ugur.pem
+---------------------------------------------------------------
+vi ansible.cfg
+---------------------------------------------------------------
+[defaults]
+host_key_checking = False
+inventory=inventory.txt
+interpreter_python=auto_silent
+roles_path = /home/ec2-user/ansible/roles/
+deprecation_warnings=False
+cow_selection = random
+---------------------------------------------------------------
+vim ping-playbook.yml
+---------------------------------------------------------------
+- name: ping them all
+  hosts: all
+  tasks:
+    - name: pinging
+      ping:
+---------------------------------------------------------------
+ansible-playbook ping-playbook.yml
+  - node'lara ping attik. inventory'deki isimleri ile gorduk.
+
+VSC-Roles:
+ansible-galaxy init /home/ec2-user/ansible/roles/apache
+  - apache rolunu indirdik.
+cd /home/ec2-user/ansible/roles/apache
+sudo yum install tree
+tree
+  - tasks ve diger dosyalar bir format ile inmis.
+vi tasks/main.yml
+  - mevcut dosyada degisiklik yapiyoruz.
+---------------------------------------------------------------
+- name: installing apache
+  yum:
+    name: httpd
+    state: latest
+- name: index.html
+  copy:
+    content: "<h1>Hello Clarusway</h1>"
+    dest: /var/www/html/index.html
+- name: restart apache2
+  service:
+    name: httpd
+    state: restarted
+    enabled: yes
+---------------------------------------------------------------
+cd /home/ec2-user/working-with-roles/
+vi role1.yml
+---------------------------------------------------------------
+- name: Install and Start apache
+  hosts: web_server_1
+  become: yes
+  roles:
+    - apache
+---------------------------------------------------------------
+ansible-playbook role1.yml
+
+Browser:
+- public ip ile bak.
+
+VSC-Role from Galaxy:
+ansible-galaxy search nginx
+  - aramayla match eden rolleri gosterir.
+  - kendimize uygun role ariyoruz.
+#q ile cikilir.
+ansible-galaxy search nginx --platform EL
+  - kurumsal olarak hazirlananlar cikar.
+#q
+ansible-galaxy search nginx --platform EL | grep geerl
+ansible-galaxy search nginx --author geerlingguy
+ansible-galaxy install geerlingguy.nginx
+  - buldugumuz image'i yukluyoruz.
+cd /home/ec2-user/ansible/roles/geerlingguy.nginx
+tree
+  - her makineye uygun alternatif sunuyor.
+
+Browser:
+- 
+
+VSC:
+ansible-galaxy list
+ansible-config dump | grep ROLE
+ansible-config dump | grep ROLE

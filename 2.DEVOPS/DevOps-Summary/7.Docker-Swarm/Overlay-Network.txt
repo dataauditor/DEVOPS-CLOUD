@@ -1,0 +1,75 @@
+1.Genel:
+- Farkli node'taki containerleri bridge gibi birbirine bagliyor.
+- Fiziksel olarak hostlarin ethernet kartini baglar.
+- Port:
+  - TCP port 2377: Cluster management communication
+  - 
+- Docker secret: default olarak sifrelenmiyor. Bu komut sifreler.
+
+2.Hands-on:
+>docker version
+>docker-compose version
+>docker info
+>sudo hostnamectl set-hostname manager-1
+>bash
+>docker --version
+>docker info
+>docker --help
+>docker swarm --help
+>docker swarm init --help
+>hostname -i
+>docker swarm init --advertise-addr 172.31.89.167
+>docker info
+>docker swarm join-token manager
+>docker node ls
+>docker swarm join-token worker
+>docker swarm join-token worker
+>docker node ls
+>docker service create   --name=viz   --publish=8080:8080/tcp   --constraint=node.role==manager   --mount=type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock 
+   dockersamples/visualizer
+>docker service ps viz
+>docker service create --name webserver --replicas=5 -p 80:80 nginx
+>docker service ls
+>docker service ps webserver
+>docker service rm webserver
+>docker service ps webserver
+>docker service ls
+>docker service create --name glbserver --mode=global -p 80:80 nginx
+>docker service ps viz
+>docker service rm glbserver
+>docker service create --name clarusweb -p 80:80 --replicas=10 clarusway/container-info:1.0
+>docker service update --detach --update-delay 5s --update-parallelism 2 --image clarusway/container-info:2.0 clarusweb
+>watch docker service ps clarusweb
+>docker service rollback clarusweb
+>docker service rm clarusweb
+>sudo hostnamectl set-hostname manager-1
+>bash
+>docker node ls
+>docker network ls
+>docker network inspect ingress
+  - overlay networku ismi ile inceliyoruz.
+>docker network create -d overlay clarus-net
+>docker network ls
+>docker network inspect clarus-net
+>docker service create --name webserver --network clarus-net -p 80:80 -d --replicas=3 clarusway/container-info:1.0
+>docker service ls
+>docker node ls
+>docker service ps webserver
+  - ilgili service'in containerlerinin hangi nodda oldugunu gosterir.
+
+Manager-2:
+>docker container ls
+  - ilgili containeri goruyoruz.
+>docker ps
+  - calisan containerleri verir.
+>docker service ps clarus-db
+>
+
+docker network create --driver=overlay --attachable test-net
+
+
+
+
+
+
+

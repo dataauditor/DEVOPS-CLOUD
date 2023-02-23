@@ -1,0 +1,147 @@
+1.Network Drivers:
+- docker platform agnostic (platformdan bagimsiz) Linux, mac, windows'ta calisabilir.
+- ec2'ya bagli iken > switch'e bagli > LAN > Router > WAN 
+- ec2 icinde kurulan container kendisini LAN'da sanir. Switch ve routera baglanir. Buradaki switch aslinda bridge'dir.
+- Birden cok container kendi arasinda LAN icra ederler.
+- Containerler kendi arasinda: 
+  - Bridge (containerler arasinda switch gorevi gorur) sayesinde.
+  - Default bridge'nin DNS hizmeti yok yani container ismi ile ip numaralarini eslestirmez.
+  - Bu yuzden default bridge'de isim ile ulasilamaz.
+- Container internete cikis icin:
+  - Bridge'den sonra gercek bir router yok. Bu yuzden container internete cikmak icin host'un ip adresi ile nic'i uzerinden routera cikar.
+  - Container paketi gonderince bridge containerin kendi privat ip'sini birakip host'un ip adresini ekler.
+- Internetten Containere Ulasim:
+  - Port'lari maplayerek, 80:80 gibi, disardan containerlerin ciktilarina ulasilir. (web-serwerlar)
+
+- Container kurulurken --network belirtilirse belirli bir brigge'ye yoksa default bridge'ye baglantili olusur.
+- Sonradan containerler bircok network'e baglanabilir.
+- Docker's networking subsystem takilip cikarilabilir. Farkli driverlar var:
+  * bridge: 
+    - default network driver. Bir driver tanimlanmazsa bridge olusur. 
+    - default bridge'de containerler sadece ip adresi ile baglanir.
+    - applicationun bagimsiz (standalone) containerlerdaykenki communication ihtiyaci icin kullanilir.
+  * host:
+    - host network driverine baglanan containerler hostun networkunu dogrudan kullanabilirler.
+    - bagimsiz containerler ve Docker host, aralarinda network izolasyonu olmadan host'un networkunu directly kullanir.
+  * none: 
+    - Tum network disable edilir. Genellikle özel bir ağ sürücüsü ile birlikte kullanılır. 
+  * overlay: 
+    - Overlay networks, multiple Docker daemonu birbirine baglar ve swarm servicelerin birbiriyle iletisimini saglar.
+    - Svarm service ile bagimsiz container arasinda baglanti saglar.
+    - Farkli Docker daemonlardaki bagimsiz containerler arasinda baglanti saglar. Bu strateji, bu kapsayıcılar arasında işletim sistemi düzeyinde yönlendirme yapma ihtiyacını ortadan kaldırır. 
+  * macvlan: 
+    - Macvlan networks, containere mac adresi atayarak networkumuzde fiziksel bir cihaz gibi gorunur kilar.
+    - Docker daemon container trafigini mac adresleri uzerinden yapar.
+  * network plugins: 3. parti network eklentilerini kullanabiliriz. 
+
+
+
+2.Hands-on Bridge:
+- Ayni Docker hostta iki farkli alpine containerin baglantisi:
+docker network ls
+  - bir bridge ve bir host goruruz. 
+docker run -dit --name alpine1 alpine ash
+  - detached modda (containere baglanmadan) interactive olarak container kuruyoruz.
+docker container run -dit --name alpine2 alpine ash
+docker container ls
+  - calisan containerlaeri gosterir.
+docker network inspect bridge
+  - hangi containerlerin bridge'e baglandigini goruruz. gateway adresi, container ip adreslerini goruruz.
+docker container inspect alpine2 | grep IPAddress
+!!!
+docker container attach alpine1
+  - container calisiyorsa baglaniriz.
+# ifconfig
+# ip addr show
+  - containerin icinde alpine1'in network interfaces gorulur. ip adresini goruruz. "docker network inspect bridge" komutu ile gordugumuz ip adresini goruruz.
+# ping -c 2 google.com
+  - "-c 2" ile iki kere ping atariz container icinden.
+# ping -c 2 172.17.0.3
+  - diger containera ping atiyoruz. 
+# ping -c 2 alpine2
+  - isimle ping atarsak hata verir. Ip adresi ile atmaliyiz. Service tanimli olmadigindan hostname ile ip adresini eslestirecek DNS yok.
+# Ctrl + p + q
+  - ilgili container stop etmeden containerden cikilir.
+docker container stop alpine1 alpine2
+!!!
+docker container rm alpine1 alpine2
+- containerlari durdurup sildik.
+
+
+
+3.Hands-on:
+- Bridge olusturma:
+  - kullanici tarafindan tanimlanan network'e container baglantisi kurma.
+!!!
+docker network create --driver bridge ugur
+  - bridge olusturma.
+docker network create elif
+  - default olarak olusur bu komuta gerek yoktur.
+docker network ls
+  - default bridge ve host ile ugur bridge'sini gosterir.
+!!!
+docker network inspect ugur
+  - ugur bridge'sinin ip adresleri vb gosterir. bridge oldugunu gosterir. Bridge'nin gateway adresini gosterir.
+!!!
+docker run -dit --name alpine1 --network ugur alpine ash
+  - bridge bagli container acma.
+docker run -dit --name alpine2 --network ugur alpine ash
+docker run -dit --name alpine3 alpine ash
+docker run -dit --name alpine4 --network ugur alpine ash
+docker network connect bridge alpine4
+  - son komut ile alpine4 ugur bridge ile de baglanti kurar. Daha once ugur ile baglanti kurulmustu.
+!!!!!!
+docker network connect ugur alpine4
+sudo docker network ls
+sudo docker network inspect ugur
+sudo docker network inspect bridge
+  - ilgili bridgenin bilgilerini va bagli containerleri gosterir. alpine4 her ikisine de bagli.
+docker container attach alpine1
+# ping -c 2 alpine2
+# ping -c 2 alpine4
+# ping -c 2 alpine3
+  - alpine3 ile bridge olmadigi icin ping atmaz.
+# exit
+docker container stop alpine1 alpine2 alpine3 alpine4
+docker container rm alpine1 alpine2 alpine3 alpine4
+
+
+
+4.Hands-on:
+Nginx containeri 80 portu ile Docker hosta baglama:
+  - '--rm': Duran container otomatik silinir.
+
+!!!
+docker run --rm -d --network host --name my_nginx nginx
+docker run --rm -d -p 8080:80 --name my_nginx nginx
+  - "--rm" container exit/stop olunca remove eder.
+  - browserden ilgili host bilgisayarin ip addresi:80 portundan nginx servere baglanilir.
+export DOCKER_HOST=tcp://192.168.99.101:2376
+  - wsl de browsere aktarmaya yarar. Sonrasinda localhost:80 ile ulasilabilir. 
+
+
+5.Hand-on:
+- "-p" "--publish" komutu ile containerin portu ile hostun portunu map ederiz.
+docker run -it --name my_nginx -p 8080:80 nginx 
+!!!
+docker run -it --name my_nginx -p 8080:80/tcp nginx
+docker run -it --name my_nginx -p 8080:80/udp nginx
+- Docker host 80 portu ile container 8080 portunu mapledik.
+- "--dns" ile ornegin 8.8.8.8 yazarak bir DNS adresi tanimlayabilirsin.
+
+6.Hands-on:
+- Nullcontainer:
+- Hicbir bridge veya baglantisi yoktur. 
+- Ping dahil yapamazsin.
+>docker container run --rm -it --network none --name nullcontainer alpine
+
+
+7.Ders:
+sudo docker container exec -it c1 ls
+  - "-it" sonda yazilan bash/ash/sh vb ile nerdeyse ayni islemi icra eder.
+  - 'exec': c1 (container ismi)'den sonra komutu icra eder.
+docker container exec -it my_nginx sh
+docker container run --rm -dit --network host --name my_nginx nginx
+  - host uzerinden baglandi. dogrudan ec2 ip'si uzerinden ulasilabilir nginx web sayfasina.
+  - "-p" komutu ile sadece port uzerinden ulasiliyordu, host uzerinden sanki host gibi davraniyor.
+        

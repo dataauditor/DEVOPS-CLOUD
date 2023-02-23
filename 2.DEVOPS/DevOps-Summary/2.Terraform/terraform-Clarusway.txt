@@ -1,0 +1,476 @@
+1.Genel:
+- Golang dilinde ve hizlidir.
+- Provider API'leri ile interact eder.
+- Create, Read, Update ve Delete islemleri icra eder.
+- Terraform state: sadece kendi urettiklerini bilir.
+- ornek dosyalar: registry.terraform.io adresinden alinabilir.
+- Plugin'i VSC'ye indir. 
+- Terraform doc snippets, dogrudan sam getiriyor. Faydali. 
+- Ctrl + Space : resource'un altina yazilabilecek attributeleri getirir.
+- terraform.tfstate.backup: terraform.tfstate dosyasinin bir onceki versiyonudur.
+- Ctrl + k + c: # isaretini koyar.
+  Ctrl + k + u: # isaretini kaldirir.
+- terraform plan -out=justs3 : ilgili plani kaydeder.
+  terraform apply justs3 : ilgili plani apply eder. Ana state file'ta olup da justs3'te olmayanlar silinir.
+- Intellij IDEA
+
+
+2.Terraform Registry Kullanimi:
+> registry.terraform.io > Browse Prowiders > AWS > Documentation > EC2 > Resource/Data Source
+
+
+3.Profil Olusturma:
+> ~user/test/.aws > config 
+------------------------------------------------
+[default]
+region = us-east-1
+output = yaml
+
+[profile bspoke]
+region = us-east-1
+output = yaml
+-------------------------------------------------
+> ~user/test/.aws > credentials
+------------------------------------------------
+[default]
+access_key = u893ju892
+secret_key = ui09mu
+
+[profile bspoke]
+access_key = u893ju892
+secret_key = ui09mu
+------------------------------------------------
+  - credentials'tan alinir sifreler.
+  - provider bloguna profil eklenek calisir.
+    ------------------------------------------------
+    provider "aws" {
+      profil = bspoke
+    }
+    ------------------------------------------------
+
+
+4.Kod yazilirken:
+- Herbir ".tf" file'i ayri bir dosyada saklanir.
+- Provider aws, azure vb seklinde tanimlanir. Soz konusu providere has credantials da girilir.
+- Credantials yazilmazsa ilgili dosyalarda config dosyasi credantials'i arar.
+- Terraform ilk once ".tf" config dosyasi ile olusur. Eski usulle "plan" ile stage olusur. "apply" ile resourcelar olusur. Daha sonra ".tf" dosyasindaki herbir degisim ile surekli olarak degistirilebilir. Degisikliklerde yalnizca degisen taraf icin islem yapilir.
+
+"plan" - State:
+- Configuration file'dan "apply" komutu ile resourcelar olusturulurken (eski versiyonlarda "plan") state olusturulur terraform tarafindan. 
+- State dosyasi terraform.tfstate file olarak saklanir.
+- Terraform, configurasyon dosyasindaki degisikleri state dosyasina uygulayarak resourcelari degistirir.
+- Asil amaci remote system ile resourcelar arasinda baglanti kurarak yapilacak degisiklikleri tum sisteme uyarlamaktir.
+- "plan" ile birlikte current state ve desired state (yeni ".tf" dosyasi) kiyaslanir ve degisiklikler icra edilir.
+- "plan" execution plani olusturur. Degisiklik yapmaz. Eski ve yeni versiyonu degisiklik oncesi karsilastirir.
+- "refresh" olusmus olan infrastructure'lara gore state file'i gunceller.
+>terraform plan
+>terraform refresh
+
+
+5.Installation:
+- Windows ve digerleri icin word'te aciklandi.
+- Linux:
+>sudo yum update -y
+>sudo yum install -y yum-utils
+>sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+>sudo yum -y install terraform
+>terraform --version
+
+
+6.Build Infrastructure:
+- Oncelikle CLI yuklu ve hesap configure edilmis olmali ; aws configure ile credentials yuklenmeli (veya ec2'ya full access veren bir rol tanimlayip ilgili makineye eklenmeli).
+- Herbir configuration kendi directory'sinde depolanmali.
+- Configuration code'lari icin bir ".tf" uzantili file olusturulur.
+- Ilgili file'a credantils tanitilarak resource'lar yazilir. 
+- Resource block'un iki tanimlayicisi var:
+  - resource type (aws_instance vb)
+  - resource name (kisisel)
+- Resource blockta argumanlar olur. Argumanlar optional ve zorunlu olarak ikiye ayrilir.
+>aws configure
+>mkdir learn-terraform-aws-instance && cd learn-terraform-aws-instance
+>touch example.tf
+>vim example.tf
+--------------------------------------------
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "3.56.0"
+    }
+  }
+}  
+
+provider "aws" {
+ access_key = "Your AWS account's access_key provided by credentials_aws.csv"
+ secret_key = "Your AWS account's secret_key provided by credentials_aws.csv"
+ profile = "default"
+ region  = "us-east-1"
+ version = "2.7"
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-2757f631"
+  instance_type = "t2.micro"
+  tags = {
+    "Name" = "created-by-terraform"
+  }
+}
+---------------------------------------------
+  !!!
+  - provider blogunda credentials, profil ve region (zorunlu) tanimlanabilir.
+  - Burada credentialslari tanitmak yanlis. Kendi bilgisayarimizda calisiyorsak normal bash'tan tanimlariz credentialslari. EC2'da ise role tanimlariz.
+
+c.Terraform'u Baslatma/Initialize:
+- "init" working directory olusturarak configuration file'i buraya kaydeder, providerin eklentilerini indirir ve ilk baslatma komutudur.
+- Otomatik upgrade'leri onlemek icin versiyonu belirtmek gerekir.
+- "fmt" ile farkli kisilerin yazdigi formati okunabilir/duzenli yapar.
+- "validate" ilgili configurationun hatalarini (modules, attributes name, value type) kontrol eder.
+>terraform init
+>terraform fmt      
+>terraform validate
+
+
+7.Create Infrastructure:
+- "apply" ile configure edilen ".tf" dosyasi resourcelari olusturur.
+- Daha sonra confirmation'a yes denilir.
+- terraform.tfstate: "apply" edince olusan ve resourcelarin ID, ozelliklerini tutan bir dosyadir. Daha sonra bu file ile resourcelar kumanda edilebilir ve kapatilabilir.
+- "show" olusan resource'u ve ozelliklerini gosterir.
+- "state" ile advanced olarak resourcelari gorebiliriz. state'teki resourcelari gosterir.
+>terraform apply
+>terraform show
+>terraform state list
+
+
+8.Error:
+- "validate" hatasiz ciksa da "apply" hata verebilir.
+  - AMI, region bazinda degisir.
+  - Default VPC, security group subnet yoksa once konsoldan olusturulmali ve id ile komutlara tanimlanmali.
+- Resource'larda yapilan degisiklikler konfigurasyon dosyasinda kaydedilir. Daha sonra "apply" edilir.
+--------------------------------------------
+resource "aws_instance" "example" {
+  ami                    = "ami-2757f631"
+  instance_type          = "t2.micro"
++ vpc_security_group_ids = ["sg-0077..."]
++ subnet_id              = "subnet-923a..."
+}
+--------------------------------------------
+>terraform apply
+
+
+9.Change Infrastructure:
+- Once ".tf" uzantili dosya ile yazilan configuration file ile degistirilir.
+- AMI degisikligi yapildi asagida. Eski ami'li instance destroy edilir.
+- Her degisimden sonra "apply" komutu da yazilir.
+- ".tf" dosyasindan degisiklik yapariz. Devaminda "apply" tekrar edilir.
+-----------------------------------------
+provider "aws" {
+  profile    = "default"
+  region     = "us-east-1"
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-b374d5a5"
+  instance_type = "t2.micro"
+}
+-----------------------------------------
+>terraform apply
+
+
+10.Output:
+- State file'daki output degiskeninin degerini verir:
+>terraform output
+
+
+11.Graph:
+- DOT formatinda configuration veya execution plani gorsel olarak gosterir.
+- "console" ise interactive bir console saglar.
+>terraform graph 
+>terraform console
+
+
+12.Taint/Isaretleme:
+- "taint" ile belirlenen resourcelar muteakip "apply"da destroy edilir ve yenisi acilir.
+>terraform taint
+
+
+13.Destroy Infrastructure:
+- Terraform configuration'a tabi tum resourcelar kapatilir.
+>terraform destroy
+>terraform apply
+
+
+14.Data Sources:
+-Terraform disindan veya terraformdaki baska bir configurationun kullanilmasini saglar.
+- "aws ec2 describe images" vb seklinde yazarak filter icin maddelere ulasilabilir. "docs.aws.amazon.com/..." sayfasindan alinir.
+- data resource olarak girilir.
+- Hazir kaynaklari import eder.
+>terraform import
+--------------------------------------------
+#example.tf
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+data "aws_ami" "ec2-ami" {
+  owners = ["amazon"]
+  most_recent = true
+
+  filter {
+    name = "name"
+    values = ["amzn2-ami-hvm*"]
+  }
+}
+
+resource "aws_instance" "myec2" {
+  ami = data.aws_ami.ec2-ami.id
+  instance_type = "t2.micro"
+}
+--------------------------------------------
+
+
+15.Referance:
+- Resourcelar parametreler uzerinden referans verilirler.
+- "apply" ile olusurlar.
+- Resourcelardan biri digerine tabi ise siralamayi bilir ve ona gore uretir. Ilk instance ornekte oldugu gibi.
+--------------------------------------------
+resource "aws_instance" "example" {
+  ami           = "ami-2757f631"
+  instance_type = "t2.micro"
+}
+
+resource "aws_eip" "ip" {
+    vpc = true
+    instance = aws_instance.example.id
+}
+--------------------------------------------
+>terraform apply
+- User code vb gibi gerkcelerle bagimli resourcelarda bagimliligi terraform bulamaz. Bu durumda "depend_on" komutu kullanilir. 
+- Asagida configuration icinde instance'in S3'e tabii oldugu belirtilmis.
+--------------------------------------------
+# New resource for the S3 bucket our application will use.
+resource "aws_s3_bucket" "example" {
+  # NOTE: S3 bucket names must be unique across _all_ AWS accounts, so
+  # this name must be changed before applying this example to avoid naming
+  # conflicts.
+  bucket = "clarusway-terraform-guide"
+  acl    = "private"
+}
+
+# Change the aws_instance we declared earlier to now include "depends_on"
+resource "aws_instance" "example" {
+  ami           = "ami-2757f631"
+  instance_type = "t2.micro"
+
+  # Tells Terraform that this EC2 instance must be created only after the
+  # S3 bucket has been created.
+  depends_on = [aws_s3_bucket.example]
+}
+--------------------------------------------
+terraform apply
+
+
+16.Provisioner:
+- Sadece onyukleme icin create'de veya destroyda kullanilirlar. Tavsiye edilmezler.
+- Resource'lar olusunca devreye girerler.
+
+
+17.Variables:
+- Degisken olarak tanimlayarak diger atributeleri tanimlamada kullanilir.
+- varibale olarak tanimlanir ve "var" olarak degisken olarak atanir. 
+- Kalici olarak degisken tanimlamak icin terraform.tfvars dosyasi olusturulur. Buradan otomatik olarak yukleme yapar.
+- olusturulan dosyayi "-var-file" argumani ile yukleriz.
+---------------------------------------------
+variable "region" {
+  default = "us-east-1"
+}
+--------------------------------------------- 
+provider "aws" {
+  region = var.region
+}
+----------------------------------------------
+>vim terraform.tfvars
+>region = "us-east-1"            # seklinde dosyaya tanimlariz degiskeni
+>terraform apply -var-file="terraform.tfvars"         # degiskeni ceker calistiririz.
+
+
+18.Maps:
+- A map is a key/value data structure that can contain other keys and values.
+- Ornegin region bazinda ami'ler kaydedilir ve gerektiginde cekilir.
+- Once maplanir. Daha sonra cagirilir.
+-----------------------------------------------
+variable "amis" {
+  type = "map"
+  default = {
+    "us-east-1" = "ami-b374d5a5"
+    "us-west-2" = "ami-4b32be2b"
+  }
+}
+-----------------------------------------------
+resource "aws_instance" "example" {
+  ami           = var.amis[var.region]
+  instance_type = "t2.micro"
+}
+-----------------------------------------------
+
+
+19.Modules:
+- Modules are containers for multiple resources that are used together. 
+- A module consists of a collection of .tf and/or .tf.json files kept together in a directory.
+- Modules are the main way to package and reuse resource configurations with Terraform.
+- Root Module: Her terraform configurationun en az bir module'u vardir ve .tf dosyasinda tanimlanir.
+- Child Modules: 
+  - Bir terraform module (genelde root module) baska modulleri cagirarak onlarin resourcelarini da kullanir.
+  - Bir root module bircok defa bir child module'u bircok defa ayni configurasyonda cagirabilir.
+  - Bircok configurations child module'u kullanabilir.
+- Published Modules: Terraform tarafindan ucretsiz kullanilabilir moduleler.
+- Terraform modulunu kullanacak departmanlari gosterir module olusturuyoruz:
+>mkdir modules && cd modules 
+>vim main.tf
+------------------------------------------------
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_iam_user" "my-new-user" {
+  name = "oliver-terraform-${var.environment}"
+}
+------------------------------------------------
+>vim variables.tf
+------------------------------------------------
+variable "environment" {
+  default = "default"
+}
+------------------------------------------------
+>vim outputs.tf
+------------------------------------------------
+output "my-terraform-user" {
+  value = aws_iam_user.my-new-user.name
+}
+------------------------------------------------
+vim main.tf
+------------------------------------------------
+module "usermodule" {
+  source = "./modules"
+  environment = "DEV"
+}
+------------------------------------------------
+>terraform init     # moduldeki dosyalari calistirir.
+>terraform plan
+>terraform apply
+
+
+20.Remote State:
+- Default olarak state, terraform.tfstate dosyasi olarak lokale kaydedilir.
+- Takim calismasinda local state dosyasi kullanilirsa ayni anda kullanma, son versiyonu kullanma vb konularinda problem cikar.
+- Remote state'de state dosyasi bir remote data store'a kaydedilir ve takim uyeleri arasinda paylasilir.
+- Terraform Cloud, HashiCorp Consul, Amazon S3, Azure Blob Storage, Google Cloud Storage, Alibaba Cloud OSS, vb remote store olarak kullanilabilir.
+- Remote state, output degerlerin baska configurasyonlarla paylasilmasina izin verir.
+- Remote state also allows teams to share infrastructure resources in a read-only way without relying on any additional configuration store.
+- State locking: terraform state file'in multiple user tarafindan ayni anda kullanilirken bozulmasini engeller.
+
+a.Backends:
+- State locking optionaldir. Backends are responsible for storing state and providing an API for state locking.
+- If locking is supported by your backend, Terraform will lock your state for all operations that could write state. This prevents others from acquiring the lock and potentially corrupting your state.
+- Remote'da depolansa da tum Terraform komutlari such as "terraform console", "terraform state", "terraform taint", ve daha fazlasi calismaya devam edecekler.
+
+b.Amazon s3:
+- Verilen key ile belirtilen bucket'da state depolanir. Bu backend de state locking'i destekler.
+- Tutarlilik kontrolunu backend, dynamodb_table'lar ile yapar.
+- Basit bir dynamodb_table ile multiple remote state files lock edilebilir.
+- Terraform generates key names that include the values of the bucket and key variables.
+- Insan hatalarina/yanlislikla silmeye karsi s3'te versioning acilir.
+- Remote backend kullanilirsa encryption da kullanilabilir.
+- mybucket isimli bir bucketimizin oldugu kabul edilerek. Asagidaki blogu config file'a ekleriz.
+------------------------------------------------
+terraform {
+  backend "s3" {
+    bucket = "mybucket"
+    key    = "path/to/my/key"
+    region = "us-east-1"
+  }
+}
+------------------------------------------------
+
+Terraform ve Ansible ayni ozellikleri var. Ancak ilk kurulumu Terraform ile ve Ansible ile de configurasyonlar yapilir.
+Terraform ilgili resourcelari yalnizca state file uzerinden takip eder. kurulum ve degisimler config dosyasi ile yapilir ama state dosyasinda olup olmamasina gore kaldirilir. AWS konsoldan kapatilan resource Terraformda calisiyor gozukur.
+configuration dosyasi degistirilirse state dosyasi uzerinden gunceller. Eger fazla degisiklik varsa yeni state dosyasi olusturur ve Backend dosyasi olusturup eski state file'i oraya atar.
+
+
+21.count ve conditionals:
+------------------------------------------------
+resource "aws_s3_bucket" "tf-s3" {
+# bucket = var.s3-bucket-name
+# count  = 2 
+# count  = var.num-of-buckets
+  bucket = "${var.s3-bucket-name}-${count.index + 1}"
+  acl    = "private"
+  count  = var.num-of-buckets != 0 ? var.num-of-buckets : 3
+}
+
+variable "s3-bucket-name" {
+  default = "umit-tf-test-bucket-addwhateveyouwant-2"
+}
+------------------------------------------------
+  - count ve count.index birlikte kullanilir.
+  - count  = var.num-of-buckets != 0 ? var.num-of-buckets : 3 ifadesinde 0'a esit degilse ":" oncesini 0'a esitse ":" sonrasini icra eder.
+
+
+22.for_each:
+------------------------------------------------
+resource "aws_iam_user" "new-user" {
+#  name = oliver
+  for_each = toset(var.users)
+  name     = each.value
+}
+
+resource "aws_s3_bucket" "tf-s3" {
+# bucket = var.s3-bucket-name
+# count = var.num-of-buckets
+# bucket = "${var.s3-bucket-name}-${count.index + 1}"
+  acl    = "private"
+# count  = var.num-of-buckets != 0 ? var.num-of-buckets : 3
+  for_each = toset(var.users)
+  bucket = "example-s3-bucket-${each.value}"
+}
+
+variable "users" {
+  default = ["spring", "michael", "orlando"]
+}
+
+output "s3-arn-1" {
+  value = aws_s3_bucket.tf-s3["spring"].arn
+}
+------------------------------------------------
+  - for_each = toset() ile variable deki degiskenleri alir ve set formatina donusturur.
+  - for_each ve each.value birlikte kullanilir.
+  !!!
+  - outputta tum isim yerine yalnizca spring yazilmasi. Burada state file'da da gosterildigi gibi index_key degeri ile ulasilir. Index_key 1, 2, 3 veya spring, orlando vb olur.
+
+
+23.fonksiyon:
+------------------------------------------------
+resource "aws_iam_user" "new-user" {
+#  name = oliver
+  for_each = toset(var.users)
+  name     = each.value
+}
+
+variable "users" {
+  default = ["spring", "michael", "orlando"]
+}
+
+output "upper" {
+  value = [for i in var.users : upper(i) if length(i) > 6]
+}
+------------------------------------------------
+
+
+
+24.Index_key:
+
+
+
+
+
+

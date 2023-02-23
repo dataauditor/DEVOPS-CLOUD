@@ -1,0 +1,331 @@
+33.Modules-root-child:
+cd terraform-docker
+vim providers.tf
+-------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+-------------------------------------------------------
+  - main.tf'in ust tarafini kesip buraya yapistirdik.
+mkdir image && cd image
+touch variables.tf main.tf outputs.tf providers.tf
+vim providers.tf
+-------------------------------------------------------
+terraform {
+  required_providers {
+    docker = {
+      source  = "terraform-providers/docker"
+      version = "~> 2.7.2"
+    }
+  }
+}
+
+provider "docker" {}
+-------------------------------------------------------
+  - terraform-docker altindaki root moduledeki provider.tf dosyasinin icerigini bu module'e kopyaladik.
+vim main.tf
+-------------------------------------------------------
+resource "docker_image" "nodered_image" {
+  name = "nodered/node-red:latest"
+}
+-------------------------------------------------------
+vim outputs.tf
+-------------------------------------------------------
+output "image_out" {
+    value = docker_image.nodered_image.latest
+}
+-------------------------------------------------------
+  - root module'de child module verisi kullanabilmek icin outputta gostermek ve root'ta da cekmek lazim. 
+
+
+
+vim terraform-docker/main.tf
+-------------------------------------------------------
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+# resource "docker_image" "nodered_image" {
+#   name = var.image[terraform.workspace]
+# }
+
+module "image" {
+  source = "./image"
+}
+
+resource "random_string" "random" {
+    count = local.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = local.container_count
+  name  = join("-", ["nodered", terraform.workspace, random_string.random[count.index].result])
+  image = docker_image.nodered_image.latest
+  ports {
+    internal = var.int_port
+    external = var.ext_port[terraform.workspace][count.index]
+  }
+  volumes {
+    container_path = "/data"
+    host_path = "${path.cwd}/noderedvol"
+  }
+}
+-------------------------------------------------------
+  - root main.tf, image'i child main.tf'ten cekiyor.
+  - image'i child outputtan cekiyor.
+cd ..
+  - terraform-docker (main moduledeyiz)
+terraform init
+terraform plan
+terraform apply --auto-approve
+terraform destroy --auto-approve
+
+
+
+34.Module Variables:
+vim variables.tf
+-------------------------------------------------------
+variable "image_in" {
+    description = "name of image"
+}
+-------------------------------------------------------
+vim terraform-docker/main.tf
+-------------------------------------------------------
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+# resource "docker_image" "nodered_image" {
+#   name = var.image[terraform.workspace]
+# }
+
+module "image" {
+  source = "./image"
+  image_in = var.image[terraform.workspace]
+}
+
+resource "random_string" "random" {
+    count = local.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = local.container_count
+  name  = join("-", ["nodered", terraform.workspace, random_string.random[count.index].result])
+# image = docker_image.nodered_image.latest
+  image = module.image.image_out
+  ports {
+    internal = var.int_port
+    external = var.ext_port[terraform.workspace][count.index]
+  }
+  volumes {
+    container_path = "/data"
+    host_path = "${path.cwd}/noderedvol"
+  }
+}
+-------------------------------------------------------
+terraform validate
+terraform plan
+terraform apply --auto-approve
+terraform destroy --auto-approve
+
+
+
+35.Terraform Graph:
+- Grafiksel olarak baglantilari grafiksel olarak pdf'te gosterir.
+terraform graph
+sudo apt install graphviz
+terraform graph | dot -Tpdf > graph-plan.pdf
+- graph-plan.pdf dosyasi olusur. Acip incelenebilir.
+  - dependency grafigini gosterir.
+terraform apply --auto-approve
+terraform graph | dot -Tpdf > graph-applied.pdf
+  - ayni grafik olustu.
+terraform graph --help
+terraform graph -type=plan-destroy | dot -Tpdf > graph-destroy.pdf   
+terraform destroy --auto-approve
+
+
+
+36.Troubleshooting Dependencies:
+- Implicit and Explicit (depends_on) dependencies:
+vim main.tf
+-------------------------------------------------------
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "sleep 60 && mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+# resource "docker_image" "nodered_image" {
+#   name = var.image[terraform.workspace]
+# }
+
+module "image" {
+  source = "./image"
+  image_in = var.image[terraform.workspace]
+}
+
+resource "random_string" "random" {
+    count = local.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = local.container_count
+  name  = join("-", ["nodered", terraform.workspace, random_string.random[count.index].result])
+# image = docker_image.nodered_image.latest
+  image = module.image.image_out
+  ports {
+    internal = var.int_port
+    external = var.ext_port[terraform.workspace][count.index]
+  }
+  volumes {
+    container_path = "/data"
+    host_path = "${path.cwd}/noderedvol"
+  }
+}
+-------------------------------------------------------
+  - sleep 60 komutu ile local-exec > volume olusturma isini geciktiriyoruz. Bu sekilde nasil volume olusmadan olusan containerin volume'a baglanmadigi problemini goruyoruz.
+rm -R noderedvol
+  - noderedvol klasoru ve olusan volume silindi.  
+terraform apply --auto-approve
+docker ps -a
+docker logs nodered-dev-j115
+  - "nodered-dev-j115" isimli containerin loglarini gosterir.
+vim main.tf
+-------------------------------------------------------
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "sleep 60 && mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+# resource "docker_image" "nodered_image" {
+#   name = var.image[terraform.workspace]
+# }
+
+module "image" {
+  source = "./image"
+  image_in = var.image[terraform.workspace]
+}
+
+resource "random_string" "random" {
+    count = local.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  count = local.container_count
+  name  = join("-", ["nodered", terraform.workspace, null_resource.dockervol.id, random_string.random[count.index].result])
+# image = docker_image.nodered_image.latest
+  image = module.image.image_out
+  ports {
+    internal = var.int_port
+    external = var.ext_port[terraform.workspace][count.index]
+  }
+  volumes {
+    container_path = "/data"
+    host_path = "${path.cwd}/noderedvol"
+  }
+}
+-------------------------------------------------------
+  - "null_resource.dockervol.id" ekleyerek null_resource'u container'e implicit (ortulu) dependency yaptik. Ayrica depends_on ile de explicit yapilabilir.
+terraform graph | dot -Tpdf > graph-implicit.pdf
+vim main.tf
+-------------------------------------------------------
+resource "null_resource" "dockervol" {
+    provisioner "local-exec" {
+        command = "mkdir noderedvol/ || true && sudo chown -R 1000:1000 noderedvol/"
+    }
+}
+
+# resource "docker_image" "nodered_image" {
+#   name = var.image[terraform.workspace]
+# }
+
+module "image" {
+  source = "./image"
+  image_in = var.image[terraform.workspace]
+}
+
+resource "random_string" "random" {
+    count = local.container_count
+    length = 4
+    special = false
+    upper = false 
+}
+
+resource "docker_container" "nodered_container" {
+  depends_on = [null_resource.dockervol]
+  count = local.container_count
+  name  = join("-", ["nodered", terraform.workspace, random_string.random[count.index].result])
+# image = docker_image.nodered_image.latest
+  image = module.image.image_out
+  ports {
+    internal = var.int_port
+    external = var.ext_port[terraform.workspace][count.index]
+  }
+  volumes {
+    container_path = "/data"
+    host_path = "${path.cwd}/noderedvol"
+  }
+}
+-------------------------------------------------------
+  - depends_on ile explicit baglanti yaptik.
+terraform graph | dot -Tpdf > graph-explicit.pdf
+terraform destroy --auto-approve
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

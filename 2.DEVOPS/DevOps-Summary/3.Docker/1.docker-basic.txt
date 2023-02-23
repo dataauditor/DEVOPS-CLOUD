@@ -1,0 +1,135 @@
+1.Genel:
+- https://www.edureka.co/blog/docker-commands/   ornek komutlari calisabilirsin.
+- Containers are running instances of Docker images.
+- It's an open-source project that automates the deployment of software applications inside containers by providing an additional layer of abstraction and automation of OS-level virtualization on Linux.
+- Tek cihaza bircok container kurularak. Ilgili makinenin donanimi pay edilir.
+- Docker is a client-server application. The Docker client talks to the Docker server or daemon, which, in turn, does all the work. You’ll also sometimes see the Docker daemon called the Docker Engine.
+- Docker client ve Docker daemon ayni sistemde calisabilir. Docker client, Docker daemon ile iletisim kurar (remote Docker daemon ile de iletisim kurabilir).
+- Containerlar imagelerden kurulur/baslatilir. Imageler, basit ve yeniden uretilebilirdir.
+- Docker Hub: public register edilen imageleri depolar. privatlari da registry eder.
+- Public ve privat registry'ler bulunur.
+- Docker client: build, pull ve run operasyonlari ile Docker host ile iletisim kurar. Bunun icin Docker API'yi kullanarak sorgulamalar yapar.
+- Docker Host: Docker Daemonu, conteinerleri ve imagelerini icerir. Imageler, containerde containerized olmus applikasyonlarin metadatalaridir. Docker daemon Registry ile iletisim kurar.
+- Registry: Docker imageleri depolar. Docker Hub ve Docker Cloud'da public registries bulunur.
+- Tek OS uzerine Docker daemon/engine yuklenir ve uzerine ihtiyac kadar containerler kurulur. 
+- Tum containerler ayni kerneli kullanirlar. 
+- Kontainerler saniyeler icinde calisirlar.
+- Imageler versiyonlanir.
+Tanimlar:
+  - Docker ID: Docker servislerine girise olanak saglar. Docker store, Docker cloud, Docker Hub repositories ve bazi beta programlari.
+  - Docker Registry: Docker imageleri depolar. 
+  - Docker Daemon: Docker Hostta calisan bacground service'tir. Building, running ve containerlerin dagitimini yapar.
+  - Dockerfile: Image yapmak uzere tum komutlari bulunduran bir text dokumanidir.
+  - Docker Image: Docker container olusturmak icin instructionlari tutan read-only templatedir. 
+  - Docker Container: Docker imagelerden uretilir ve app calistirir. 
+  - Docker Compose: Multi container Docker tanimlama ve calistirmak icin kullanilir.
+- Tek Unix/Linux OS uzerine Docker Engine kurularak herbir microservice icin bir container calistirilabilir.
+- Containerler applicationun ihtiyaci kadar kaynak kullanir.
+
+2.Installation:
+- Windows icin Docker Hub'tan download edilebilir.
+- Linux:
+  - 64 bit olmali ve kernel 3.10 ve uzeri olmali. "uname -r" ile sorgula.
+  >sudo yum update -y
+  >sudo amazon-linux-extras install docker
+  >sudo service docker start
+  >sudo usermod -a -G docker ec2-user    # useri (ec2-user) gruba (docker) ekleyerek sudo yazmadan komutlari yazabiliriz.
+  >newgrp docker
+    - yapilan degisikligi al.
+  >docker version
+  >docker info
+- Ubuntu:
+  >sudo apt install apt-transport-https ca-certificates curl software-properties-common
+  >curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  >sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic test"
+  >sudo apt install docker-ce
+  >sudo groupadd docker            #Create the docker group if it does not exist
+  >sudo usermod -aG docker $USER   #Add your user to the docker group
+  >newgrp docker                   #Run the following command or Logout and login again and run
+  >sudo docker version
+  >sudo apt update
+  >sudo snap install docker
+  >sudo docker version
+  >docker swarm leave --force      # ayrilma komutu
+
+  veya
+  sudo yum update -y && sudo yum install -y yum-utils && sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo && sudo yum -y install terraform
+
+3.Init ve Status:
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo systemctl status docker
+
+4.Calistirma:
+- Docker Hub'a netten girilerek explore reporitories'ten imagelere ulasabilirsin.
+- Containerler filesytemde kurulur. 
+- Containerlerin network, IP adres ve local hostla irtibati icin kopru interface'i vardir.
+>docker run <image>         # Container olusturma. Localdeki image'i cekerek containeri olusturur. Localde yoksa Docker Hub'tan ceker ve olusturur.
+>docker help                # komutu gerekli tum komutlari gosterir.
+>docker run help            # ile de gerekli komutlar bulunur.
+!!!
+>docker run -it ubuntu /bin/bash  # image dosyasini indirip container olusturma. '-i': Shell acar. Image dosyasinin konumu verilmis. Eger localde bulamazsa Docker Hub registry'de arar. Docker image'i disarda bulursa locale de yedekler.
+!!!
+>docker run --name MyUbuntu -it ubuntu  # ubuntu'yu interactif olarak calistirir. Isim de verilmis.
+>docker kill MyUbuntu       # containeri kapatir.
+>docker rm MyUbuntu         # containeri siler.
+!!!
+>docker rm 2e3 45r 332      # dockerlari silmeden once stop etmeli.
+
+5.Container Icindeyiz:
+- containerden cikinca, icinde calisan komut sonlaninca stop eder.
+>hostname
+>apt-get update && apt-get install nano
+>exit                                     # containerden ubuntu host'a ciktik.
+
+6.Diger Komutlar: 
+- Containerleri isim ve id numaralari ile cagirmak icin tum id'yi yazmaya gerek yok ilk 3 rakam da yeter.
+- Normalde containerler rastgele isimle olusurlar. Container ID'si yerine ismini de kullanabiliriz.
+!!!
+>docker ps -a                     # mevcut stopped ve running containerleri goruruz.
+>docker ps                        # running containerleri goruruz.
+>sudo docker run --name clarusway -i -t ubuntu /bin/bash   # containere isim vererek kurariz. isimler uniq olmali.
+!!!
+>sudo docker start clarusway      # stop'taki containeri calistirir.
+>sudo docker start 2f5a96f3ccde   # start icin isim yerine id ile de container belirtebiliriz.
+>docker stop clarusway            # containeri stop etme.
+>docker pause clarusway
+>docker unpause clarusway
+!!!
+>sudo docker attach clarusway     # ilgili containere gireriz.
+>sudo docker inspect clarusway    # container hakkinda detayli bilgi verir. yarim sayfa takriben.
+>sudo docker inspect --format='{{ .State.Running }}'  # tum raporu degilde icinden spesifik olarak bilgi almaya yarar.
+>docker rm clarusway              # container silme
+>docker top clarusway             # id'yi verir.
+>docker status clarusway          # mevcut statusunu verir.
+>docker history clarusway         # history'i verir.
+>docker -v                        # versiyonu verir.
+>cat /etc/os-release              # OS ve current user hakkinda bilgi verir.
+>echo $0                          # kullanilan shell ismini verir.
+>apt-get update && apt-get upgrade -y
+>apt-get install vim
+>docker start a06 && docker attach a06  # durarken baglanamazsin.
+!!!
+>docker run -d --restart unless-stopped redis --name clarusway   # manueal stop edilmedikce durursa restart yapar.
+>docker run -d --restart always redis --name clarusway           # durursa restart yapar. 
+>docker update -d --restart always clarusway                     # mevcut containerin restart politikasini degistirir. 
+
+
+6.Docker Hub:
+- Internetten hub.docker.com > explore reporitories
+>docker pull hello-world          # istedigimiz image'i indirir ve docker host (docker daemon)'a image olarak kaydeder.
+>docker run ubuntu:17.03          # hubtan veriyonuyla beraber indirip container kurar.
+>docker push umitceylan/clarusway # repository ismi/ image ismi
+
+
+7.Docker'dan 
+
+
+
+
+
+
+
+
+
+          

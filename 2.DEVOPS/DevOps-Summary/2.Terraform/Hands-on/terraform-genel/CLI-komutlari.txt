@@ -1,0 +1,17 @@
+terraform init
+
+- -var tanimlanirsa daha once tanimli olsa da suan bu tanima uygun acar.  
+terraform plan -var="s3-name=deneme-umit-11111"
+
+- --var-file, tfvars dosyasini onceler. bu komut yerine dosya ismini terraform koyarsak dogrudan buraya bakar. Aksi halde variable dosyasina bakar.
+terraform plan --var-file="degisken.tfvars"
+
+terraform apply
+
+terraform fmt
+
+terraform validate
+
+
+
+

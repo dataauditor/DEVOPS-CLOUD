@@ -1,0 +1,311 @@
+Genel:
+- Proje:
+  * Webserver
+    - Apache
+  * Dbserver
+    - Mariadb
+
+
+
+Hands-on:
+
+AWS-EC2:
+Red Hat Enterprise Linux 8 ile 3 ec2 actik.
+Biri control (ansible) -consol
+Biri Webserver, Biri dbserver
+
+VSC:
+sudo yum install -y python3 
+  - Bu OS'de bu kutuphaneden kuruluyor.
+pip3 install --user ansible
+export PS1="\[\e[;35m\][\u@\h \W]\$ \[\e[m\]"
+ansible --version
+  - config file yok gosterir.
+  - hatalar veriyor. onlari kaldiracagiz.
+- ugur.pem dosyasini buraya surukledik.
+chmod 400 ugur.pem
+mkdir Ansible-Website-Project
+cd Ansible-Website-Project
+vi inventory.txt
+--------------------------------------------------------------------
+[servers]
+db_server  ansible_host=172.31.86.2  ansible_ssh_private_key_file=~/ugur.pem ansible_user=ec2-user
+web_server ansible_host=172.31.85.192 ansible_ssh_private_key_file=~/ugur.pem ansible_user=ec2-user
+--------------------------------------------------------------------
+  - private ip ve pem dosyasinin konumunu belirttik.
+vim ansible.cfg
+--------------------------------------------------------------------
+[defaults]
+host_key_checking = False
+inventory = inventory.txt
+deprecation_warnings=False
+interpreter_python=auto_silent
+--------------------------------------------------------------------
+vim ping-playbook.yaml
+--------------------------------------------------------------------
+- name: ping them all
+  hosts: all
+  tasks:
+    - name: pinging
+      ping:
+--------------------------------------------------------------------
+ansible all -m ping -o
+  - playbook'un adhoc versiyonu.
+
+vim playbook.yaml 
+  - docs.ansible.com altindan module ve -a alternatiflerini bularak yazilir.
+  - zorunlu olanlar ile ihtiyac duyulanlari module'leri yazariz. 
+--------------------------------------------------------------------
+- name: db configuration
+  hosts: db_server
+  tasks:
+    - name: install mariadb and PyMySQL
+      become: yes
+      yum:
+        name: 
+            - mariadb-server
+            - python3-PyMySQL
+        state: latest
+
+    - name: start mariadb
+      become: yes  
+      command: systemctl start mariadb
+
+    - name: enable mariadb
+      become: yes
+      systemd: 
+        name: mariadb
+        enabled: true
+--------------------------------------------------------------------
+  - inventory'de verilen isimle cagiriyoruz.
+  - 'become: yes' root yetkisi
+  - 'yum:' modul 
+  - 'name:' liste seklinde yazabiliriz.
+  - 'systemd': 
+ansible-playbook playbook.yaml
+  - Mariadb'yi dbserver'i yukledik.
+ansible db_server -m shell -a "mysql --version"
+  - db-server'da mysql yuklenmis mi kontrol ettik.
+vim db-load-script.sql
+--------------------------------------------------------------------
+USE ecomdb;
+CREATE TABLE products (id mediumint(8) unsigned NOT NULL auto_increment,Name varchar(255) default NULL,Price varchar(255) default NULL, ImageUrl varchar(255) default NULL,PRIMARY KEY (id)) AUTO_INCREMENT=1;
+
+INSERT INTO products (Name,Price,ImageUrl) VALUES ("Laptop","100","c-1.png"),("Drone","200","c-2.png"),("VR","300","c-3.png"),("Tablet","50","c-5.png"),("Watch","90","c-6.png"),("Phone Covers","20","c-7.png"),("Phone","80","c-8.png"),("Laptop","150","c-4.png");
+--------------------------------------------------------------------
+vim playbook.yaml 
+--------------------------------------------------------------------
+    - name: copy the sql script
+      copy:
+        src: ~/db-load-script.sql
+        dest: ~/
+--------------------------------------------------------------------
+  - playbook.yaml'in sonuna ekleyerek ilgili scripti db-server'a gonderiyoruz.
+ansible db_server -a "ls"
+  - db-load-script.sql dosyasinin gittigini gorduk.
+  - mariadb kurulu ve icine tabloyu gonderdik.
+vim playbook.yaml
+--------------------------------------------------------------------
+- name: Create password for the root user
+      mysql_user:
+        login_password: ''
+        login_user: root
+        name: root
+        password: "clarus1234"
+--------------------------------------------------------------------
+  - root tanimlayip sifre olusturmak icin playbook'a ekledik.
+vim .my.cnf 
+--------------------------------------------------------------------
+[client]
+user=root
+password=clarus1234
+
+[mysqld]
+wait_timeout=30000
+interactive_timeout=30000
+bind-address=0.0.0.0
+--------------------------------------------------------------------
+  - conf dosyasidir.
+  - password vb verilmezse buradan ceker.
+  - bir onceki playbook eklentisi yerine bu da kullanilanilir.
+vim playbook.yml
+--------------------------------------------------------------------
+- name: copy the .my.cnf file
+      copy:
+        src: ~/.my.cnf
+        dest: ~/
+--------------------------------------------------------------------
+  - .my.cnf dosyasini db-server'a gonderiyoruz.
+ansible-playbook playbook.yml
+  - hata verir. Hem playbook.yaml'da verdik hem de .my.cfg'i gondererek iki  kere verince cakisti.
+vim playbook.yml
+--------------------------------------------------------------------
+    #- name: Create password for the root user
+    #  mysql_user:
+    #    login_password: ''
+    #    login_user: root
+    #    name: root
+    #    password: "clarus1234"
+--------------------------------------------------------------------
+  - seklinde yorum satiri yaparak cakismayi sonlandirdik.
+ansible-playbook playbook.yml
+vim playbook.yml
+--------------------------------------------------------------------
+    - name: Create db user with name 'remoteUser' and password 'clarus1234' with all database privileges
+      mysql_user:
+        name: remoteUser
+        password: "clarus1234"
+        login_user: "root"
+        login_password: "clarus1234"
+        priv: '*.*:ALL,GRANT'
+        state: present
+        host: "{{ hostvars['web_server'].ansible_host }}"
+--------------------------------------------------------------------
+  - '"{{ hostvars['web_server'].ansible_host }}"' ile guncel ip'yi dinamik olarak aliyor.
+
+vim test.yaml 
+--------------------------------------------------------------------
+- hosts: db_server
+  tasks:
+    - debug: var=hostvars
+    - debug: var=hostvars['web_server'].ansible_host
+    - debug: var=hostvars['web_server'].playbook_dir
+    - debug: var=hostvars['db_server'].ansible_host
+    - debug: var=ansible_os_family
+    - debug: var=ansible_selinux.config_mode
+    - debug: var=groups['servers']
+--------------------------------------------------------------------
+  - verileri cekip gorduk. 
+  - ders disi.
+
+vim playbook.yml
+--------------------------------------------------------------------
+    - name: Create database schema
+      mysql_db:
+        name: ecomdb
+        login_user: root
+        login_password: "clarus1234"
+        state: present
+--------------------------------------------------------------------
+  - 'present': olusturur. 'exit': siler.
+ansible-playbook playbook.yml
+vim playbook.yml
+--------------------------------------------------------------------
+    - name: check if the database has the table
+      shell: |
+        echo "USE ecomdb; show tables like 'products'; " | mysql
+      register: resultOfShowTables
+
+    - name: DEBUG
+      debug:
+        var: resultOfShowTables
+--------------------------------------------------------------------
+  - db'de products isimli table var mi kontrol ediyor.
+  - register: islemin sonucunu bir degiskene atiyor. Daha sonra DEBUG vb ile cekilir.
+ansible-playbook playbook.yml
+vim playbook.yml
+--------------------------------------------------------------------
+    - name: Import database table
+      mysql_db:
+        name: ecomdb   # This is the database schema name.
+        state: import  # This module is not idempotent when the state property value is import.
+        target: ~/db-load-script.sql # This script creates the products table.
+      when: resultOfShowTables.stdout == "" # This line checks if the table is already imported. If so this task doesn't run.
+--------------------------------------------------------------------
+  - 
+ansible-playbook playbook.yml
+vim playbook.yml
+--------------------------------------------------------------------
+    - name: restart mariadb
+      become: yes
+      service: 
+        name: mariadb
+        state: restarted
+--------------------------------------------------------------------
+ansible-playbook playbook.yml
+
+vim playbook.yml
+--------------------------------------------------------------------
+- name: web server configuration
+  hosts: web_server
+  become: yes
+  tasks: 
+    - name: install the latest version of Git, Apache, Php, Php-Mysqlnd
+      package:
+        name: 
+          - git
+          - httpd
+          - php
+          - php-mysqlnd
+        state: latest
+--------------------------------------------------------------------
+  - 'package': package'i otomatik belirler.
+ansible-playbook playbook.yml
+vim playbook.yml
+--------------------------------------------------------------------
+    - name: start the server and enable it
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+--------------------------------------------------------------------
+ansible-playbook playbook.yml
+vim playbook.yml
+--------------------------------------------------------------------
+    - name: clone the repo of the website
+      shell: |
+        if [ -z "$(ls -al /var/www/html | grep .git)" ]; then
+          git clone https://github.com/kodekloudhub/learning-app-ecommerce.git /var/www/html/
+          echo "ok"
+        else
+          echo "already cloned..."
+        fi
+      register: result
+
+    - name: DEBUG
+      debug:
+        var: result
+
+    - name: Replace a default entry with our own
+      lineinfile:
+        path: /var/www/html/index.php
+        regexp: '172\.20\.1\.101'
+        line: "$link = mysqli_connect('{{ hostvars['db_server'].ansible_host }}', 'remoteUser', 'clarus1234', 'ecomdb');"
+      when: not result.stdout == "already cloned..."
+--------------------------------------------------------------------
+  - kosullu, yapildiysa tekrarlama. yoksa yap diyor.
+  - clonlama yapildi.
+ansible-playbook playbook.yml
+vim playbook.yml
+--------------------------------------------------------------------
+    - selinux:
+        state: disabled    
+
+    - name: Restart service httpd
+      service:
+        name: httpd
+        state: restarted
+--------------------------------------------------------------------
+ansible-playbook playbook.yml
+
+Selinux: 
+- Linux icin bir guvenlik dosyasi.
+- 3 modu var.
+- default modu enforcing
+
+VSC-Local:
+scp -i 
+
+
+Ctrl + k + c : secili satirlari yorum satiri yapar.
+Ctrl + k + u : secili satirlardan yorumu kaldirir.
+
+
+
+
+
+
+
+
+
+

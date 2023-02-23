@@ -1,0 +1,878 @@
+1.Genel:
+- www.jenkins.io  sayfasindan pluginlerin ozelliklerini okuyabilirsin.
+- Jenkins is a self-contained, open-source automation server that can be used to automate all sorts of tasks related to building, testing, and delivering or deploying software.
+- Continious Integration process'i icra eder.
+- Icinde JRE (Java Runtime Environment) olan tum bilgisayarlarda Docker dahil calisir.
+- Server tabanlidir. Web serverda calisir Apache Tomcat gibi.
+- Build, document, test, package, stage, deploy, static analysis ve daha fazlasini life-cycle icinde yapar.
+
+CI (Continuous Integration):
+- CI:
+  - Developerlar tarafindan gun icinde defaatle lifecycle icinde tekrar test edilir.
+  - Test basarili olursa deployment icin build test edilir.
+  - Deployment basarili olursa code production ortamina aktarilir.
+  - Bu islemler herbir code degisiminde yapilir.
+  - Pluginler sayesinde yapilir CI. Application bazinda pluginleri indirerek CI yaparsin.
+  - Ilave edilecek herbir application icin ilgili pluginini install etmelisin.
+- Devoloper kodu Github'a atar > Calisilabilir olmasi icin build edilir > Unit test ve functional test > Stage: acceptange testler yapilir (manual) > Deployment yapilir musteriye verilmeden once. (Manual) 
+  - Developerlar kodlarini Github'a aktarinca senior kontrol edip merge eder. 
+  - Test: Jenkins Github'a gelen kodu test edip kontrol eder.
+  - Stage safhasinda production ortamina benzer baska bir environmente aktarilir ve burada functional, ... testleri icra eder.
+  - Production environment: Staging environmentte testleri basari ile gecen kodlar production environmente aktarilir.
+- Jenkins file (Infrastructure as a code) ile (Terraform gibi) CI'i kurariz.
+- Compile: kodun sistemin anlayacagi sekilde koda cevrilmesidir.
+
+Continuous Delivery:
+- CI'a ilave olarak User acceptance testler de yapilir.
+- Production ortamina manual gonderilir.
+>> Devoloper kodu Github'a atar > Calisilabilir olmasi icin build edilir > Unit test ve functional test > Stage: acceptange testler yapilir > Deployment yapilir musteriye verilmeden once. (Manual) 
+
+Continuous Deployment:
+- Production'a gonderilmesi dahil otomatik yapilir.
+>> Devoloper kodu Github'a atar > Calisilabilir olmasi icin build edilir > Unit test ve functional test > Stage: acceptange testler yapilir (manual) > Deployment yapilir musteriye verilmeden once.
+
+- DSL: Jenkins'in cfn'i.
+
+a.Installation and Configuration:
+VM/Bilgisayara Kurma:
+sudo yum update -y
+yum install java -y
+wget http://mirrors.jenkins.io/war-stable/latest/jenkins.war
+java -jar jenkins.war --httpPort=8080
+  - Yuklemeyi yapar ve sonunda admin sifresi verir.
+- http://localhost:8080 seklinde browsera yazilarak girilir.
+  - admin sifresi girilir. Yukarda alinmisti. 
+>> Admin sifresi gir > Install suggested plugins > User olustur > Start using jenkins 
+
+veya:
+>sudo yum update -y
+>sudo amazon-linux-extras install java-openjdk11 -y
+>sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
+>sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+>sudo amazon-linux-extras install epel -y
+>sudo yum install jenkins -y
+>sudo systemctl start jenkins
+>sudo systemctl enable jenkins
+>sudo systemctl status jenkins
+>sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+  - sifreyi aliriz.
+
+Docker'a Jenkins Kurma:
+>docker run -d -p 8080:8080 jenkins/jenkins
+  - jenkins yuklenir containere ve bize admin sifresi verir.
+>docker ps
+  - containerin id'si alinir.
+>docker logs <containerid>
+  - loglari gorebilirsin sifreyi almak icin.
+>docker exec -it <containerid> bash
+  - sifreyi alabilirsin.
+>cat /var/jenkins_home/secrets/initialAdminPassword
+  - sifreyi alabilirsin.
+- http://localhost:8080 or http://ec2-ip-address:8080 ile browserden baglanilir.
+>> Admin sifresi gir > Install suggested plugins > User olustur > Start using jenkins 
+
+- Trigger: crontab.guru  ile 
+  * dk / saat / gun / ay / hafta gunu
+
+b.Kullanim:
+- Items: Freestyle Project, Pipeline, External Job, Multi-configuration Project, Folder, Github Organization, Multibranch Pipeline
+>> New item > name/Freestyle Project > Description > Apply/Save > Build > Add build step > Execute shell > Command: echo Hello World/Apply/Save >
+  > suan projenin icindesin > Build now (5sn bekle) > Build history'de build sonucunu gor (build number mavi ise problem yok basarsan build page'e ulasirsin) >
+  > Console Output (console sonuclari gor) ve Success > 
+
+ Create new item > Build application > Console output
+- Freestyle Project: her tur projede kullanilabilir. Set up'i kolaydir.
+- Build:
+  - Windows batch command  : Windows icin
+  - Execute shell          : Linux icin
+
+
+c.Maven Konfigurasyonu:
+- Maven, Java, Git yuklemesi yapilir.
+- Jenkins'e Maven icin konfigursayon yapilir.
+> Manage Jenkins > Configure System > Environment variables > Add > Name: PATH+EXTRA / Value: /opt/maven/bin > Save
+  - Maven Path'ini default user icin tanimladik.
+> Manage Jenkins > Global Tool Configuration > Maven > Maven Installation > Install automatically > Name: maven-3.6.3 > Version: 3.6.3 > Save
+  - ec2-user-a jenkins yuklenince jenkins adli user olusturur ve bu islemleri o yapar.
+
+VSC:
+- ec2-user
+>sudo yum update -y
+>sudo amazon-linux-extras install java-openjdk11 -y
+>sudo yum install java-devel 
+  - java yukledik.
+>sudo su
+>cd /opt
+>rm -rf maven
+>wget https://ftp.itu.edu.tr/Mirror/Apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
+>tar -zxvf $(ls | grep apache-maven-*-bin.tar.gz)
+>rm -rf $(ls | grep apache-maven-*-bin.tar.gz)
+>sudo ln -s $(ls | grep apache-maven*) maven
+>echo 'export M2_HOME=/opt/maven' > /etc/profile.d/maven.sh
+>echo 'export PATH=${M2_HOME}/bin:${PATH}' >> /etc/profile.d/maven.sh
+>exit
+>source /etc/profile.d/maven.sh
+  - Maven yukledik.
+>sudo yum install git -y
+  - git yukledik.
+
+
+Github Konfigurasyonu:
+- github'tan birseyler cekmesi icin github'imizin adresini tanitiyoruz.
+>sudo usermod -s /bin/bash jenkins
+  - "-s" : jenkins kullanicisina shell acar. /bin/bash 'i kullanir (bash).
+  - 3 tur user var: regular, root, service (shell'i yoktur)
+>sudo su - jenkins
+>whoami
+>git config --global user.name dataauditor
+>git config --global user.email byildiz2019@gmail.com
+  - sudo yum install git -y  (hata verirse yukle)
+
+
+2.Hands-on (Basic):
+- Jenkins-01
+- Temel Freestyle project:
+- Instance acilir.
+  - 22 ve 8080 portlari acik.
+VSC:
+- ssh ile instance'a baglan.
+>sudo yum update -y
+>sudo amazon-linux-extras install java-openjdk11 -y
+>java -version
+>sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
+>sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+>sudo amazon-linux-extras install epel
+>sudo yum install jenkins -y
+>sudo systemctl start jenkins
+>sudo systemctl enable jenkins
+>sudo systemctl status jenkins
+>sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+Jenkins Dashboard: 
+- Browserda <ec2'nun public ip>:8080 portundan jenkins dashboard'a baglanilir.
+> Manage Jenkins: (ihtiyac duyulan pluginler indirilir.) 
+  > Manage Plugins 
+  > Available 
+  > (AnsiColor, Copy Artifact, Deploy Container... vb) secilir > install without restart
+> New View: joblari siniflandiririz. 
+  > isim: tomcat application / list view > ok > apply > save
+> New item: job'lari olusturuyoruz.
+  > isim: my-first-job / Freestyle project / ok
+  > Discription: aciklama yazilabilir.
+  > Discard old builds: eski islerin sonu depolanir tarih ve/veya gun sinirlandirmasi getirir.
+  > Execute concurrent builds if necessary: normalde isleri teker teker yapar burada istenirse ayni anda birkac islem yapar.
+  > Source code management: github repo adresi eklenerek codelar githubtan cekilir.
+  > Build trigger: job'in baslatilma zamanini belirtir. Genelde bir trigger secilir. 
+    - GitHub hook trigger for GITScm polling: Github'a birisi code push edilince job'i calistirir.
+    - Poll SCM: belirli araliklarla repository'i kontrol eder degisiklik varsa job'i calistirir.
+  > Build Environment: Onceden yuklenen pluginler.
+    > Add timestamp to..: yapilan tum islemlere zaman ekler.
+  > Build: 
+    > Execute shell: echo "hi" > apply/save
+  > Build now 
+  > Yesil daire veya Console output (yapilan islemleri gosterir.)
+  
+
+3.Hands-on (Pipeline with Pipeline Script):
+- Jenkins-01
+> New Item
+  > isim: simple-pipeline / Pipeline / ok
+  > Pipelene / Pipeline Script
+--------------------------------------------------------------
+pipeline {
+    agent any
+    stages {
+        stage('build') {
+            steps {
+                echo "Clarusway_Way to Reinvent Yourself"
+                sh 'echo second step'
+                sh 'echo another step'                
+                sh '''
+                echo 'Multiline'
+                echo 'Example'
+                '''
+                echo 'not using shell'
+            }
+        }
+    }
+}
+--------------------------------------------------------------
+    - stage ve steps'ler ile farkli farkli gorevleri sira ile icra eder.
+  > apply / save
+  > Build now
+
+
+4.Hands-on (Pipeline with Jenkinsfile)
+- Jenkins-01
+- Pipeline Script'i Jenkinsfile olarak bir repoya yukleyip SCM tanimlayip repodan cektiririz.
+- Git hesabi tanitilir.
+Github:
+> jenkinsfile-pipeline-project adli public repo olustur.
+  > /MY-WORKSPACE/DEVOPS/DevOps-Summary/6.Jenkins/Hands-on-calisma/jenkins-01-installing jenkins konumuna clonladik.
+  > git clone https://github.com/dataauditor/jenkinsfile-pipeline-project.git
+
+VSC:
+>git config --global user.name dataauditor
+>git config --global user.email byildiz2019@gmail.com
+  - sudo yum install git -y  (hata verirse yukle)
+- local
+> Jenkinsfile olustur. (localde clonlanan dosyada) :
+-----------------------------------------------------------------
+pipeline {
+    agent any
+    stages {
+        stage('build') {
+            steps {
+                echo "Clarusway_Way to Reinvent Yourself"
+                sh 'echo using shell within Jenkinsfile'
+                echo 'not using shell in the Jenkinsfile'
+            }
+        }
+    }
+}
+-----------------------------------------------------------------
+    - groovy dilindedir.
+    - Jenkinsfile, Github'ta root directoryde olmali yoksa verilen adreste bulamaz veya konumu detayli verilmeli.
+  > git add . (ilgili dosya icindeyken)
+  > git commit -m 'added Jenkinsfile'
+  > git push
+
+VSC:
+- ec2-user
+>sudo yum install git -y
+  - SCM (source management code) olarak gitten Jenkinsfile cekilecek Jenkins tarafindan.
+  
+Jenkins:
+> New item 
+  > name: pipeline-from-jenkinsfile / Pipeline / ok
+  > Description: Simple pipeline configured with Jenkinsfile
+  > Pipeline > Definition: Pipeline script from SCM > SCM: Git > Repository URL gir (https://github.com/dataauditor/jenkinsfile-pipeline-project) (Code'dan kopyala) > Branch Specifier: master kontrol et > Script Path: Jenkinsfile1 > apply/save
+  > Build now
+
+
+
+5.Hands-on (Webhook Trigger):
+- Jenkins-02
+- freestyle project
+- Webhook: Github'a yeni bir kod veya kodda degisiklik push edilince build ile belirtilen komut icra edilir (tetikler).
+
+Github:
+- Repo olustur: "jenkins-first-webhook-project" isimli public.
+
+VSC:
+- Lokalde calisiyoruz.
+>cd C:\Users\Test\Desktop\MY-WORKSPACE\DEVOPS\DevOps-Summary\6.Jenkins\Hands-on-calisma\jenkins-02-triggers
+>git clone https://github.com/dataauditor/jenkins-first-webhook-project.git
+>cd jenkins-first-webhook-project
+- hello-world.py dosyasina print ("Hello World") yazilir.
+>git add .
+>git commit -m 'added hello world'
+>git push
+
+Jenkins:
+> New item > name: first-job-triggered/free style project/ok > 
+  > Source Code Management: "Git" sec / Repository URL: https://github.com/dataauditor/jenkins-first-webhook-project.git (Code'tan kopyaladik) > Branch Specifier: master (Github'tan kontrol et) 
+  > Build Triggers: "GitHub hook trigger for GITScm polling" sec >     
+  > Build: Add build step: "Execute Shell" > python *.py (shell'e yaz) > apply/save 
+
+Github:
+> ilgili repoya gir > settings > Webhooks > Add webhook > <Jenkins URL>:8080/github-webhook/ yapistir > (yesil tiki gor)
+
+Jenkins:
+> Build now
+  - webhook'un calismasi icin oncesinde 1 defa jenkins dashboard'tan Build now yapilir.
+
+VSC:
+- hello-world.py'de degisiklik yap ve kaydet. 
+>git add .
+>git commit -m 'updated hello world'
+>git push
+
+Jenkins:
+- Github'a transfer Jenkins'i tetikledi ve build islemi oldu.
+
+
+
+6.Hands-on (Pipeline with Webhook and Jenkinsfile):
+- Jenkins-02
+
+Github:
+> `jenkinsfile-pipeline-project` reposuna git > Settings > Webhook > Add Webhook > 
+  <Jenkins URL>:/github-webhook/ yapistir > add webhook (yesil tiki gor)
+
+Jenkins:
+> New item  
+  > name: "pipeline-with-jenkinsfile-and-webhook" / pipeline / ok
+  > Description: Simple pipeline configured with Jenkinsfile and GitHub Webhook
+  > Github Project > Project url: https://github.com/dataauditor/jenkinsfile-pipeline-project.git
+  > Build Trigger: GitHub hook trigger for GITScm polling 
+  > Pipeline > Pipeline script from SCM > SCM: Git > Repository URL: https://github.com/dataauditor/jenkinsfile-pipeline-project.git > branch: master > Script Path: Jenkinsfile (Github'ta root klasorde mi kontrol et)
+  > apply/save
+  > Build now 
+    - otomatize olmasi icin webhook'un bir kere manuel yapilmali. 
+
+VSC:
+- Jenkinsfile'de degisiklik yap ve kaydet. 
+>git add .
+>git commit -m 'updated'
+>git push
+
+Jenkins:
+- Github'a transfer Jenkins'i tetikledi ve build islemi oldu.
+- To build the `python` code with Jenkins pipeline using the `Jenkinsfile` and `GitHub Webhook`.
+
+
+
+7.Hands-on (Pipeline Webhook Jenkinsfile Python Code ):
+- Jenkins-02
+- Configuring Jenkins Pipeline with GitHub Webhook to Run the Python Code.
+
+VSC:
+- "jenkins-pipeline-project" dosyasinda pipeline.py dosyasi olustur ve asagidakini icine yazdir:
+----------------------------------------------------------------
+print('My first python job which is run within Jenkinsfile.')
+----------------------------------------------------------------
+- Jenkinsfile'i update yap:
+----------------------------------------------------------------
+pipeline {
+    agent any
+    stages {
+        stage('run') {
+            steps {
+                echo 'Clarusway_Way to Reinvent Yourself'
+                sh 'python --version'
+                sh 'python pipeline.py'
+            }
+        }
+    }
+}
+----------------------------------------------------------------
+>git add .
+  - "jenkins-pipeline-project" dosyasi icinde.
+>git commit -m 'updated jenkinsfile and added pipeline.py'
+>git push
+
+Jenkins:
+- "pipeline-with-jenkinsfile-and-webhook"u otomatik olarak build yapar.
+
+
+
+8.Hands-on (Pipeline with Poll SCM and Jenkinsfile):
+- Jenkins-02
+- Creating a Pipeline with Jenkinsfile and Poll SCM
+- Poll SCM belirlenen zamanlarda (burada her dakika) verilen repo adresine gidip degisiklik varsa ceker ve build islemi yapar.
+- Repoda degisiklik yoksa islem yapmaz.
+- Jenkinsfile ile pipeline hazir repodaki komutlari icra eder.
+
+Jenkins:
+> New item:
+  > name: jenkinsfile-pipeline-pollSCM / pipeline / ok
+  > Description: This is a pipeline project with pollSCM
+  > Build Triggers > Poll SCM > * * * * * (her 1dk da bir ilgili repoyu kontrol eder)
+  > Pipeline > Pipeline script from SCM > SCM: Git > Repository: https://github.com/dataauditor/jenkinsfile-pipeline-project.git > master > Jenkinsfile
+  > apply / save
+
+
+
+
+ASAGIYA DOGRU SERI:
+
+9.Maven Konfigurasyonu:
+- Maven, Java, Git yuklemesi yapilir.
+- Jenkins'e Maven icin konfigursayon yapilir.
+
+VSC:
+- ec2-user
+>sudo yum update -y
+>sudo amazon-linux-extras install java-openjdk11 -y
+>sudo yum install java-devel 
+  - java yukledik.
+>sudo su
+>cd /opt
+>rm -rf maven
+>wget https://ftp.itu.edu.tr/Mirror/Apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
+>tar -zxvf $(ls | grep apache-maven-*-bin.tar.gz)
+>rm -rf $(ls | grep apache-maven-*-bin.tar.gz)
+>sudo ln -s $(ls | grep apache-maven*) maven
+>echo 'export M2_HOME=/opt/maven' > /etc/profile.d/maven.sh
+>echo 'export PATH=${M2_HOME}/bin:${PATH}' >> /etc/profile.d/maven.sh
+>exit
+>source /etc/profile.d/maven.sh
+  - Maven yukledik.
+>sudo yum install git -y
+  - git yukledik.
+
+Jenkins:
+> Manage Jenkins > Configure System > Environment variables > Add > Name: PATH+EXTRA / Value: /opt/maven/bin > Save
+  - Maven Path'ini default user icin tanimladik.
+> Manage Jenkins > Global Tool Configuration > Maven > Maven Installation > Install automatically > Name: maven-3.6.3 > Version: 3.6.3 > Save
+
+
+
+10. Hands-on (Maven-Archive):
+- Jenkins-03
+- Java programi yuklu repo cekilerek Maven tarafindan clean package calistirilir.
+- target klasoru silinir ve olusan .war dosyasi Jenkins'e kaydedilir.  
+- maven ve java yuklenir. yukardaki hands on'da yukledik.
+
+Jenkins:
+> New item 
+  > name: Package-Application / Free Style Project > ok
+  > Description: This Job is packaging Java-Tomcat-Sample Project and creates a war file.
+  > General > Discard old builds > Strategy: Log Rotation > Days: 5 / Max builds: 2
+  > Source Code Management: Git > Repo URL: https://github.com/JBCodeWorld/java-tomcat-sample.git > main > 
+  > Build Environment > Delete workspace before build starts / Add timestamps to the Console Output
+  > Build > Invoke top-level Maven targets > Maven version: maven-3.6.3 > Goals: clean package > Advanced > POM: pom.xml
+  > Post-build Actions > Archive the artifacts > Files to archive: **/*.war
+  > Apply / Save
+  > Build now > Workspace'te .war dosyasi olustu/kaydedildi.
+
+
+
+11.Hands-on (Maven-Java-Webhook):
+- Jenkins-03
+- Jenkinsfile ile Java programinin Maven'da build ve run edildigi, Webhook'lu proje. 
+  - Burada Maven'in 9'da yuklenmesine ragmen tekrar yuklenmesinden gaye sanki yeni bir Jenkinsmis gibi degerlendiriliyor.
+- We will build the `java` code with Jenkins pipeline using the `Jenkinsfile` and `GitHub Webhook`
+- We will leverage from the same job created in `pipeline-with-jenkinsfile-and-webhook`.
+- Java code, java environment (run the build stages on the java code) ve Jenkinsfile (configured for an automated build on our repo) ihtiyac var.
+
+VSC:
+- local.
+> jenkins-pipeline-project (jenkins-02-triggers icinde) > Hello.java dosyasi olustur:
+------------------------------------------------------------------
+public class Hello {
+
+    public static void main(String[] args) {
+        System.out.println("Hello from Java");
+    }
+}
+------------------------------------------------------------------
+
+VSC:
+- ec2-user
+>sudo yum update -y
+>sudo amazon-linux-extras install java-openjdk11 -y
+>sudo yum install java-devel 
+  - java yukledik.
+>sudo su
+>cd /opt
+>rm -rf maven
+>wget https://ftp.itu.edu.tr/Mirror/Apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
+>tar -zxvf $(ls | grep apache-maven-*-bin.tar.gz)
+>rm -rf $(ls | grep apache-maven-*-bin.tar.gz)
+>sudo ln -s $(ls | grep apache-maven*) maven
+>echo 'export M2_HOME=/opt/maven' > /etc/profile.d/maven.sh
+>echo 'export PATH=${M2_HOME}/bin:${PATH}' >> /etc/profile.d/maven.sh
+>exit
+>source /etc/profile.d/maven.sh
+  - Maven yukledik.
+>sudo yum install git -y
+  - git yukledik.
+
+Jenkins:
+> Manage Jenkins > Configure System > Environment variables > Add > Name: PATH+EXTRA / Value: /opt/maven/bin > Save
+  - Maven Path'ini default user icin tanimladik.
+> Manage Jenkins > Global Tool Configuration > Maven > Maven Installation > Install automatically > Name: maven-3.6.3 > Version: 3.6.3 > Save
+
+VSC:
+- local (jenkins-pipeline-project)
+> Jenkisfile update:
+-----------------------------------------------------------------
+pipeline {
+    agent any
+    stages {
+        stage('build') {
+            steps {
+                echo 'Compiling the java source code'
+                sh 'javac Hello.java'
+            }
+        }
+        stage('run') {
+            steps {
+                echo 'Running the compiled java code.'
+                sh 'java Hello'
+            }
+        }
+    }
+}
+-----------------------------------------------------------------
+>git add.
+>git commit -m "w"
+>git push
+
+Jenkins:
+- jenkinsfile-pipeline-project > pipeline > ok
+  - GitHub hook trigger for GITScm polling
+  - Pipeline script from SCM > Git > https://github.com/dataauditor/jenkinsfile-pipeline-project > */master > Jenkinsfile2
+- jenkinsfile-pipeline-pollSCM ve pipeline-with-jenkinsfile-and-webhook projeleri build oldu.
+  - Alternatif
+
+
+Github:
+> jenkinsfile-pipeline-project > settings > webhook ayarla
+- git ile degisiklik yapip push et.
+
+
+
+12.Hands-on (Maven-Pipeline-Webhook-Jenkinsfile):
+- Jenkins-03
+- Configuring Jenkins Pipeline with Jenkinsfile and GitHub Webhook to Build the target folder of a Java Maven Project
+- Java code'lari icin java environmentin kurulmasina ihtiyac var.
+- Build stages icin Maven env kurulur.
+
+Github: 
+- `jenkins-maven-project' isimli repo olusturuldu.
+>cd C:\Users\Test\Desktop\MY-WORKSPACE\DEVOPS\DevOps-Summary\6.Jenkins\Hands-on-calisma\jenkins-03-maven
+>git clone https://github.com/dataauditor/jenkins-maven-project.git
+- Icine hello-app folder'i atildi.
+>cd jenkins-maven-project
+>git add .
+>git commit -m "w"
+>git push
+
+Jenkins:
+> New item 
+  > name: pipeline-with-jenkinsfile-and-webhook-for-maven-project / pipeline / ok
+  > Description: Simple pipeline configured with Jenkinsfile and GitHub Webhook for Maven project
+  > General: Github project > URL: https://github.com/dataauditor/jenkins-maven-project.git 
+  > Build trigger: GitHub hook trigger for GITScm polling 
+  > Pipeline > Pipeline script from SCM > SCM: Git > URL: https://github.com/dataauditor/jenkins-maven-project.git > master > Jenkinsfile
+  > aply / save
+
+VSC:
+- Jenkinsfile: jenkins-maven-project icinde olusturulur:
+-----------------------------------------------------------------------
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn -f hello-app/pom.xml -B -DskipTests clean package'
+            }
+            post {
+                success {
+                    echo "Now Archiving the Artifacts....."
+                    archiveArtifacts artifacts: '**/*.jar'
+                }
+            }
+        }
+        stage('Test') {
+            steps {
+                sh 'mvn -f hello-app/pom.xml test'
+            }
+            post {
+                always {
+                    junit 'hello-app/target/surefire-reports/*.xml'
+                }
+            }
+        }
+    }
+}
+-----------------------------------------------------------------------
+>git add .
+>git commit -m "w"
+>git push
+
+Jenkins:
+- pipeline-with-jenkinsfile-and-webhook-for-maven-project de tetiklendigini kontrol et.
+- Eger calismazsa once Build now'i calistir.
+
+
+
+13.Hand-on (DSL):
+- Jenkins-03
+- Job DSL: Groove'de yazilmis bir script uzerinden jenkins olusturuyorsunuz.
+- 
+
+Jenkins:
+> Manage Jenkins > Manage Plugins > Available > Job DSL > install
+> New item:
+  > name: Maven-Seed-Job / Freestyle Project / ok
+  > Source Code Management: Git / https://github.com/dataauditor/jenkins-project-settings.git / master / 
+  > Build > Process Job DSLs > Look on Filesystem: MavenProjectDSL.groovy > save
+    - 'MavenProjectDSL.groovy' dosyasi Jenkinsfile gibi komutlar barindirir ve Github'tan cekilecek.
+> Manage Jenkins > In-process Script Approval > Approve (tikla) 
+> Dashboard > Maven-Seed-Job > Build now
+> Dashboard > First-Maven-Project-Via-DSL > Configure > Maven Version: 3.6.3 > Build now
+  - Artifactlari ".jar" yukledik.
+
+
+
+14.Hands-on (Tomcat-Server):
+- Jenkins-04
+- Tomcat server kurulusu:
+- Java'da yazilan app'lar icin kullanilir.
+- .yml dosasini cloudformation ile yapinca stage ve production instances acildi. Tomcatler stage'te yuklu. .cfn de 75. satiri mv apache-tomcat-8.5.75 /opt/tomcat seklinde degistir.
+- Java jdk, Tomcat yuklenir. Cfn'de bu yuklemeler otomatik yapiliyor.
+- Sonrasinda Tomcat web server configure edilir.
+
+AWS SG:
+- 22 ve 8080 portlari acilir.
+
+VSC:
+- Tomcat'i kendimiz yuklersek: 
+>sudo yum update -y
+>sudo yum install java-1.8.0-openjdk -y
+  - java kurulumu
+>sudo yum install unzip wget -y
+  - wget kurulumu.
+
+Browser:
+- https://tomcat.apache.org/download-80.cgi > Binary distributions > Core > zip'in adresini copy link yap.
+
+VSC:
+- Tomcat installation.
+>cd /tmp
+>wget https://ftp.itu.edu.tr/Mirror/Apache/tomcat/tomcat-8/v8.5.71/bin/apache-tomcat-8.5.71.zip
+  - zip dosyasinin adresini copy link yaptik wget'ten sonraya yapistirdik.
+>unzip apache-tomcat-*.zip
+>sudo mv apache-tomcat-8.5.75 /opt/tomcat
+  - tomcat yuklemesi tamamlandi.
+  - Numarasi guncel mi kontrol et.
+
+VSC:
+- Tomcat configuration
+- stage servera baglandik.
+>sudo hostnamectl set-hostname stage
+>bash
+>cat /opt/tomcat/conf/server.xml
+-------------------------------------------------------------
+    <Connector port="8080" protocol="HTTP/1.1"
+               connectionTimeout="20000"
+               redirectPort="8443" />
+-------------------------------------------------------------
+  - Normalde ayni olur ama kontrol edilmeli.
+  - 8080 port connectoru farkli ise vim ile duzelt. Yorum da kalmamali.
+>cd ..
+>cd /opt/tomcat/bin
+>sudo chmod +x *
+>cd ..
+>cd /opt/tomcat/conf
+>sudo vim tomcat-users.xml
+----------------------------------------------------------
+  <role rolename="manager-script"/>
+  <role rolename="admin-gui"/>
+  <user username="tomcat" password="tomcat" roles="manager-script,admin-gui"/>
+-----------------------------------------------------------
+  - </tomcat-users>  uzerini degistiririz. 
+>cd /opt/tomcat/webapps/host-manager/META-INF/
+>sudo vi context.xml 
+------------------------------------------------------------------------
+<!--
+  <CookieProcessor className="org.apache.tomcat.util.http.Rfc6265CookieProcessor"      
+                   sameSiteCookies="strict" />
+  <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+         allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" />
+-->
+----------------------------------------------------------------------------------------
+  - "<!--" ve "-->" seklinde 127..... paragrafini yorum satiri yapiyoruz.
+>cd /opt/tomcat/webapps/manager/META-INF/
+sudo vi context.xml 
+------------------------------------------------------------
+-->
+<Context antiResourceLocking="false" privileged="true" >
+<!--
+  <CookieProcessor className="org.apache.tomcat.util.http.Rfc6265CookieProcessor"
+                   sameSiteCookies="strict" />
+  <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+         allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" />
+-->
+--------------------------------------------------------------------------------
+>sudo /opt/tomcat/bin/shutdown.sh
+>sudo /opt/tomcat/bin/startup.sh
+  - guncelleriz.
+cd /etc/systemd/system
+sudo vi tomcat.service
+  - yeni bir dosya olusturulur: 
+------------------------------------------------------------------------
+[Unit]
+Description=Apache Tomcat Web Application Container
+After=syslog.target network.target
+
+[Service]
+Type=forking
+
+Environment=JAVA_HOME=/usr/lib/jvm/jre
+Environment=CATALINA_PID=/opt/tomcat/temp/tomcat.pid
+Environment=CATALINA_HOME=/opt/tomcat
+Environment=CATALINA_BASE=/opt/tomcat
+Environment='CATALINA_OPTS=-Xms512M -Xmx1024M -server -XX:+UseParallelGC'
+Environment='JAVA_OPTS=-Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom'
+
+ExecStart=/opt/tomcat/bin/startup.sh
+ExecStop=/bin/kill -15 $MAINPID
+
+[Install]
+WantedBy=multi-user.target
+------------------------------------------------------------------
+  - service file olusturuyoruz. Boylece arka tarafta otomatik olarak calisacak.
+sudo systemctl enable tomcat
+sudo systemctl start tomcat
+
+Browser:
+- public ip:8080 ile baglaniriz.
+
+
+
+15.Hands-on (Deploy App):
+- jenkins-05
+- Deploy applications to Staging/Production Environment with Jenkins.
+- Post-build ile Package-Application build olunca otomatik olarak Deploy-Application-Staging-Environment projesi build edilir.
+- Update application ve deploy staging env.
+- Build pipeline plugin.
+- Deploy to prod env.
+- Automate en existing Maven project as pipeline with Jenkins.
+
+Jenkins:
+- Package-Application'dan alinan .war dosyasinin tomcat container servere deploy'u icra edilir.
+- Deploy-Application-Production-Environment instance'ina baglanarak (icinde tomcat yuklu) deployment yapar.
+> tomcat-application view > New item > 
+  > name: Deploy-Application-Staging-Environment / Free Style Project / save
+  > Description : `This Job will deploy a Java-Tomcat-Sample to the staging environment.`
+  > General > Discard old builds > Strategy > Days to keep builds: 5 / Max # of builds to keep: 2
+  > Build Environments > Delete workspace before build starts / Add timestamps to the Console Output
+  > Build > Copy artifact from another project > Package-Application > Which build: Latest successful build > Stable build only > Artifacts to copy: **/*.war
+    - artifact kaydeden projeler cikar bunlarin .war dosyasini cekip bu projede kullanirsin. 
+    - Bu .war dosyasi ayni zamanda tetikleyici olur. 
+    - Artifacti olusturan item her calistiginda bu item'i da tetikler.
+    - Birden fazla build konulabilir. 
+    - Burada .war dosyasi kopyalaniyor.
+  > Add post-build action > Deploy war/ear to a container > WAR/EAR files: **/*.war > Context path: / Containers: Tomcat 8.x Remote > Add credentials > Add: Jenkins (sagdan username ve password add ile tanimlanir) > Username: tomcat / password: tomcat > Credentials: tomcat/***** (soldan tanimlanan username ve password secilir) > Tomcat URL: http://<private ip of staging server>:8080
+    - build ile baska bir item'den kopyalanan .war dosyalari tomcat containerine/servere deploy edilir.
+  > save
+  > Build now
+
+Browser:
+- Staging env bilgisayarinda deploymenti goruruz.
+
+
+!!!
+16.Hands-on (Update app, Deplop Stag Env):
+- jenkins-05 (devam)
+- Update the application and deploy to the staging environment.
+
+Jenkins:
+- Post-build ile Package-Application build olunca otomatik olarak Deploy-Application-Staging-Environment projesi build edilir.
+> Package-Application > Configure > Post-build action > Build other projects > Projects to build: Deploy-Application-Staging-Environment > Trigger only if build is stable
+  - Package application calistikca baska projeyi deploy edecek.
+> Build Triggers > Poll SCM > * * * * * > save
+- Downstream Projects olarak (verilerin gonderildigi) bir baska proje ismini gosterir.
+
+VSC: 
+- java-tomcat-sample dosyasinda degisiklik yapilir.
+>git add .
+>git commit -m "w"
+>git push
+
+Jenkins:
+- 1 dk icerisinde Package-Application sonra da Deploy-Application-Staging-Environment projesi build olur.
+
+
+
+17.Hands-on (Build Pipeline Gorseli):
+- Ilgili pluginleri indirilir.
+- View olusturarak ilgili projeler gorsel bir pipeline olarak izlenir.
+
+Jenkins:
+> Manage Jenkins > Manage Plugins > Available > Build Pipeline > Install without restart
+> New view > name: Pipeline-Tomcat-View > Build Pipeline View > create
+  > Build Pipeline View Title: Deploy-Application-Staging-Environment > 
+  > Pipeline Flow > Layout: Based on upstream/downstream relationship > Select Initial Job:   Package-Application > ok
+  > Run > Refresh
+
+
+
+18.Hands-on ():
+- Bir projeden .war dosyasi cekip Stage-env'da tomcat servere atilir.
+- Stage env. ile olusan build daha sonra Production env.a sevkedilir.
+
+Jenkins:
+- Package-Application'dan .war dosyasi build eder.
+- .war dosyasini Tomcat container'e deploy eder.
+> tomcat-application 'view' > New item > name: Deploy-Application-Production-Environment > Free Style Project > ok
+> Description : `This Job will deploy a Java-Tomcat-Sample to the deployment environment.`
+> General > Discard old builds > Strategy > Days to keep builds: 5 > Max # of builds to keep: 2
+> Build Environment > Delete workspace before build starts / Add timestamps to the Console Output / Color ANSI Console Output
+> Build > Copy artifact from another project > Project name: Package-Application > Which build: Latest successful build > Stable build only > Artifact to copy: **/*.war
+> Add post-build action > Deploy war/ear to a container > WAR/EAR files: **/*.war > Context path: / > Containers: Tomcat 8.x Remote > Credentials: tomcat/***** > Tomcat URL: http://<private ip> > save
+
+Jenkins: 
+- Proje build'i baska projeye gonderiliyor.
+- Upstream Projects : Package-Application
+- Downstream Projects :Deploy-Application-Production-Environment
+> Deploy-Application-Staging-Environment > Configure > Post-build Actions > Build other projects (manual step) > Downstream Project Names: Deploy-Application-Production-Environment
+> Save / Refresh
+
+
+
+19.Hands-on (Automate Maven Pipeline):
+- Automate Existing Maven Project as Pipeline with Jenkins
+- URL ile Maven projesi Github'tan cekilir.
+- Jenkinsfile ile ilgili proje deploy edilir.
+
+Jenkins:
+> New item:
+  > name: package-application-code-pipeline > pipeline > ok
+  > Description: This code pipeline Job is to package the maven project
+  > General > Discard old build > Strategy > Days to keep builds: 5 / Max # of builds to keep: 2
+  > Advanced Project Options > Pipeline > Definition: Pipeline script from SCM > SCM: Git > Repo URL: https://github.com/dataauditor/java-tomcat-sample.git > main > Script Path: Jenkinsfile
+  > Apply / Save
+  > Build now
+-----------------------------------------------------------------------------------------------
+pipeline {
+    agent any
+    stages {
+        stage('Build Application') {
+            steps {
+                sh 'mvn -f pom.xml clean package'
+            }
+            post {
+                success {
+                    echo "Now Archiving the Artifacts....."
+                    archiveArtifacts artifacts: '**/*.war'
+                }
+            }
+        }
+        stage('Deploy to Staging Environment'){
+            steps{
+                build job: 'deploy-application-staging-environment-pipeline'
+
+            }
+            
+        }
+        stage('Deploy to Production Environment'){
+            steps{
+                timeout(time:5, unit:'DAYS'){
+                    input message:'Approve PRODUCTION Deployment?'
+                }
+                build job: 'deploy-application-production-environment-pipeline'
+            }
+        }
+    }
+}
+-----------------------------------------------------------------------------------------------
+
+
+
+20. Hands-on ():
+- Eksik
+- Iki projeyi kopyalayarak pipeline olarak yapma:
+
+Jenkins:
+> New item:
+  > name: deploy-application-staging-environment-pipeline > copy from: Deploy-Application-Staging-Environment > ok
+  > Build: package-application-code-pipeline > Last successful build 
+> New item:
+  > name: deploy-application-production-environment-pipeline > copy from: Deploy-Application-Production-Environment > ok
+
+
+
+
+5 bitti son konu 200'den sonrasi eksik izleyerek yap.
+6 eksik
+
+
+
+
+

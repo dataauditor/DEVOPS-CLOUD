@@ -1,0 +1,589 @@
+1. ECS:
+- ECS: K8s ve Docker swarm gibi container orchestration yapar.
+- 10000 tane image'i private olarak kaydediyor.
+- Alt yapi olarak S3'u kullaniyor. 
+- Versioning vb ozelliklerini kullaniyor.
+- Management'i (kullanimi) kolaydir.
+- Docker ile calisir.
+- EC2 veya AWS Fargate (Serverless) ile calisabilir. Fargate'te guncelleme sorumlulugu AWS'dedir. 
+- Ayni regionu kullaniyorsa Container instance'ler internete cikmadan clusteri run edebilirsiniz.
+- Internete cikislarda ve depolama kapasitesi uzerinden ucretlendirme olur.
+- Rol tanimlayarak authentication tanimlariz. Login olabiliriz.
+- ECR'a image deploy edince ECS otomatik olarak bunu taniyor ve image ECR'dan cekebiliyor.
+- Task:
+  > Dockerfile olusturulur > Image olusturulur > Image'ler ECR'ye push edilir. > ECS'ye task olusturmaya gonderilir > Task olusturur.
+- ECS cluster olusturulur. 
+- Node: Container Instance - once bunlar olusturulur.
+- Pode: Task - Bunlari bir container gibi dusunebiliriz. (Taskleri tanimliyorsunuz.)
+- Taskleri tanimladiktan sonra bir service olusturulur.
+- Daha sonra ECS cluster icinde run ediliyorlar.
+- ECS ucretsizdir.
+- Donanim/Server olarak EC2 ve Farget kullanilabilir.
+  - EC2: Managementi sizdedir.
+  - Farget: Serverless computing. Managementi AWS'dedir. Yormaz.
+
+
+
+2.ECR:
+- Docker image'lari depolar ve ECS ile uyumludur.
+- Internete cikmadan image'larinizi run edebilirsiniz.
+- Registry: Birden fazla repoyu barindirir.
+- Repo: Ayni image'in farkli versiyonlarini barindirir. (Bununla birlikte ayni repoda farkli image'lar da olabilir.)
+- Docker image'leri depolanabilir.
+- Olusan image ECR'a atilince otomatik olarak sikistirilir ve sifrelenir.
+- Versioning, tag, manage lifecycle (saklama suresi ve adetlerini ayarlama), cross account (baska account ve regiona kopyalayabiliyoruz) yapilabilir.
+- Tag Immutability: Disable olursa: latest bir code varsa yeni bir latest gelirse eskiyi untag yaparak tutar, yenisini latest olarak kabul eder. Enable olursa sadece son gonderileni ikaz eder yeniyi kabul etmez. Sonradan acilabilir.
+- Scan: dosyayi kontrol eder. Sonradan acilabilir.
+- Encryption: Sonradan degistirilemez. KMS'i acmazsaniz S3'un default encryption'unu kullaniriz. Her turlu sifreleme zorunludur.
+- Private/Public sonradan degistirilemiyor.
+- Cloudwatch ile izlenebilir.
+- Diger cloudlar ve on-premis'e aktarabilirsiniz.
+- Ucretlendirme: Storage'i ne kadar kullandiginiza ve internete cikisa gore transfer ucreti ile ucretlendirilir.
+- Login/Authenticate: Once kendimizi tanitiriz sonra EC2'ya rol tanimlariz. ('docker login' gibi) Daha sonra pull ve push edebiliriz.
+- Public gallery uzerinden public image'ler paylasilir.
+- Kullanabilmek icin ozellikle EC2'dan: Docker, IAM role for EC" CLI Version 2 ve Registry authentication gerekiyor.
+! ECR Repository'i kullanabilmek icin:
+  * Docker yuklu olmali
+  * IAM role for ECR verilmeli. (EC2'ya ECR ile konusabilmesi icin yetki verilir.)
+  * CLI Version 2 yuklu olmali
+  * Registry authentication yapilmali. (Privat repo icin Login komutu ile kendinizi ECR'ye tanitmaniz gerek. Ornekte var.)
+! IAM role arn'lari baglayarak olusturulur ve assume_role_policy ile attach edilir.
+! aws_iam_instance_profile ile olusturulan IAM role ec2'ya attach edilir.
+
+
+
+3.EKS:
+- K8s altyapisini kullanir. ECS yerine K8s kullanacaksaniz EKS kullanilir. 
+- K8s clusterlarinizi AWS'ye transfer edilecekse kullanilir.
+- Bastan orchestration tool kurulacaksa K8s yerine ECS tavsiye ediliyor.
+
+
+
+
+4.Hands-on:
+> Bir EC2 instance ayaga kaldirilir. 
+  > Instance'a rol tanimlayacagiz.
+  > Instance pull ve push'lari yapacak.
+> ECR > Create > Private > <sol taraf registry name>/student1-repo/todo-app  (repository name) > create
+  - Registry name: account number.
+  - Olusturduktan sonra Private-public ve KMS encryption edit edilemiyor.
+  - ECR'da encryptionjsuz veri tutulamiyor. 
+> View push commands > ihtiyac duyulan docker komutlarini gosterir.
+
+AWS IAM:
+> Role tanimla > fullaccessec2 ve accessIAMrole policies ekle.
+
+AWS EC2:
+> EC2 ac > 22, 80 portlari acik > Ilgili rolu attach et.
+
+VSC:
+- docker ve terraform yukle
+cd ecr-01-elastic
+vim ecr-ec2.tf
+----------------------------------------------------------------
+/*This terraform file creates a Compose enabled Docker machine on EC2 Instance. 
+  Docker Machine is configured to work with AWS ECR using IAM role, and also
+  upgraded to AWS CLI Version 2 to enable ECR commands.
+  Docker Machine will run on Amazon Linux 2 EC2 Instance with
+  custom security group allowing HTTP(80) and SSH (22) connections from anywhere. 
+  assume_role_policy: o rolu kendisi gibi oynamasi
+*/
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_iam_role" "ec2ecrfullaccess" {
+  name = "ecr_ec2_permission"
+  managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"]
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "ecr-ec2_profile"
+  role = aws_iam_role.ec2ecrfullaccess.name
+}
+
+resource "aws_instance" "ecr-instance" {
+  ami                  = "ami-02e136e904f3da870"
+  instance_type        = "t2.micro"
+  key_name        = "ugur"
+  security_groups = ["ec2-sec-gr"]
+  tags = {
+    Name = "ec2-ecr-instance"
+  }
+  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
+  user_data = <<-EOF
+          #! /bin/bash
+          yum update -y
+          amazon-linux-extras install docker -y
+          systemctl start docker
+          systemctl enable docker
+          usermod -a -G docker ec2-user
+          curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" \
+          -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          ./aws/install
+          EOF
+
+}
+
+# curl ile docker compose indiriliyor. Docker oncesinde indirilmisti.
+# chmod ile compose'a execute izni veriliyor.
+# CLI2 yukleniyor.
+
+resource "aws_security_group" "ec2-sec-gr" {
+  name = "ec2-sec-gr"
+  tags = {
+    Name = "ec2-sec-group"
+  }
+  ingress {
+    from_port   = 80
+    protocol    = "tcp"
+    to_port     = 80
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 22
+    protocol    = "tcp"
+    to_port     = 22
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    protocol    = -1
+    to_port     = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
+output "ec2-public-ip" {
+  value = "http://${aws_instance.ecr-instance.public_ip}"
+}
+
+output "ssh-connection" {
+  value = "ssh -i ~/.ssh/ugur.pem ec2-user@${aws_instance.ecr-instance.public_ip}"
+}
+----------------------------------------------------------------
+terraform init
+terraform apply
+  - ECR'a aws'den ec2'ya giris izni veren rol tanimliyor.
+  - Daha sonra olusturulan rol uzerinden profil'e attach ediliyor.
+  - EC2'ya bu profil attach ediliyor. (rol attach edilemiyor-terraform'da)
+
+AWS ECR:
+> Create a repository > private > isim: student1-repo/todo-app > create
+  - Repository name: Basinda Registry name (AWS account id.dkr.ecr.region.amazonaws.com)/repo name = 145012395309.dkr.ecr.us-east-1.amazonaws.com/student1-repo/todo-app
+> View push commands > ilgili repoya Github gibi push, build, login komutlarini gosterir. 
+
+VSC:
+aws ecr get-login-password --region us-east-1
+  - bize aws bir token verir.
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 145012395309.dkr.ecr.us-east-1.amazonaws.com
+  - login yani authenticate yapariz ECR'ye.
+  - ilgili token'i kullaniriz ve 'password-stdin' den sonra sifre olarak kabul eder.
+  - username default olarak AWS olmali, 
+  - '145012395309.dkr.ecr.us-east-1.amazonaws.com' isimli registry'e login olmak istiyorum.
+  - Bu kullanim ile password bir yerde log birakmaz.
+wget https://github.com/awsdevopsteam/jenkins-first-project/raw/master/to-do-app-nodejs.tar
+  - Bir application indiriyoruz. Ornek olsun diye.
+  - '.tar' birden fazla file'in beraber compress edildigi bir uzantidir.
+tar -xvf to-do-app-nodejs.tar
+  - extract yapar.
+cd to-do-app-nodejs/
+vim Dockerfile
+-----------------------------------------------------------------
+FROM node:12-alpine
+WORKDIR /app
+COPY . .
+RUN yarn install --production
+CMD ["node", "/app/src/index.js"]
+-----------------------------------------------------------------
+  - "yarn": bir proje ile ilgili tum dependencies'i yuklemeye yarar.
+  - '--production': sadece prod ile ilgili dependencies'leri indir demektir.
+  - Bunlar source kodun icinde (package.json veya yarn.lock) dosyasinda yazar. Buradaki dependencies'leri indirir. 
+sudo systemctl start docker
+sudo systemctl enable docker
+  - Durmussa burdan calistir.
+docker build -t todo-app:latest .
+  - Mevcut Dockerfile ile image yaptik.
+docker images
+docker run --name todo -d -p 80:3000 todo-app
+  - localimizde olusturdugumuz image ile container olusturuyoruz.
+docker container ls
+  - container calisiyor.
+
+Browser:
+- EC2 public IP:80 ile girilir siteye.
+
+VSC:
+docker container stop todo
+docker container rm todo
+  - 'docker container rm -f 411' calissa da siler.
+docker ps -a
+docker image tag todo-app:latest 145012395309.dkr.ecr.us-east-1.amazonaws.com/student1-repo/todo-app:latest
+  - Image'i ECR'da kullandigimiz repomuzun adresi ile tag'layarak yeni bir image olusturup locale kaydediyoruz.
+  - Image ID'si ikisinin de ayni. Isimleri farkli. 
+docker push 145012395309.dkr.ecr.us-east-1.amazonaws.com/student1-repo/todo-app:latest
+  - Olusturdugumuz image'i ECR'daki repomuza gonderiyoruz.
+docker pull 145012395309.dkr.ecr.us-east-1.amazonaws.com/student1-repo/todo-app:latest
+  - image cekme.
+docker image rm -f 145012395309.dkr.ecr.us-east-1.amazonaws.com/student1-repo/todo-app
+  - Image id ile de silinebilir.
+docker image pull 145012395309.dkr.ecr.us-east-1.amazonaws.com/student1-repo/todo-app:latest
+  - 'docker pull ...' ile de cekebiliriz.
+  - Cekmedi sadece ismi cekti 2 ayni ID'de image olustu.
+docker images
+docker container rm todo
+  - onceden ayni isimle kalan container silindi (varsa).
+docker run --name todo -dp 80:3000 145012395309.dkr.ecr.us-east-1.amazonaws.com/student1-repo/todo-app:latest
+  - pull ettigimiz image ile run ediyoruz.
+docker container rm -f 68
+vim src/static/js/app.js
+--------------------------------------------------------------------------
+<p className="text-center">No items yet! Add one above!</p>
+# yukaridaki ifadeyi buluruz ve 'No items yet! Add one above!' ifadesi yerine farkli bir ifade yazariz.
+--------------------------------------------------------------------------
+  - App dosyasinda yukardaki ifadeyi ilgili yerde degistirip tekrar build ettigimizde yeni image'de degisir.
+docker build -t todo-app:latest .
+  - Son halini build edecek. Image yapacak.
+docker images
+  
+
+
+5.Hands-on:
+- ECR-2
+- ECR repository olusturma.
+- terraform ile Git, Docker, AWS CLI'i da kullanarak bir EC2'da Jenkins olusturma.
+- Dockerfile ile image olusturma.
+- Jenkinsfile ile pipeline olusturma.
+- Webhook kurma.
+- Jenkins pipeline ile NodeJS projesini build etme.
+- Docker komutlari ile ECR'a image tag'lama, pull ve push etme.
+- CLI komutlari ile ECR repository silme.
+
+Github:
+> Settings > Developer settings > Personal access tokens > Generate new token > tumunu tikle / expiration: no expiration > Generate token (kopyala)
+
+VSC:'
+> ecr-ec2-jenkins.tf dosyasinda provider altindaki bilgiler girilir: 
+  - access_key = ""
+  - secret_key = ""
+> ecr-ec2-jenkins.tf dosyasinda locals altindaki bilgiler girilir: 
+  - github-email = "byildiz2019@gmail.com"                      
+  - github-username = "dataauditor"                             
+  - github-token = "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"   
+  - key_pair="ugur"            					
+  - pem_key_address = "~/.ssh/ugur.pem" 
+terraform init
+  - Github repo olusturulur.
+  ! IAM role olusturur ve assume_role_policy ile attach ederiz.
+  ! aws_iam_instance_profile ile olusturulan IAM role ec2'ya attach edilir.
+  - ec2 ve jenkins user'lari docker group'una eklenerek sudo'suz islem yapabilir.
+  ! Docker icinde kod degistirilerek Jenkins docker containerleri agent olarak kullanabiliyor.
+  - CLI 2 yukleniyor.
+  ! connection ile ec2'ya ssh baglantisi yapilir ve remote_exec ile remote olarak ec2'ya komutlar gonderilir.
+aws iam delete-instance-profile --instance-profile-name jenkinsprofile
+  - uretilmekte olan profil ile ayni isimde profil olugu icin apply edemiyor.
+  - onceden olusturulmus olan profil silindi.
+terraform apply
+  - Jenkins icin ec2 kurulur. (22, 80 ve 8080 acik)
+
+VSC-ec2:
+cat /var/jenkins_home/secrets/initialAdminPassword
+  - Jenkins kodu alinir.
+
+Jenkins:
+- Jenkins konfigure edilir.
+- Jenkins'in kurulmasi icin jenkins ve key'i indirilir sonra epel repository eklenir daha sonra Jenkins install edilir.
+> kodu yapistir.
+> install suggested plugins
+> ec2 public ip:8080 > user: admin / password: Clarusway1234
+> Manage Jenkins > Manage Plugins > Available > GitHub Integration, Pipeline: GitHub, Docker, Docker Pipeline pluginlerini indir. > install without restart
+  - pluginler indirildi.
+
+AWS-ECR:
+> private > repo name: clarusway/to-do-app > create
+
+Github:
+- Webhook repodaki her degisimi gonderir.
+> todo-app-node-project > settings > Webhooks > Add webhook > Payload URL: http://3.88.42.220:8080/github-webhook/ add > refresh > yesil tik goruldu.
+
+Jenkins:
+- Jenkins yalniz Java ile calisir. Hatta bir agent baglanilacaksa ona da Java kurulmali.
+- Webhook, Jenkinsfile ile Pipeline,  
+> Jenkinsfile > Kodu kontrol > docker built (paketleyecegiz-image olusturacagiz) > ECR'a push > ECR'dan pull (normalde farkli pipeline ile cekilir) > Container (olusturulur) ile ayaga kaldirilir.   
+> New item > name: todo-app-pipeline > pipeline > ok
+  > General > Github project: https://github.com/dataauditor/todo-app-node-project.git
+  > Build Triggers > GitHub hook trigger for GITScm polling
+  > Pipeline > Pipeline script from SCM > SCM: Git > URL: https://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@github.com/dataauditor/todo-app-node-project.git > master > Jenkinsfile > apply/save
+    - Token'i da kullan. (http://token@github.com/...)
+  > Credentials > Add > Jenkins > Username: ugur (serbest) / Password: token > Add
+
+VSC-Jenkins:
+ls
+cd todo-app-node-project/
+vi Jenkinsfile
+--------------------------------------------------------------------------------
+pipeline {
+    agent any
+    stages {
+        stage("Run app on Docker"){
+            agent{
+                docker{
+                    image 'node:12-alpine'
+                }
+            }
+            steps{
+                withEnv(["HOME=${env.WORKSPACE}"]) {
+                    sh 'yarn install --production'
+                    sh 'npm install'
+                }   
+            }
+        }
+    }
+}
+--------------------------------------------------------------------------------
+  ! Oncelikle calistirilacak app (nodejs)in env'i yuklenmeli. Bunu da host'a yapmaktansa containere kuruyoruz.
+  - Once container kuruyoruz sonra gerekli dependencies'leri yukluyoruz. 
+  - agent any yerine: Manage Jenkins > Manage Nodes and Clouds > New Node uzerinden eklenen node'lar ismen verilebilir.
+  ! Jenkins normalde her proje icin bir workspace olusturup ilgili dosyalari oraya kaydeder. Githubtan aldiklarini ornegin. 
+  ! 'withEnv(["HOME=${env.WORKSPACE}"])': Containere workspace kuramadigi icin Jenkins host'ta kurdugu workspace'i containere mount eder, volume olarak baglar. 
+  ! Boylece proje dosyalarini container'de de gorup calistirabiliriz.
+! sol tarafta Source control > Ilgili clonlanmis dosyaya tikla. > Changes RC > Stage All Changes > Bosluga yorum yaz > Yukarda Commit tikine bas > 3 noktaya bas > push
+  - Push ederiz son degisiklikleri.
+> built now
+  ! github adresine gider > oradaki fileleri workspace'e alir > commit ettin diyor > imaga'i pull ediyor > containeri vol mount ederek ve -d modda run ediyor. > docker shellini jenkins shelline yapistirir. Boylece containerin icini goruruz. > dependencies'ler indirilir > npm install ile nodejs calistirilir > containeri stop eder > containeri siler.
+  - workspace: /var/lib/jenkins/workspace/todo-app-pipeline
+  ! Jenkins public ip:8080/env-vars.html/ ile otomatik olusan env variable'lari gorebiliriz.
+vi Dockerfile
+  - Dockerfile ile Jenkinsfile olusturulur.
+--------------------------------------------------------------------------------
+FROM node:12-alpine
+WORKDIR /app
+COPY . .
+RUN yarn install --production
+CMD ["node", "/app/src/index.js"]
+--------------------------------------------------------------------------------
+  - nodejs ile bir image olustururuz.
+vi Jenkinsfile
+--------------------------------------------------------------------------------
+pipeline {
+    agent any
+    environment {
+        ECR_REGISTRY = "145012395309.dkr.ecr.us-east-1.amazonaws.com"
+        APP_REPO_NAME= "clarusway/to-do-app"
+	PATH="/usr/local/bin/:${env.PATH}"
+    }
+    stages {
+        stage("Run app on Docker"){
+            agent{
+                docker{
+                    image 'node:12-alpine'
+                }
+            }
+            steps{
+                withEnv(["HOME=${env.WORKSPACE}"]) {
+                    sh 'yarn install --production'
+                    sh 'npm install'
+                }   
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build --force-rm -t "$ECR_REGISTRY/$APP_REPO_NAME:latest" .'
+                sh 'docker image ls'
+            }
+        }
+        stage('Push Image to ECR Repo') {
+            steps {
+                sh 'aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$ECR_REGISTRY"'
+                sh 'docker push "$ECR_REGISTRY/$APP_REPO_NAME:latest"'
+            }
+        }
+    }
+    post {
+        always {
+            echo 'Deleting all local images'
+            sh 'docker image prune -af'
+        }
+	success {
+	    echo 'Islem basarili'
+	}
+    }
+}
+--------------------------------------------------------------------------------
+  - Jenkinsfile'i degistiririz. aws_account_id degistirdik.
+  - ilave olarak variable tanimliyoruz.
+  - Image build yapiyoruz.
+  - ECR'a authentice olarak baglaniyoruz. ilk bolum sifre uretir ve '--password-stdin'e gonderir. username: AWS olur.
+  ! Image'i ECR'a push ediyoruz. '--force-rm': Son layer haric image olusurken olusan diger layerlari (intermediate containerleri) siler.
+  - localdeki tum image'leri siliyoruz.
+docker image rm -f 0f0
+  - tek image numarasi versek de intermadiate containerleri de siler. Burada 7 image siler.
+! sol tarafta Source control > Ilgili clonlanmis dosyaya tikla. > Changes RC > Stage All Changes > Bosluga yorum yaz: second commit > Yukarda Commit tikine bas > 3 noktaya bas > push
+
+Jenkins:
+- Webhook calisti ve built basladi.
+- command not found, Cannot perform an interactive login from a non TTY device.
+  ! Jenkis job'lari execute ederken kendi user (jenkins)'ini kullanir. Onceki user makineyi kuran user, ec2-user'di.
+cat /etc/passwd 
+  - env'da jenkins userini goruruz.
+cd /usr/local/bin
+  - aws komutlarini goruruz.
+echo $PATH
+  - calistirilan komutlar path altindaki dosyalara bakilarak bulunur.
+  ! /usr/local/bin $PATH'e tanimlanmis ama ec2-user icin. jenkins user'inda bu yol tanimli degil.
+  ! jenkins user'inin $PATH'ine /usr/local/bin'i eklemeliyiz.
+! PATH="/usr/local/bin/:${env.PATH}" kodunu Jenkinsfile'da environmentin altina ekleriz.
+export PATH=/usr/local/bin:$PATH
+  - Jenkinsfile yerine buradan da eklenebilir.
+! sol tarafta Source control > Ilgili clonlanmis dosyaya tikla. > Changes RC > Stage All Changes > Bosluga yorum yaz: second commit > Yukarda Commit tikine bas > 3 noktaya bas > push
+
+Jenkins:
+- Built islemi Webhook ile baslamis.
+Built tamamlandi.
+
+VSC:
+- Developer tarafindan Github'a guncelleme yapilirsa deniyoruz.
+vi src/static/js/app.js
+  - 56. satirdaki 'No item yet! Add one above' yerine baska birsey yaz.
+> sol tarafta Source control > Ilgili clonlanmis dosyaya tikla. > Changes RC > Stage All Changes > Bosluga yorum yaz: second commit > Yukarda Commit tikine bas > 3 noktaya bas > push
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <aws_account_id>.dkr.ecr.us-east-1.amazonaws.com
+  - Manual olarak built etmek icin once baglaniriz. Sonra run komutu calistirilir.
+docker run --name todo -dp 80:3000 <aws_account_id>.dkr.ecr.us-east-1.amazonaws.com/clarusway/to-do-app:latest
+  - ECR'dan image pull ederek todo isimli container kurduk.
+docker container stop todo
+docker container rm todo
+
+
+
+6.Hands-on:
+- ECR-02
+- Env olusturma, built, ECR'ye push ve pull, run container, deploy
+- ECR'ye private image gonderebilmek icin oncesinde login olmak gerek.
+
+VSC:
+cd todo-app-node-project
+vi Jenkinsfile
+-----------------------------------------------------------------------------
+pipeline {
+    agent any
+    environment {
+        ECR_REGISTRY = "<aws_account_id>.dkr.ecr.us-east-1.amazonaws.com"
+        APP_REPO_NAME= "clarusway/to-do-app"
+        PATH="/usr/local/bin/:${env.PATH}"
+    }
+    stages {
+        stage("Run app on Docker"){
+            agent{
+                docker{
+                    image 'node:12-alpine'
+                }
+            }
+            steps{
+                withEnv(["HOME=${env.WORKSPACE}"]) {
+                    sh 'yarn install --production'
+                    sh 'npm install'
+                }   
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build --force-rm -t "$ECR_REGISTRY/$APP_REPO_NAME:latest" .'
+                sh 'docker image ls'
+            }
+        }
+        stage('Push Image to ECR Repo') {
+            steps {
+                sh 'aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$ECR_REGISTRY"'
+                sh 'docker push "$ECR_REGISTRY/$APP_REPO_NAME:latest"'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$ECR_REGISTRY"'
+                sh 'docker pull "$ECR_REGISTRY/$APP_REPO_NAME:latest"'
+                sh 'docker ps -q --filter "name=todo" | grep -q . && docker stop todo && docker rm -f todo'
+		sh 'docker run --name todo -dp 80:3000 "$ECR_REGISTRY/$APP_REPO_NAME:latest"'
+            }
+        }
+
+    }
+    post {
+        always {
+            echo 'Deleting all local images'
+            sh 'docker image prune -af'
+        }
+    }
+}
+----------------------------------------------------------------------------------
+  - nodejs'ler default olarak 3000 portunu kullanir. Dockerfile'da port kullanmadigimiz halde 3000'den cikis yapiyor.
+  - Herbir stage yeni bir shell acar. Authentication, herbir shell icin yapilir. Bu yuzden onceden Docker authenticate yapilsa da bu shell icin de yapilmali.
+  - Error vermemesi icin 'sh 'docker ps -q --filter "name=todo" | grep -q . && docker stop todo && docker rm -f todo'' komutu ile run ile yeni container olusturmadan once ayni isimdeki containeri sileriz.
+    - filter ile todo isminde container varsa id'si ile doner. Yoksa bos doner. Bu durumda failure vermemesi icin 'grep -q .' kullanilir.
+    - 'grep -q .': 0 sonucu verir ve cvp gelmemesi yerine kullanilir. 
+- Developer tarafindan Github'a guncelleme yapilirsa deniyoruz.
+vi src/static/js/app.js
+  - 56. satirdaki 'No item yet! Add one above' yerine baska birsey yaz.
+> sol tarafta Source control > Ilgili clonlanmis dosyaya tikla. > Changes RC > Stage All Changes > Bosluga yorum yaz: second commit > Yukarda Commit tikine bas > 3 noktaya bas > push
+- built olur.
+- terraform destroy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

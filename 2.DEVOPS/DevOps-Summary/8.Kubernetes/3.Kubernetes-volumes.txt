@@ -1,0 +1,239 @@
+1.Volumes:
+- 
+- Uc cesit volume var:
+  - Persistence Volume
+    - .yaml dosyasi ile olusturur; hostPath, kapasite, readwrite ozelligini belirleriz.
+    - claim dosyasi ile olusturulmus olan pv'yi cagiririz.
+      - storageClassName, accessModes ayni olmali ve talep edilenden az kapasiteli pv alinamaz.
+    - Pod, Deployment vb olustururken onceden calistirdigimiz pvc'yi referans veririz. (pv'yi degil)
+    - adres pvc'de yazilmaz ilgili pod'da yazilir.
+  - EmptyDir
+    - Pod'la birlikte ayni .yaml file ile olusturulur ama container dusse de dusmez.
+    - Containerle ayni podu paylasir ve api-server tarafindan takip edilir.
+    - Container dusse de ayni podda yenisi olusturulur ve emptydir Pod yasadikca devam eder.
+  - Persistence Volume:
+    - Buradaki cloud'da bir disc olusturur ve Node'a baglar. En saglami budur.
+    - Node dusse de disc devam eder.
+
+
+
+
+
+2.Hands-on:
+- Persistence Volume, pod ile ayni node'da olusturulur.
+
+VSC-worker:
+kubectl cluster-info
+  - kubernetes running mi gosterir.
+kubectl get no
+kubectl explain pv
+mkdir pv-data && cd pv-data
+echo "Welcome to Kubernetes persistence volume lesson" > index.html
+ls
+pwd
+
+VSC-master:
+mkdir volume-lessons && cd volume-lessons
+vim clarus-pv.yaml
+----------------------------------------------------
+ apiVersion: v1
+ kind: PersistentVolume
+ metadata:
+   name: clarus-pv-vol
+   labels:
+     type: local
+ spec:
+   storageClassName: manual
+   capacity:
+     storage: 5Gi
+   accessModes:
+     - ReadWriteOnce
+   hostPath:
+     path: "/home/ubuntu/pv-data"
+----------------------------------------------------
+kubectl apply -f clarus-pv.yaml
+kubectl get pv clarus-pv-vol
+kubectl explain pvc
+vim clarus-pv-claim.yaml
+----------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clarus-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+----------------------------------------------------
+kubectl apply -f clarus-pv-claim.yaml
+kubectl get pvc clarus-pv-claim
+vim clarus-pod.yaml
+----------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: clarus-pod
+  labels:
+    app: clarus-web 
+spec:
+  volumes:
+    - name: clarus-pv-storage
+      persistentVolumeClaim:
+        claimName: clarus-pv-claim
+  containers:
+    - name: clarus-pv-container
+      image: nginx
+      ports:
+        - containerPort: 80
+          name: "http-server"
+      volumeMounts:
+        - mountPath: "/usr/share/nginx/html"
+          name: clarus-pv-storage
+----------------------------------------------------
+  - yukarda olusturulan pvc referans yapildi.
+  - mount edilecek adres containerin altinda tanimlandi. host address ise pv'de tanimli.
+kubectl apply -f clarus-pod.yaml
+kubectl get pod clarus-pod
+kubectl exec -it clarus-pod -- /bin/bash
+curl http://localhost/
+
+VSC-Worker:
+cd pv-data
+echo "Kubernetes Rocks!!!!" > index.html
+  - Volume'daki index'i degistiriyoruz.
+
+VSC:
+kubectl exec -it clarus-pod -- /bin/bash
+# curl http://localhost/
+kubectl expose pod clarus-pod --port=80 --type=NodePort
+  - Pod'a NodePort bagladik.
+kubectl get svc
+
+Browser:
+http://<public-workerNode-ip>:<node-port>
+
+VPC:
+kubectl delete pod clarus-pod
+kubectl delete pvc clarus-pv-claim
+kubectl delete pv clarus-pv-vol
+
+
+
+3.Hands-on:
+- Binding PV to PVC
+
+VPC:
+mkdir pvc-bound && cd pvc-bound
+vim pv-3g.yaml
+-----------------------------------------------------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-3g
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 3Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/home/ubuntu/pv-data"
+-----------------------------------------------------
+kubectl apply -f pv-3g.yaml
+vim pv-10g.yaml
+-----------------------------------------------------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-10g
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/home/ubuntu/pv-data"
+-----------------------------------------------------
+kubectl apply -f pv-10g.yaml
+kubectl get pv
+  - 3GB ve 10GB'lik iki pv olustu.
+echo '
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-claim-4g
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi' > pv-claim-4g.yaml
+kubectl apply -f pv-claim-2g.yaml
+kubectl get pvc
+  - 4GB talebi 10GB'lik pv ile karsilandi. 3GB, 4'e daha yakin olsa da talebin altindaki volume baglanamaz.
+vim pv-claim-20g.yaml
+-----------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-claim-20g
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+-----------------------------------------------------
+kubectl apply -f pv-claim-20g.yaml
+kubectl get pv,pvc
+  - Talep edilen miktar veya uzerinde pv olmadigi icin pendingte bekler. Yeterli bir pv olusunca baglanir.
+kubectl delete -f .
+
+
+
+4.Hands-on:
+- EmptyDir
+
+VPC:
+vim nginx.yaml
+--------------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-podum
+  labels:
+    app: nginx
+spec:
+  containers:
+  - name: mynginx
+    image: nginx:1.19
+    ports:
+    - containerPort: 80
+    volumeMounts:
+      - mountPath: /test
+        name:  emptydir-test
+  volumes:
+  - name: emptydir-test
+    emptyDir: {}
+--------------------------------------------------------
+  - pod ile emptyDir olustu.
+  - /test dosyasi emptyDir ile baglantilidir. 
+kubectl apply -f nginx.yaml 
+kubectl exec -it nginx-podum -- bash
+# ls
+# cd test
+# echo "Hello World" > hello.txt 
+docker container ls
+docker container rm -f <container-id>
+  - containeri siliyoruz ama pod silinmiyor, icinde emptyDir var. Yerine yeni container olusuyor.
+kubectl exec -it nginx-pod -- bash

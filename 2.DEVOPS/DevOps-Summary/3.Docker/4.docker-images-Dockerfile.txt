@@ -1,0 +1,242 @@
+1.Image:
+- Baslangicta read-write layer bos gelir.
+- Read-only layera yazilmayip uzerine yeni bir layer olusturulup yapilan degisimler read-write layera yazilir. 
+!!!
+- /var/lib/docker: Docker hostta image'lerin tutuldugu directory. 
+>docker image ls                   # imageleri listeler.
+>docker image pull ubuntu          # ubuntu image'i indir
+>docker run -it ubuntu             # yukler ve calistirir.
+#cat /etc/os-release               # image'in versiyon vb bilgisini verir.
+#exit                              # icinden cikildi
+>docker image pull ubuntu:18.04    # versiyonuyla birlikte image indirme
+>docker image inspect ubuntu:18.04          
+>docker image history ubuntu  
+!!!
+>docker rmi ubuntu                 # "rmi" remove image
+>docker search python              # image aratma 
+>docker search ubuntu              # docker hub'ta ilgili imaji arar.
+>docker pull docker.io/ubuntu:20.04             # registry UPL/Repository:Tag Official
+>docker pull docker.io/clarusway/flask-app:2.0  # Registry URL/Repository:Tag  Ozel
+
+vim Dockerfile
+------------------------------------------------
+FROM ubuntu
+LABEL maintainer="clarusway@example.com"
+RUN apt-get update && apt-get install -y nginx
+EXPOSE 80
+------------------------------------------------
+!!!
+docker build -t="clarusway" .       # docker image olusturma
+!!!
+docker run -d -p 8080:80 --name mycontainer clarusway nginx -g "daemon off;"  # olusan imajdan container acma.
+docker ps -a
+docker stop mycontainer
+docker rm mycontainer
+docker image rm ubuntu:18.04
+docker images                        # image'leri listeler
+
+
+2.Dockerfile:
+- Talimatlar butunudur. Applicationa yonelik olusturulur.
+- Dockerfile calistirilacak application (ornegin .py dosyasi) ile ayni dosya icinde olur.
+- Bir dosya icinde Dockerfile olusturup icinde kod ile imaje olusturabiliriz.
+- Dockerfile'da FROM, LABEL vb'nin buyuk harf olmasi onemli ve sirasi da onemli.
+- FROM: ilk imaji nerden alacagiz
+- RUN: imajin olusma asamasinda kullanilir.
+- CMD: containerin olusma asamasinda kullanilir.
+- ADD: copy ve cekme islemleri URL alma vb islemlerinde kullanilir. zip'li dosyayi acarak gonderiyor.
+- ENTRYPONT: Ilk default komutu degistiremeyiz. Her container acilisinda bunu yapar.
+- VOLUME: imaj icinde volume baglanacaksa volume olusturabiliriz.
+- WORKDIR: directory'i belirleriz.
+- ARG: 
+- HEALTCHECK: containerin calisip calismadigini kontrol eder. Hata verir, uyari verir, baglantilari kopmustur vb bunlari bu satirdan belirtip kontrol edebiliriz.
+
+
+a.Dockerfile ile Image Olusturma:
+!!!!!!
+docker build -t imagename/tag -f Dockerfile .
+docker build -t mynginximage/last -f Dockerfile.agent .
+
+
+b.Dockerfile ile nginx kurma:
+!!!
+docker login
+  umitceylan
+  Mustafa11,h
+mkdir static_web && cd static_web
+touch Dockerfile
+vim Dockerfile                     # ubuntu kurup, guncellemeleri alip nginx web-server kuracak
+-----------------------------------------------
+FROM ubuntu
+LABEL maintainer="clarusway@example.com"
+RUN apt-get update && apt-get install -y nginx
+EXPOSE 80
+-----------------------------------------------
+docker build - < Dockerfile               # Dockerfile ile image olusurma.
+docker build -f Dockerfile .              # Dockerfile ile image olusturma.
+docker image ls                           # imajlari gorme
+!!!!!
+sudo docker build -t="clarusway_web" -f Dockerfile2 .    # isim vererek belli isimdeki Dockerfile'dan image olusturma 
+docker ps                                 # olusan containerlari ve acik portunu gosterir.
+docker port 320                           # containerlerin acik portlarini gosterir.
+
+
+c.Dockerfile ile komut yazan image olusturma:
+-----------------------------------------------
+FROM alpine
+CMD ["echo", "hello world!"]
+-----------------------------------------------
+docker build .                            # Dockerfile ile ayni konumda komut girilince icindeki komutu icra edecek bir image olusur.
+docker run --name test 43c                # yeni imagein id'sini vererek container olusturma.
+ 
+d.Dockerfile ile script acan image olusturma:
+vim script.sh                             # script file olusturma
+-----------------------------------------------
+#!/bin/bash
+echo hello world, from a script file!
+-----------------------------------------------
+:!chmod +x script.sh                      # izin veriyoruz.                          
+-----------------------------------------------
+FROM alpine
+COPY script.sh /script.sh                 # ilki script dosyasi ikincisi containerde belirlediginiz mevki.
+# COPY . /usr/src/app                     # mevcut klasordeki herseyi ilgili adrese kopyalar.
+CMD ["/script.sh"]                        # ilgili scripti icra eder.
+-----------------------------------------------
+docker rm test
+docker build .				  # image'i icinde .sh dosyasiyla olusturur.
+docker run --name test 734                # containeri kurar.
+
+
+3.Docker Hub:
+- hub.docker.com'da "umitceylan" id'si ile ve "Mustafa11,h" sifreli hesabimdan image paylasabilirim.
+docker push umitceylan/my-images:tagname  # hesabimin adini ve imaja isim vererek push ederiz.
+sudo docker rmi clarusway_web             # image silme.
+docker pull ubuntu:18.04                  # image cekme
+docker images --help
+docker images                             # tum image'leri gosterir.
+docker images -f "dangling=false"         # "-f" filter
+docker images -a                          # "-a" all
+docker run --name U1 -it ubuntu bash      # ubuntu imajindan container kurduk ve bashine baglandik.
+docker inspect ubuntu                     # image hakkinda detayli bilgi
+docker stop U1                            # durdurma
+docker rmi U1                             # containeri durdurmadan silemeyiz.
+docker rmi -f ubuntu:18.04                # "-f" forcefully image'i siler.
+docker search <image>                     # istedigimiz imagi Docker Hub'ta arama komutu
+
+
+4.Hands-on:
+- ec2'ya baglanilir.
+- welcome.py
+------------------------------------------------------
+from flask import Flask
+app = Flask(__name__)
+@app.route("/")
+def hello():
+    return "<h1>Welcome to Clarusway</h1>"
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=80)
+------------------------------------------------------
+- Dockerfile: welcome.py dosyasinin bulundugu ders klasorunde olusturulur.
+------------------------------------------------------
+FROM ubuntu
+RUN apt-get update -y
+RUN apt-get install python3 -y
+RUN apt-get install python3-pip -y
+RUN pip3 install flask
+COPY . /app                         # mevcut konumdaki tum dosyalari app'ye kopyalar.
+WORKDIR /app                        # islem yapilacak/calisilacak dosya konumunu gosterir.
+CMD python3 ./welcome.py            # container olusturulurken default olarak calistirilacak program. python3 komutu ile ilgili app'i calistirir.
+------------------------------------------------------
+>cd ders
+>docker build -t umitceylan/flask-app:1.0 .
+  - "-t" tagler.
+  - "kendi repository ismi/alt repository ismi:tag seklinde yazilir.
+  - "." soz konusu konumdaki tum dosyalari image'a kopyalar.
+  - Mevcut konumdaki Dockerfile ile image'i olusturur.
+  - Dockerfile 8 layer. Bu yuzden build islemi (image olusturma) esnasinda her icra ettigi komut sonrasinda yeni image ala ala ilerler.
+  - Toplamda 8 ayri image olusur ve her image uzerine muteakip islem yapildiginda eski image silinir.
+>docker run -d -i --name welcome -p 90:80 umitceylan/flask-app:1.0 
+  - Ilgili klasor (ders) icinde iken container olusturma komutu yazilir.
+  - Mevcut konumdaki Dockerfile'i alarak container olusturur.
+  - Ilgili image "umitceylan/flask-app:1.0" built ile olusturulmadan container olusturulamaz.
+  - sg'den 90 portuna izin verilir.
+  - "-i": kullanirsak attach edilebilir sonradan.
+>docker login
+  - username: umitceylan
+  - password: Mustafa11,h
+>docker push umitceylan/flask-app:1.0
+  - ilgili image'i docker hub repositories'imize gondeririz.
+  - Image ile repository'nin ismi ayni olur. umitceylan/flask-app
+  - Image'leri ayirmak icin sonuna ":1.0" seklinde tag ekleriz. 
+  - repository'de falsk-app reposu olmasaydi da bu komutla olusurdu. ama umitceylan muhakkak olmali image icinde. 
+>docker exec -it 45d bash
+#ls
+  - Dockerfile ve welcome.py goruruz.
+  - WORKDIR /app belirledigimiz icin app folderdan girdi.
+#exit
+>docker image history umitceylan/flask-app:1.1
+  - image'in katmanlari hakkinda olusum tarihlerini verir.
+>sudo docker build -t umitceylan/flask-app:1.1 .
+  - ayni isimle image olusturabiliriz ve cok hizli olusur.
+- Dockerfile degistirilirse degisiklikten itibaren (2. satirdan itibaren) cache'den almaz:
+------------------------------------------------------
+FROM ubuntu
+COPY . /app                         # mevcut konumdaki tum dosyalari app'ye kopyalar.
+RUN apt-get update -y
+RUN apt-get install python3 -y
+RUN apt-get install python3-pip -y
+RUN pip3 install flask
+WORKDIR /app                        # islem yapilacak/calisilacak dosya konumunu gosterir.
+CMD python3 ./welcome.py            # container olusturulurken default olarak calistirilacak program. python3 komutu ile ilgili app'i calistirir.
+------------------------------------------------------
+>sudo docker build -t umitceylan/flask-app:1.0 .
+  - ikinci satirdan itibaren cache kullanmadan yaptigi icin yavaslar.
+  - Bu yuzden Dockerfile'da sik degistirilebilecek satirlar/komutlar mumkun oldugunca en altlara konulmali.
+
+5.Hands-on:
+- Onceki Dockerfile'in oldugu dosyada Dockerfile-alpine isimli ikinci bir Dockerfile olusturduk.
+- Image olustururken istedigimiz file'i kullanmasi icin "-f" attribute'u ile file'i belirtiriz.
+- welcome.py :
+------------------------------------------------------
+from flask import Flask
+app = Flask(__name__)
+@app.route("/")
+def hello():
+    return "<h1>Welcome to Clarusway</h1>"
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=80)
+------------------------------------------------------
+- Dockerfile-alpine :
+------------------------------------------------------
+FROM python:alpine
+RUN apk update && pip install flask
+COPY . /app
+WORKDIR /app
+EXPOSE 80
+CMD python ./welcome.py                   
+------------------------------------------------------
+>cd Deneme
+  - Dockerfile ve welcome.py dosyasinin konumuna gelinir.
+>docker login
+#username: umitceylan
+#password: Mustafa11,h
+>docker build -t umitceylan/flask-app:alpine .
+  - "." ilgili konumdaki tum file'lari da image'a kaydeder.
+  - image olustu.
+>docker images
+  - image'leri gosterir.
+>docker image rm -f 8ff bcf
+  - image'leri sileriz.
+>>docker build -t umitceylan/flask-app:alpine -f Dockerfile-alpine .
+  - 'docker build -t umitceylan/flask-app:alpine -f ./Dockerfile-alpine .' da calisir.
+  - aydi dosyada iki Dockerfile var. Bu yuzden "-f" ile Dockerfile'in ismi yazilir.
+>>docker run -d --name welcome2 -p 8080:80 umitceylan/flask-app:2.0
+docker stop welcome2 && docker rm welcome2
+docker image tag umitceylan/flask-app:alpine:1.0 umitceylan/flask-app:alpine:2.0
+docker image rm 497
+  - docker rmi 497
+
+
+
+
+

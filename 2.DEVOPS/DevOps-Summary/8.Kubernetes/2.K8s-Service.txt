@@ -1,0 +1,417 @@
+1.Genel:
+- Pod'larin kendi private ip'leri olur.
+- Ayni poddaki containerler ip'siz gorusurler ve ip'leri olmaz. Yalniz birinin olur.
+- Pode, Rs, Deploy olusturulurken basit ablamda expose=80 denirse target portu gosterir.
+- Portlar:
+  * Target port: poddan cikis portudur.
+  * Port: target portlari selector ile alir ve cluster IP'ye port ile baglar.
+  * NodePort: Port disari cikis icin NodePort'a baglanir.
+- Cluster IP: Tum clusterda calisir.
+- NodePort: tum clusterda calisir ve disari da cikis yapar.
+- Kube-DNS: 
+  * K8s icinde DNS hizmeti saglar. Olusan pode'lara private IP atar. 
+  * Containerlere IP atamaz. Bu anlamda her pode'da bir container, IP'yi kullanir.
+  * pode icindeki containerler IP olmadan iletisim kurarlar.
+  * DNS table tutarak key ve value degerleri ile iletisimi saglar.
+  * Key: servicelerin adi, value: IP adresleridir.
+  * Pode kapanir tekrar acilirsa veya yaml redeploy edilirse IP adresleri degisir. 
+- Service types:
+  * Cluster IP: sadece cluster icinde tum node'lari kapsar.
+  * NodePort: Disari cikis yapar ve tum node'lari kapsar.
+
+2.Hands-on:
+- kubernetes-03
+- Networking and Service.
+- Setting up the Kubernetes Cluster.
+- Services, Load Balancing, and Networking in Kubernetes
+- Deployment/ReplicaSet'ler labellari ile service'e baglanir.
+- Upgrade, rollout'larda normalde yeni ip atanir.
+
+VSC:
+kubectl cluster-info
+kubectl get no
+mkdir service-lessons ; cd service-lessons
+vim web-flask.yaml
+--------------------------------------------------------------------
+apiVersion: apps/v1 
+kind: Deployment 
+metadata:
+  name: web-flask-deploy
+spec:
+  replicas: 3 
+  selector:  
+    matchLabels:
+      app: web-flask
+  minReadySeconds: 10 
+  strategy:
+    type: RollingUpdate 
+    rollingUpdate:
+      maxUnavailable: 1 
+      maxSurge: 1 
+  template: 
+    metadata:
+      labels:
+        app: web-flask
+        env: front-end
+    spec:
+      containers:
+      - name: web-flask-pod
+        image: clarusway/cw_web_flask1
+        ports:
+        - containerPort: 5000
+--------------------------------------------------------------------
+  - selector ile labellerinden podlari yakalar.
+kubectl apply -f web-flask.yaml
+kubectl get pods -o wide
+  - farkli ip adresleri atandigi gorulur.
+vim forcurl.yaml
+--------------------------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: forcurl
+spec:
+  containers:
+  - name: forcurl
+    image: clarusway/forping
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+--------------------------------------------------------------------
+  - localde yoksa download eder image'i.
+  - ping atmaya yarayan bir image.
+kubectl apply -f forcurl.yaml
+kubectl get pods -o wide
+kubectl get ep
+  - Podlarin IP address:targetport seklinde endpointlerini verir.
+kubectl exec -it forcurl -- sh
+# ping 172.16.166.180
+  - get ile aldigin diger pod ip'lerine ping atariz.
+# exit
+kubectl scale deploy web-flask-deploy --replicas=0
+  - pod sayisini degistirir. Pode'lari kapattik.
+kubectl explain svc
+  - Service'in dokumantation'unu aliriz.
+vim web-svc.yaml
+--------------------------------------------------------------------
+apiVersion: v1
+kind: Service   
+metadata:
+  name: web-flask-svc
+  labels:
+    app: web-flask
+spec:
+  type: ClusterIP  
+  clusterIP: 10.108.16.2
+  ports:
+  - protocol: TCP
+    port: 3000  
+    targetPort: 5000
+  selector:
+    env: front-end 
+--------------------------------------------------------------------
+  - "clusterIP: 10.108.16.2" ve "protocol: TCP" satirlari zorunlu degil.
+  - selector ile podlarin labellarindan yakalar ve podlari clusterIP (bridge)ye katar.
+  - ClusterIP: yalniz icerde calisir. dis dunyaya cikis yapmaz.
+  - targetPort, podlarin; port, ClusterIP'nindir. 
+  - Endpoint: <pod ip>:targetPort
+kubectl apply -f web-svc.yaml
+kubectl get svc -o wide
+kubectl describe svc web-flask-svc
+kubectl exec -it forcurl -- sh
+# curl <IP of service web-flask-svc>:3000
+# ping web-flask-svc 
+# curl web-flask-svc:3000
+vim clarus-db.yaml
+--------------------------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: clarus-db
+spec:
+  containers:
+  - name: clarus-db
+    image: clarusway/clarusdb
+    imagePullPolicy: Always        
+  restartPolicy: Always
+--------------------------------------------------------------------
+  - "imagePullPolicy: IfNotPresent" guncellemelerin istenmedigi zaman kullanilir.
+kubectl apply -f clarus-db.yaml
+kubectl get svc -o wide
+kubectl exec -it clarus-db -- sh
+# curl <cluster ip of service>:3000 
+# curl web-flask-svc:3000
+  - IP ile ve service name ile ulasilabilir.
+
+
+
+3.Hands-on:
+- kubernetes-03
+- Nodeport
+- Networking and Service.
+- Nodeport ile disari expose edilir.
+
+VPC:
+vim web-svc.yaml
+---------------------------------------------------------------------
+apiVersion: v1
+kind: Service   
+metadata:
+  name: web-flask-svc
+  labels:
+    app: web-flask
+spec:
+  type: NodePort  
+  ports:
+  - port: 3000  
+    targetPort: 5000
+  selector:
+    env: front-end
+---------------------------------------------------------------------
+kubectl apply -f web-svc.yaml
+kubectl get svc -o wide
+kubectl get ep 
+  - endpoint alinir. Herbir podunkini IP:targetport seklinde verir. 
+kubectl exec -it forcurl -- sh
+# curl <IP of service web-flask-svc>:3000
+# ping web-flask-svc 
+# curl web-flask-svc:3000
+
+Browser:
+http://<public-node-ip>:<node-port>
+  - application'a ulasilir.
+  - sg'de gerekli ayar yapilmali.
+vim web-svc.yaml
+---------------------------------------------------------------------
+apiVersion: v1
+kind: Service   
+metadata:
+  name: web-flask-svc
+  labels:
+    app: web-flask
+spec:
+  type: NodePort 
+  ports:
+  - nodePort: 30036  
+    port: 3000        
+    targetPort: 5000
+  selector:
+    env: front-end
+---------------------------------------------------------------------
+  - NordPort'a bir port numarasi atanmis. Atanmasaydi (onceki ornekte) sistem otomatik atama yapardi.
+kubectl apply -f web-svc.yaml
+  - yaml dosyasi apply edilerek degisiklikler yapilir.
+kubectl get svc -o wide
+
+
+
+4.Hands-on:
+- kubernetes-03
+- Endpoints, Labels, Loose coupling.
+- Networking and Service.
+
+VSC:
+kubectl explain ep
+kubectl get ep -o wide
+kubectl scale deploy web-flask-deploy --replicas=10
+kubectl get ep -o wide 
+vim web-svc.yaml
+-------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-flask-svc
+  labels:
+    app: web-flask
+spec:
+  type: NodePort
+  ports:
+  - port: 3000
+    nodePort: 30036
+    targetPort: 5000
+  selector:
+    env: front-end
+    version: v1
+-------------------------------------------------------------------
+  - Sonuna "version: v1" ekledik. Selector'deki label'lar ile pode'lari yakalar.
+kubectl apply -f web-svc.yaml
+  - .yaml dosyasindaki degisiklikleri ilgili service'e uygulariz.
+  - service'in 2 labelinin da deplotment'ta olmamasi nedeniyle deployment service'i kullanamaz.
+echo '
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-flask-deploy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-flask
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: web-flask
+        env: front-end
+        version: v1
+        test: coupling
+    spec:
+      containers:
+      - name: web-flask-pod
+        image: clarusway/cw_web_flask1
+        ports:
+        - containerPort: 5000' > web-flask.yaml
+  - ayni isimle olusturdugumuz icin yeni bir versiyon olustu.
+  - template > metadata altindaki labels'lar svc > spec > selector altindaki label'lar ile uyustugu icin svc'ye baglanir.
+  - deployment'ta svc'dekinden fazla label olmasi problem degildir.
+  - svc'deki tum labellar deploy'da da olmali.
+kubectl apply -f web-flask.yaml
+ 
+Browser:
+- Worker public IP:nodeport ile ulasilir.
+
+
+
+5.Hands-on:
+- kubernetes-03
+- Service.
+- Onceden ns olusturulmamissa deployment'ta baglanilamaz.
+- To connect a service from different namespace.
+- Ayni ns'deki svc'ler birbirlerini isimleri ile bulurlar.
+!!!
+- Farkli ns (test-ns)'deki pod'lar ilgili svc (redis)'ye suffix ekleyerek ulasir. redis, my-ns'te. redis.my-ns seklinde ulasir.
+- Ayrica providing the `FQDN` of the service as `redis-master.my-ns.svc.cluster.local`. seklinde de ulasabilir.
+
+VSC:
+kubectl create ns my-space
+vim web-flask-deploy.yaml
+--------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-flask-deploy
+  namespace: my-space
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: web-flask
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: web-flask
+        env: front-end
+        version: v1
+        test: coupling
+    spec:
+      containers:
+      - name: web-flask-pod
+        image: clarusway/cw_web_flask1
+        ports:
+        - containerPort: 5000
+-------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-flask-deploy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-flask
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: web-flask
+        env: front-end
+        version: v1
+        test: coupling
+    spec:
+      containers:
+      - name: web-flask-pod
+        image: clarusway/cw_web_flask1
+        ports:
+        - containerPort: 5000' > web-flask.yaml
+-------------------------------------------------------------------------
+-------------------------------------------------------------------------
+echo '
+ apiVersion: v1
+ kind: Service
+ metadata:
+   name: web-flask-svc
+   namespace: my-space
+   labels:
+     app: web-flask
+ spec:
+   type: NodePort
+   ports:
+   - port: 3000
+     targetPort: 5000
+     nodePort: 30036
+   selector:
+     env: front-end
+     version: v1' > web-flask-svc.yaml
+----------------------------------------------------------------------
+kubectl apply -f .
+  - deployment ve scv my olustu.
+!!!
+kubectl get deploy -n my-space
+kubectl get pod -n my-space
+kubectl get svc -n my-space
+kubectl get pod
+kubectl get svc
+kubectl get po -o wide -n my-space
+kubectl exec -it forcurl -- sh
+# ping <pod ip>
+kubectl delete -f .
+kubectl delete -f .
+kubectl delete ns my-space
+
+!!!
+- kubectl api-resources
+  - Version bilgilerini aliriz tum resources'lar icin ve .yaml file'larinda kullaniriz.
+
+
+- Service'ler 
+  - targetPort: Pod'larin endpointi ()
+  - port: ClusterIP'nin endpointi (service endpointi)
+  - nodePort: Dis dunyaya ulasim endpointi.
+
+
+
+namespace: deployment'ler icin izole mekanlar. Soyisim gibi. Namespace olusturulmazsa default namespace icinde olusur.
+
+kubectl create namespace demo
+kubectl apply -f .
+
+
+kubectl get ep -o json
+
+
+Volumes: 
+- Pod/container olurse storage'si gider. ephemeral (gecici)
+- Pod 
+- Volume'lar yalnizca kendi nodundaki containerlere bakar. 
+
+Volume Types:
+  - hospath: node'da olusur. Container olurse baska bir node'ta olusabilecegi icin kullanimi zor.
+  - emptyDir: Pod'da olusur ve container cokerse kube-api ayni pod'da emptyDir'in yanina yeni bir container kurar.
+  - Secret: hassas verilerin tutuldugu
+  - configMap: env variables'larin, configuation datasinin tutuldugu resource'dur. Cluster genelinde kullanilan verileri koyup ihtiyac halinde cekeriz.
+  - persistentVolumeClaim: Admin olusturur. Farkli boyutlarda olabilir. 

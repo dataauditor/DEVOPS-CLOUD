@@ -1,0 +1,227 @@
+1.Genel:
+help.sonatype.com
+  - formatlari, 
+- Developerlarin kullanimi 
+- Repositoryler:
+  * Artifact Repository: 
+    - Deployment surecinde olusan binary'lerin depolandigi repository'dir.
+    - Metadatasi olur.
+    - Clonlanamaz.
+    - Belirlenen kullanicilar disinda kullanilamaz.
+  * Source Control Management: developmentlerin dosyalarini depolayan Github vb repositories'lerdir.
+- Artifact: deploy edilmis executable dosyalardir. (.py, .jar, docker image)
+- Hiz, standardizasyon, guvenlik ve etkilesim saglar.
+- Nexus Repository Cesitleri: Nexus bilgisayari icinde uc cesit repository kurulabilir. Hepsi ayni bilgisayarda bulunur.
+  * Proxy Repository: Public olup, dependenciesleri netten cekip cachleyen repositorydir. 
+  * Hosted Repository: Private olup nete cikmaz. Kodlar developerlarca yazilir.
+    - Snapshot: development verilerinin tutuldugu data. Birden fazla versiyonu olabilir.
+    - Release repository: Production ortamina gonderilecek ve uzerinde degisim olmayacak binary'lerin tutuldugu repository.
+  * Group Repository: Birden fazla repository'i farkli tur proxy, hosted baglayan yapidir. Kendisi repository degildir. Bir endpoint verir ve altindaki repositories'lere giris saglar. Group sayesinde evelope
+- Hosted Repository Cesitleri: Release ve Snapshot.
+- Components: Software'i olusturan package, library, dependencies, binary, container vb herseydir.
+- Nexus bir cok uygulama ile uyumludur.
+- Format: maven2 repository'nin formatidir. Icinde kullanilabilecek componentler app'ler buna gore kullanilabilir. 
+> Once Proxy ile Maven icin dependencies'ler indirilir > 
+  > Hosted ile snapshot repository olusturulup tum artifactlar ve dependenciesler buraya kurulur. 
+  > Vesriyonlar denenir > release repository'e gonderilir.
+- port: 8081 kullanir.
+
+sudo wget https://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo -O /etc/yum.repos.d/epel-apache-maven.repo
+  - '-O': bu adrese kaydet.
+sudo sed -i s/\$releasever/6/g /etc/yum.repos.d/epel-apache-maven.repo
+  - sed arar. 'releasever' araniyor. 
+  - '-i': insert, degistir. 'releasever' yerine 6 yazilir. 6 numarali indir diyoruz. 
+  - /etc... : degisimin yapilacagi konumu gosterir.
+!!!
+Interpreter/Compiler diller:
+  - Interprete: line by line kodlari okuyup makine koduna cevirir. Nispeten hizlidir ama her calistirildiginda ayni islemi yapar. Hata verirse hata kodu veriri ve durur. (python, bash... vb.) Kisa programlar icin uygundur.
+  - Compile: Line by lne okumaz. Tum kodu makine diline (1 ve 0'lara) cevirir. Yavastir ama bir kere yapilir. Muteakip durumlarda makine diline cevrilmis halinden calistirir. Compiler'da kod hatasi olursa source koda gidilip duzeltilir. Uzun kodlar icin programlama dilleri uygundur. (java ... vb.)
+!!!
+.jar: compile dosya + dependencies. exe dosyasidir. build islemi sonrasi olusur. Package edilmistir. OS'den bagimsiz olarak calisir. Istenilen OS'de calisir. Tiklaninca calisir. Sadece jvm (java virtual manager) yuklu olmali.
+Artifact repository: build sonrasi olusan compile edilmis kod ve dependencieslerin tutuldugu depodur. Artifac repository olarak nexus kullanilabilir.
+Interpreter diller icinde Nexus'ta dependenciesleri pip gibi pythonun kodlarini cekmeye yarayan yum gibi bir repository'dir. python dependencies programi iner.
+Yuklenecek java ile nexus uyumlu olmali. 
+!!!
+Daemon Calisma Usulu: Systemd olarak bilinir. 
+  - PATH: PATH'e yazilan adresteki executable dosya ilgili exe dosyasi ile ilgili systemstl start veya ayni formatta app calistirilirsa calisir.
+  - Systemd: Buraya yazilan .service dosyasi icinde start vb. komutlari da oldugu icin PATH + systemctl start ve PATH systemctl + enable gibi calisir ve otomatik olarak service'i calistirir.
+  - .service konfigurasyon dosyasi: herbir app'in sitesinde bulunur. systemd/system altina atilir.
+  - Bilgisayar her acildiginda otomatik calismasi istenen app'ler .service dosyasi ile buraya atilir.
+
+
+
+2.Kullanimi:
+Maven built > proxy dependenciesleri ceker cacheler ve Maven'a gonderir. 
+  > Maven ile olusan artifactlar (.jar vb filelar dependenciesleri ile beraber) Hosted'a kaydedilir.
+  > Daha sonra release repository (Hosted)'daki artifact Production ortamina aktarilir. 
+    - Sonuc asamasi oncesinde buna Snapshot, testler sonrasi deploy oncesinde ise Release denir. 
+    - Group ile proxy'den cekilen dependencies Hosted alir.
+
+
+3.Hands-on:
+Nexus kurulumu:
+  - systemd/system altinda .service dosyasi olusturularak nexus ec2 her acildiginda otomatik calisir. 
+  
+AWS EC2:
+- t2-large (22, 8081 (nexus'un default portu))
+
+VSC install maven:
+sudo yum update -y
+sudo yum install java-1.8.0-openjdk -y
+  - Maven ve Nexus iytiyac duyar.
+  - Nexus, java-1.8.0-openjdk ile uyumlu diger versiyonlarla problem yasanabiliyor.
+java -version
+sudo wget https://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo -O /etc/yum.repos.d/epel-apache-maven.repo
+  - Mavenin yuklu oldugu repo indirilir.
+  - Maven kullanilacagi icin indirilir.
+ls /etc/yum.repos.d/
+sudo sed -i s/\$releasever/6/g /etc/yum.repos.d/epel-apache-maven.repo
+  - 'sed': text icindeki kelimeyi bulup degisim islemi yapmaya yarar.
+  - releasever, 6 ile degisir '-i': kaydedilir.
+cat epel-apache-maven.repo
+  - dependencies'lerin nereden cekilecegi bilgisi var.
+  - $releasever, $6 ile degistirerek versiyonu belirtiyoruz ve ilgili dependenciesleri indiriyor.
+cd /opt
+sudo yum update -y
+sudo yum install apache-maven -y
+mvn -version
+whereis mvn
+  - executable dosyasinin yerini gosterir.
+
+
+VSC install-nexus:
+sudo wget -O nexus.tar.gz https://download.sonatype.com/nexus/3/latest-unix.tar.gz
+  - compress yapar ve farkli tip dosyalardan olusan paketi mevcut konuma indirir.
+sudo tar xvzf nexus.tar.gz
+sudo rm nexus.tar.gz
+sudo mv nexus-3* nexus
+ll
+!!!
+sudo chown -R ec2-user:ec2-user /opt/nexus
+sudo chown -R ec2-user:ec2-user /opt/sonatype-work
+  - owner olarak user ve group isimleri verildi. Ikisi de ayni.
+  - user'lar root idi. root user tavsiye edilmiyor.
+  - '-R': altindaki tum dosyalarla birlikte uygula.
+ll
+sudo nano /opt/nexus/bin/nexus.rc
+----------------------------------------------------------------
+run_as_user="ec2-user"
+----------------------------------------------------------------
+  - nexus'un binary (service)'sinde degisiklik yapilir.
+cd /opt/nexus/bin
+ls
+!!!!!!Alternatif!!!!!!!!
+export PATH=$PATH:/opt/nexus/bin
+echo $PATH
+cd /opt
+nexus start
+!!!!!!!!!!!!!!!!!!!!!!!
+  - nexus calisir. Browserden girilebilir. Asagidaki .service dosyasi olusturma PATH'e alternatif bir usuldur.
+cd /etc/systemd/system/
+  - otomatik calisan konum
+  - .service ile yazili olan serviceler calisir.
+sudo nano /etc/systemd/system/nexus.service
+----------------------------------------------------------------
+[Unit]
+Description=nexus service
+After=network.target
+
+[Service]
+Type=forking
+LimitNOFILE=65536
+User=ec2-user
+Group=ec2-user
+ExecStart=/opt/nexus/bin/nexus start
+ExecStop=/opt/nexus/bin/nexus stop
+User=ec2-user
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
+----------------------------------------------------------------
+  - service dosyasi olusturulur.
+  - bilgisayarin her acilmasi ile otomatize edilebilmesi icin, service dosyasinin asagidaki komutlarla start/enable edilmeli.
+sudo systemctl daemon-reload
+sudo systemctl enable nexus.service
+sudo systemctl start nexus.service
+sudo systemctl status nexus.service
+  - systemd'nin altina atilan *.service dosyalari her zaman calisir.
+  - *.service dosyalari, systemd'nin altina atilinca bir kereye mahsus start ve enable edilmelidir. 
+!!!
+Daemon Calisma Usulu: Systemd olarak bilinir. 
+  - PATH: PATH'e yazilan adresteki executable dosya ilgili exe dosyasi ile ilgili systemctl start veya ayni formatta app calistirilirsa calisir.
+  - Systemd: Buraya yazilan .service dosyasi icinde start vb. komutlari da oldugu icin PATH + systemctl start ve PATH systemctl + enable gibi calisir ve otomatik olarak service'i calistirir.
+  - .service konfigurasyon dosyasi: herbir app'in sitesinde bulunur. systemd/system altina atilir.
+more /opt/sonatype-work/nexus3/admin.password
+- nexus sifresi alinir.
+
+Browser:
+- public-ip:8081
+- user: admin
+- sifre: VSC'den alinir.
+- yeni sifre tanimlanir.
+- Disable ananymous access: sadece yetlilendirilmis kullanicilar. (genelde)
+  - Enable anonymos access: herkes girebilir ama yetkisiz kullanicilarin izinleri default: read only olup baskaca ayarlanabilir.
+
+
+
+
+
+4.Hands on:
+
+Conf > Roles > roller gorulur. nx-all tum yetkiler.
+Conf > Repositories: yeni repository olusturulabilir.
+Conf > Cleanup policy: isim yazip format: maven2 remove component: 30 (30 gun sonrasini sil)
+Conf > Routing policy (repo ile baska bir yere baglanti icin (route table gibidir)
+
+VSC maven repo:
+cd
+mkdir nexus-hands-on && cd nexus-hands-on
+nano pom.xml
+----------------------------------------------------------------
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example</groupId>
+  <artifactId>nexus-proxy</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.10</version>
+    </dependency>
+  </dependencies>
+</project>
+----------------------------------------------------------------
+  - ilk satir ns'i tanimlar.
+  - groupId: sirketin domainname'inin ters yazimi genelde.
+  - groupId, artifactId ve version ile tanimlanir.
+ 
+B:
+> setings > create > maven-proxy > 'maven-proxy-hands-on' yapistir. 
+  > version policy: mixed ikiside kullanabilir. > Remote storage: https://repo1.maven.org/maven2 dependenciesleri alir. > create repository
+
+
+.m2: ilk maven komutu ile olusur.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

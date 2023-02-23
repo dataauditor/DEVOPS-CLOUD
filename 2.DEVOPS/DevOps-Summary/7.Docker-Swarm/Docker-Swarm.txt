@@ -1,0 +1,389 @@
+1.Genel:
+- Birden fazla bilgisayarin tek merkezden yonetilerek sisteme dahil bilgisayarlarda ihtiyac miktari container acar.
+- https://github.com/dockersamples/docker-swarm-visualizer : bilgisayar basina containerleri isim, imageleri ile gosterir.
+- https://labs.play-with-docker.com  ortami sagliyor. Icinde docker yuklu instanceler veriyor. 
+  - docker > start > ingiliz anahtari > bir cluster sec. > ortam hazir.
+- Amac en az 3 manager ile ve workerlar ile swarm olusturmak.
+  - Bir nodda atri ayri servisler olabilecegi gibi ayri nodlarda farkli servisler de olabilir.
+  - Herbir microservis icin service/cluster (ayni gorevi goren containerler grubu) acilabilir.
+- Faydasi:
+  - Scalability: istegigimiz kadar VM ilave ederek yeni containerler ekleyebiliriz.
+  - Fault tolerance:
+  - Simplicity & Automation: otomatik olarak acilirlar/deploy edilirler.
+- Docker-Swarm: 
+  - Containerleri koordine eder, yonetir.
+  - Docker'a entegre gelir. Docker kurulu ise Docker Swarm da kurulu gelir.
+- Nodes: Icine docker kurulan instance'lerdir. Instance'lar clustera/docker swarm'a dahil edilince node olarak tanimlanir. Iki cesittir:
+  - Manager node: 
+    - orchestration ve cluster management yapar. 
+    - Tek manager kurulmaz. Managerler ariza yaparsa tum sistem coker onun ici birkac tane kurulur.
+    - Managerlerden biri primary digrleri secondary olur. Secondary'ler primary'nin komutlarini takip eder primary cokerse yetkiyi alir.
+    - Primary ve secondary'a ayni anda gorev girilirse oncelik primary'dedir.
+    - Raft consensus algorithm: Tekli sayida olmali. Primary cokerse bir secondary'i primary secerler. Bu algoritma sayesinde secondaryler primary ne biliyorsa onu bilirler. 
+    - Sadece bizden komutlari alip worker node'lara iletir. 
+    - Worker container isini yapmaz hata yaparsa yeni container olusturur. 
+    - 7 tane kadar olabilir.
+    - Her ne kadar worker gorevi (conteiner acabilir) yapabilirse de gercek hayatta worker gorevi verilmez. Manager patlamasin diye.
+  - Worker node: Manager node'tan gelen gorevleri icra eder.
+- A docker swarm is comprised of a group of physical or virtual machines operating in a cluster. When a machine joins the cluster, it becomes a node in that swarm.
+- Docker Stack: Containerlerin listesi (Stack: List of Services)
+- Service: 
+  - ayni isi yapan containerler toplulugu.
+  - Ornegin bir microserviste ayni microservisi calistiran web-server gorevi goren birden fazla containerler.
+  - Managere 3 tane nginx containeri olustur demek service olusturmaktir.
+  - Modes:
+    - Global Service: 
+      - Node basina bir tanedir.
+      - Node'la birlikte container de kapanir tekrar baska node'ta acilmaz.
+      - Node tekrar acilirsa bir container acilir.
+    - Replicated Service:
+      - Node'lara dengeli dagitilir.
+      - Node kapanirsa baska node'da ilgili containerler acilir.
+      - Node acilirsa container otomatik acilmaz.
+      - Yeni bir service acma komutu gelirse kapanip acilan noda gelir task oncelikli olarak.
+- Task:
+  - Manager'a 3 nginx containeri olustur komutu gidince > primary node 3 tane nginx olustur taski olusturur ve Worker node'lara teker teker dagitir. > Worker node taski icra edip 1 adet nginx containeri calistirir.
+  - Herbir task tek container olusturmak icin verilir. 
+  - Manager'a ornegin 10 conteiner olustur komutu giderse 3 worker varsa birine 4 digerlerine 3 tane task gonderir. Herbir taskta da 1 container olustur gorevi olur.
+  - Worker kendisine gelen task ile istenen containeri olusturur.
+  - Manager da kendisine gelen komut kapsaminda belirlenen sayidaki conteineri tasklarla worker node'larda ayakta tutar takip eder.
+- Containerized application'lari cloud ve data center'lar arasi transfer, scale edebiliriz. 
+- otomatik olarak failure veren container yerine yenisi acilir ve updates'lar otomatik olarak alinir.
+- Container orchestration is used to automate the following tasks at scale:
+  - Provisioning and deployments of containers.
+  - Ayni anda sayilari ve gorevleri verebiliriz.
+  - Availability of containers
+  - Load balancing, traffic routing and service discovery of containers
+  - Health monitoring of containers
+  - Securing the interactions between containers.
+  - Configuring and scheduling of containers
+  - The configuration of applications in terms of the containers that they run in
+  - Scaling of containers to equally balance application workloads across infrastructure
+  - Allocation of resources between containers
+- Configuration file: container orchestration tool'a container'ler arasindaki network ve log kayitlarinin nerede saklanacagini belirtir.
+- Orchestration tool: 
+  - conteiner'lerin cluster halinde deployment'larini schedule eder. 
+  - containerlerin calistigi her yerde calisir.
+  - bazi containerlere fazla bazisina az kaynak tahsis edilebilir.
+  - load balancer gibi calisir.
+  - Containerler icin en iyi host'u belirler.
+  - Host belirlendikten sonra onceden belirlenmis ozellikler uzerinden containerlerin lifecycle'ini kontrol eder
+  - Containerlerin calistigi her ortamda calisabilir.
+  - Orchestration tool asagidakilerden olusur:
+    - Docker Machine: Provisions host and installs Docker Engine.
+    - Docker Compose: Deploys multi-container apps by creating the required containers.
+    - Docker Swarm: Clusters multiple Docker hosts under a single host. It can also integrate with any tool that works with a single Docker host.
+- Cluster olusunca (bir grup container bir araya gelince) Docker commands'larini kullanabilirsin. Tek farkla komutlar tum containerler tarafindan dikkate alinir.
+- Swarm manager: Clusterter'larin aktivitelerini control eder. 
+- Load balancing yapar. Auto scaling yapamaz. Kubernetes autoscaling yapabilir.
+- Autoscaling yoksa da desired capacity saglanir. Hata yapan containerlerin yerine yenisi acilir.
+- Node'lar manager ve worker node olarak 2'ye ayrilir.
+- Swarm manager nodes her service'e (worker nodes) DNS name atayarak koordine eder. 
+- Swarm Ozellikleri:
+  - Kriptolu olarak iletisim kurarlar, emniyetlidir. 
+  - Decentralised: Primary manager node komutlari alip tasklari dagitsa da diger managerler da proxy gorevi gorup komutlari alip primary'e gonderirler ve tasklar dagitilir.
+  - Auto-Load Balancing: bir node kapandimi kapanan containerleri diger node'lara kurar. Default olarak containerleri nodelara dengeli dagitir.
+  - High Scalability: 
+  - Roll-back a task: Son task sonrasi problemler cikarsa bir onceki duruma donulebilir.
+- Docker Engine yuklemek yeterli.
+- Overlay network: Swarm mode farkli node'larda container deploy etmek icin kullanir. Build in load balancer ile service'leri scale eder.
+- Swarm mode: 
+  - Docker CLI'in parcasi olarak gorulur.
+  - node'lar ayni subnette olmali.
+- Yaml file ile declarative olarak swarm cluster ve service'leri kurulur.
+- Bir service ile bir service veya container ayni portu kullanamaz hata verir.
+- Swarm'da kullanilan API communication icin kullanilan TCP portu default olarak 2377 olup degistirilebilir.
+- Overlay Network: Swarm'da nodes'lar arasi netwok icin kullanilir.
+
+2.Kodlar:
+>docker swarm init
+  - ilgili node manager olur.
+  - docker-compose-yml ile ayni hizada a ve b service'lerinin folderlari var.
+  - a ve b servis folderlari ayri ayri Dockerfile, .js dosyasi ve package.json (jdk gibi dusun) tutuyor.
+>docker swarm join --token SWMTKN-1-3e0hh0jd5t4yjg209f4g5qpowbsczfahv2dea9a1ay2l8787cf-2h4ly330d0j917ocvzw30j5x9 192.168.65.3:2377
+  - init'ten sonra cikan kod ile worker node ekleyebilirsin.
+>docker swarm join-token manager
+  - initten sonra yukardaki kod ile yeni manager ekleyebilirsin.
+>docker service create --name demo --replicas 3 alpine:3.5 ping 8.8.8.8
+  - It runs a simple Docker service that uses an alpine-based filesystem, and isolates a ping to 8.8.8.8
+  - 3 container acar.
+>docker node ls
+  - node bazinda statulerini manager mi gosterir.
+>docker service create --name deneme --mode global nginx
+  - global modda container acar. Her nodda 1 container olur, sonradan acilan node'lara da uygulanir.
+>docker service ps demo
+  - tek bir containerin oldugunu kontrol et.
+  - swarm'a bagli node'lari gosterir.
+>docker service rm demo
+  - containeri siler.
+>docker service create --replicas 3 --name hello -p 80:80 nginxdemos/hello
+  - service olusturur. 3 container'i var ve image=nginxdemos/hello
+>docker service inspect --pretty helloworld
+  - Yaml formatinda service hakkinda bilgi verir.
+>docker service ps helloworld.
+  - service'in containerlerini gosterir.
+>docker service scale hello=5
+  - Mevcut onceden olusturulmus bir service'teki container sayisini degistirir.
+
+
+3.Hands-on:
+- docker-08-swarm-basic-operations
+- cfn dosyasini cloudformation'dan yukleyerek 5 instance acilir.
+- Sirayla instance'lara VSC'dan baglanilir.
+
+1.Manager-Primary:
+>ssh -i "ugur.pem" root@ec2-52-91-97-153.compute-1.amazonaws.com
+  - connect deyince gelen kodda yazan "root" kullanicisini "ec2-user" olarak degistirerek baglanilir.
+  - pem file'in oldugu yerden VSC ile baglanilir.
+>docker --version
+>sudo hostnamectl set-hostname manager-1
+  - bu bilgisayari manager-1 olarak node yaptik.
+  - sadece takip kolayligi sagliyor bu komut.
+>bash
+  - manager-1 user'i olarak bash'te yazar.
+>docker info
+  - Swarm'in inactive oldugu gorulur.
+>docker --help
+>docker swarm --help
+  - swarm'la ilgili komutlari goruruz.
+>docker swarm init --help
+  - init ile ilgili komutlar.
+  - "--advertise-addr" : bazi bilgisayarlarda birden fazla network karti/ip'si olabilir
+>hostname -i
+  - ip adresini goruruz.
+  - birden fazla ip adresi varsa instance'nin bu attribute ile ip numarasi belirtmeliyiz.
+>docker swarm init --advertise-addr 172.31.89.167
+  >docker swarm init
+    - tek ip'si oldugu icin yukarki komutta yeterli.
+  - "init" komutunu calistirdigimiz manager primary olur.
+  - Tek node'dan olusan docker swarm cluster'imiz var.
+  - Bu komut Docker Swarm/Cluster kurarken tek bir instance'ta kullanilir. 
+  - Diger instance'ta kullanirsan bagimsiz ayri bir Docker Swarm kurar.
+>docker info 
+  - Swarm: active
+>docker swarm join-token manager
+  - bu clustera manager eklemek icin bana token iceren komut verir.
+  - ilgili komutu kopyalayip diger manager olacak node'lara yapistiririz.
+
+2. Manager:
+>ssh -i "ugur.pem" root@ec2-34-239-117-10.compute-1.amazonaws.com
+  - 2. instance'a baska bir bash ile baglanilir.
+  - "root" user, "ec2-user" ile degistirilir.
+>sudo hostnamectl set-hostname manager-2
+  - takibi kolay olsun diye isim verdik.
+>bash
+>docker version
+>docker swarm join --token SWMTKN-1-69ytlptltd5o4gue7srjxdc1o1kyz5thl5i736tercrsk56guh975a-e6bhq8yh5jibon  z8lfafcr6kk 172.31.89.167:2377 
+  - manager-1'de uretilen komutu buraya girince bu instance'yi de cluster'a baglayip manager yaptik.
+  - "docker swarm join --token TOKEN HOSTNAME|IP:PORT" komutun tanimi.
+  - "docker init" deseydik ayri bir cluster olusturacaktik.
+>docker node ls
+  - 2 adet manageri hangisinin primary oldugunu gosterir.
+
+3.Manager:
+>ssh -i "ugur.pem" root@ec2-35-171-23-46.compute-1.amazonaws.com   
+  - root > ec2-user degisecek.
+>sudo hostnamectl set-hostname manager-3
+>bash
+>docker swarm join --token SWMTKN-1-69ytlptltd5o4e7srjxdc1o1kyz5thl5i736tersk56guh975a-e6bhq8yh5jibonz8lfafcr6kk 172.31.89.167:2377
+  - Primary manager'dan alinan ayni komutu manager-3'e de yazarak manager yaptik.
+  - Primary olmayan managerlara komut yazarsak proxy gorevi gorur ve komutu primary manager'a aktarirlar. Isleri primary manager yapar. 
+
+1.Manager:
+>docker node ls
+  - yaninda * olan komutu yazdigimiz mevcut manager.
+  - Leader yazan primary manager.
+>docker swarm join-token worker
+  - Primary'den worker instance icin tokenli kod alinir.
+
+1.Worker:
+>ssh -i "ugur.pem" ec2-user@ec2-35-172-119-85.compute-1.amazonaws.com      
+  - worker-1 instance'a baglandik.
+  - root > ec2-user degistir.
+>sudo hostnamectl set-hostname worker-1
+  - isimlendirdik.
+>bash
+>docker swarm join --token SWMTKN-1-69ytlptltd5o4e7srjxdc1o1kyz5thl5i736tersk56guh975a-5nef0wqdljeiw671en9jyqp03 172.31.89.167:2377
+  >Managerdan "docker swarm join-token worker" kodu ile alinan token kodunu yazarak mevcut nodu worker yaptik.
+>docker node ls
+  - hata verir cunki workerlardan komut girilemez.
+
+Manager-1:
+>docker node ls
+  - manager ve worker node'lari gosterir.
+>docker swarm join-token worker
+  - bu komutu her girdigimizde ayni tokenla komut verir.
+
+Worker-2 node:
+>ssh -i "ugur.pem" root@ec2-18-205-103-8.compute-1.amazonaws.com
+  - root > ec2-user degistir.
+>sudo hostnamectl set-hostname worker-2
+>bash
+>docker swarm join --token SWMTKN-1-69ytlptltd5o4e7srjxdc1o1kyz5thl5i736tersk56guh975a-5nef0wqdljeiw671en9jyqp03 172.31.89.167:2377
+  - worker node oldu.
+
+Manager-1:
+>docker node ls
+  - 3 manager ve 2 worker'i gosterir.
+>docker service create \
+  --name=viz \
+  --publish=8080:8080/tcp \
+  --constraint=node.role==manager \
+  --mount=type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
+  dockersamples/visualizer
+    - viz isimli conteiner olusturduk.
+    - managerda olusturduk.
+    - goruntuleme imkani verir.
+>docker service ps viz
+  - hangi managerde container olustugunu goruruz.
+- browserden hangi visualizerin hangi manager'a yuklendi ise o managerin ip addresi:8080 portundan baglaniriz.
+  - https > http
+>docker service create --name webserver --replicas=5 -p 80:80 nginx
+  - docker conteiner run (farki cluster olusturur tek conteiner yerine)
+  - "--replicas=5" adet belirtilir. 
+  - "-p" ilk instance son container
+  - 5 adet conteiner olusur.
+- browserden visualisere bakarsak 5 nodda birer conteiner goruruz. 2.sinde viz containeri var fazladan.
+>docker service ls
+  - service yani cluster'lari (container adetleri ile) gosterir.
+  - 2 adet service gosterir: webserver ve viz.
+  - Replicas: sol istenen adet/sag mevcut adet
+>docker service ps webserver
+  - webserver service'indeki container ve bulunduklari node'lari gosterir.
+
+Manager-3:
+>docker container ls
+  - Mevcut node'taki containeri gorur yalnizca.
+>docker rm -f a13
+  - Mevcut node'taki container silindi.
+>docker container ls
+  - bir sure beklenip bu komut yazilirsa swarm'in yeni container calistirdigi gorulur.
+- browserden manager-2'ye baglanilirsa 5 container gorulur.
+>docker service ps webserver
+  - 5 adet container
+>docker service inspect webserver
+  - "inspect" ilgili service'i inceleriz.
+>docker service inspect --pretty webserver
+  - "--petty" yaml. formatinda daha okunur gosterir.
+
+AWS Konsol:
+- 5 numarali nodu stop ederiz.
+- Browserden visualisor'a bakinca 2 numarali node'da bir container daha acmis. 4 node var.
+  - Swarm'a bagli bir node cokse bile onun gorevlerini primary manager dagitir ve sistem calismaya devam eder.
+  - Istenilen ile current/mevcut container adedini surekli esit tutmaya calisiyor.
+- 5 numarali nodu start edince node acilsa bile baska node'a transfer olan container yerinde kalir. 
+  - Yeni bir komut girilirse container yeni node'ta acilir.
+
+Manager-1:
+>docker service ps webserver
+  - 5 container var.
+>docker service logs webserver
+  - tum service'in log'larina bakariz.
+!!!
+>docker service scale webserver=3
+  - container sayisini 3'e azaltir.
+>docker service scale webserver=15
+  - container sayisini 15 yapar.
+  - 3'er 3'er dagitti.
+>docker service ls
+  - iki service'i gosterir. Birinde tek birinde 15 container var.
+>docker service rm webserver
+  - webserver cluster/service'ini sildi. 
+!!!
+>docker service create --name glbserver --mode=global -p 80:80 nginx
+  - "global" her instanceda bir container calissin istersek kullaniriz.
+  - "--mode=replicated" defaultudur. Bos birakilirsa replicated modda calisir.
+
+AWS Konsol:
+- Worker-1 stop ettik.
+- Icindeki containeri baska node'da olusturulmadi. Global'de her node'da bir container olusturulur.
+- Worker-1 start ettik.
+- Icinde 1 container acildi.
+
+Worker-1:
+>docker container ls
+  - 1 container var.
+>docker rm -f 70b
+  - container silindi.
+  - Swarm otomatik olarak ayni nodda global oldugu icin bir container acar.
+>docker service rm glbserver
+  - service silindi
+
+Manager-1:
+!!!
+>>docker service create --name clarusweb -p 80:80 --replicas=10 clarusway/container-info:1.0
+!!!
+>docker service update --detach --update-delay 5s --update-parallelism 2 --image clarusway/container-info:2.0 clarusweb
+  - bir onceki komutla actigimiz service'i update ediyoruz.
+  - "--update-delay 5s" : arada kopukluk olmasin diye 5sn aralik veriyoruz. Kapatinca yenilerin acilmasi icin 5sn sure ver baska kapatmadan once.
+  - "--update-parallelism 2" : 2'ser 2'ser shutdown yapip 2'ser 2'ser yerine olustur.
+  - "--image" : kullanilacak yeni imaji belirtir.
+  - "clarusweb" imaji degisecek servisi tanimladik.
+>>watch docker service ps clarusweb
+  - "watch" calistirilan komutun sonucunu gosterir.
+  - komutla birlikte anlik degisimleri izlersiniz.
+!!!
+>>docker service rollback clarusweb
+  - bir onceki image ile eski hale doner.
+>docker node promote 4h0eba8xkko48msqtx3talp4i
+  - worker nodu manager noda cevirir.
+  - docker node promote ID|HOSTNAME
+>docker node demote manager-2
+  - manager nodu worker noda cevirir.
+>docker swarm leave --force
+  - node'lari swarmdan cikarmak icin kullanilir.
+  - Suan swarmda 4 node var. 
+>docker service scale clarusweb=5
+  - Container sayisini 5 yaparak degistirdik.
+  - Service acmaz. Olan service'te container sayisini degistirir. 
+>>docker service rm clarusweb
+  - service'i sildik.
+>docker service inspect clarusweb
+  - service hakkinda bilgi verir. Silindiyse gostermez.
+
+
+4.Hands-on (Docker Stack):
+AWS Konsol:
+- Cloudformation'a .yml dosyasi konarak stack acilir. 5 node olusur.
+- 2377, 22, 8080, 80 portlari acik.
+
+VSC:
+>ssh -i "ugur.pem" ec2-user@ec2-54-90-110-42.compute-1.amazonaws.com 
+  - root olan username'leri ec2-olarak degistiririz.
+  - Bes bilgisayara da bu sekilde baglaniriz.
+
+Bil-1
+>docker swarm init
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
