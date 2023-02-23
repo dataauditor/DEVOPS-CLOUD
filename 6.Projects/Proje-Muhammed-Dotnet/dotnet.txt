@@ -1,0 +1,80 @@
+1..Net 5.0'i yukluyoruz.
+- ubuntu dotnet yazinca talimatlar cikiyor:
+- https://docs.microsoft.com/en-us/dotnet/core/install/linux-ubuntu
+
+wget https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb      # microsoft kutuphane indirme icin yukleme
+sudo dpkg -i packages-microsoft-prod.deb                                                                                   
+
+sudo apt-get update; \
+  sudo apt-get install -y apt-transport-https && \
+  sudo apt-get update && \
+  sudo apt-get install -y dotnet-sdk-5.0                    # .Net sdk yukluyoruz. Boylece ilgili .Net programi bilgisayarda calisabilir.
+
+dotnet --version
+sudo apt install nginx                                      # nginx yuklenir.
+sudo systemctl start nginx
+sudo systemctl enable nginx
+sudo systemctl status nginx
+
+2.Configuration Dosyasinda Degisiklik:
+sudo vim /etc/nginx/sites-available/default                 # configuration dosyasini actim
+-----------------------------------------------
+v ile hepsini sectik
+d ile hepsini sildik
+-----------------------------------------------
+server {
+ listen 80;
+ location / {
+ proxy_pass http://localhost:5000;
+ proxy_http_version 1.1;
+ proxy_set_header Upgrade $http_upgrade;
+ proxy_set_header Connection keep-alive;
+ proxy_set_header Host $host;
+ proxy_cache_bypass $http_upgrade;
+ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+ proxy_set_header X-Forwarded-Proto $scheme;
+ }
+}
+--------------------------------------------------
+configuration dosyasina yukariyi ekledik.
+https://docs.microsoft.com/tr-tr/aspnet/core/host-and-deploy/linux-nginx?view=aspnetcore-5.0
+sudo nginx -s reload                                         # configurasyon dosyasindaki degisikliklerin gecerli olmasi icin yapilir.
+
+3.Izin:
+cd TestProje/
+sudo chmod u+x TestNetCore.dll                               # mevcut ubuntu kullanicisina ilgili dosyayi kullanma yetkisi verdik.
+dotnet TestNetCore.dll                                       # calistiriyoruz.
+
+4.Servis Yazma:
+sudo nano /etc/systemd/system/web.service
+----------------------------------------------------
+[Unit]
+Description=My first .NET Core application on Ubuntu
+[Service]
+WorkingDirectory=/home/ubuntu/TestProje                           # Proje Klasorunun adresi
+ExecStart=/usr/bin/dotnet /home/ubuntu/TestProje/TestNetCore.dll  # Ilgili dotneti calistirir sonra calistirilacak dosyanin adi.
+Restart=always
+RestartSec=10 # Restart service after 10 seconds if dotnet service crashes
+SyslogIdentifier=offershare-web-app
+Environment=ASPNETCORE_ENVIRONMENT=Production
+[Install]
+WantedBy=multi-user.target
+-----------------------------------------------------
+sudo systemctl enable web.service
+sudo systemctl start web.service
+sudo systemctl status web.service
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
