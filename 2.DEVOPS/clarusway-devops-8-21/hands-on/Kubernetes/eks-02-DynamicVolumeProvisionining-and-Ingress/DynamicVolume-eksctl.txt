@@ -1,0 +1,214 @@
+1.Genel:
+eksctl.io 
+- eksctl ile icinde node'lari da olan cluster olusturup EBS pvc baglanacak. 
+- EBS oldugu icin pv olusturmayacak ve hostpath olmayacak.
+- default olarak acilirsa pahaliya patlar.
+- Dynamic Volume Provisionining and Ingress:
+- eksctl ile EKS cluster olusturup, manage etmek.
+- Persistent Volume - pv ve Persistent Volume Claims - pvs olusturma.
+- Ingress ve Ingress Controller'in kullanimi.
+- Volume tipleri:
+  * Static Volume: Admin pv olusturur. Kullanicilara pvc ile tahsis eder.
+  * Dynamic Volume: Storage class (pv tanimi yerine kullanilir.) olusturur.
+    - Admin sadece class tanimliyor. Kapasite belitilmiyor. > Clientler class'i belirterek istedigi miktarda talep ediyor. > aws-ebs volume olusturuluyor. > bu volume pv olarak ortaya cikiyor. > ebs, poduna mount ediliyor.
+    - annotations: resource'un ic ayarlari
+    - provisioner: ebs secilebilir.
+    - parameter: 
+      - fsType: file sistem type
+      - type: islemci
+
+
+
+2.Hands-on:
+- EKS-02-Dynamic
+- eksctl ile cluster ve node'lari olusturma:
+  - kubectl ve eksctl indirilecek ve eksctl ile cluster ve node'lari olusturulacak.
+  - executeble file'lari $PATH'e ekleyerek calistirilir:
+  - ssh sifresi olusturulacak.
+  - EKS'ye girmeden EC2'den eksctl ile kontrol edebilecegim:
+
+VSC:
+!!!
+sudo yum update -ycurl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.17.9/2020-08-04/bin/linux/amd64/kubectl
+  - "-o": output kubectl olarak ciksin.
+echo $PATH
+  - ilgili komut burada tanimlanmissa uygular.
+  - burada yok.
+!!!
+chmod +x ./kubectl
+kubectl version --short --client
+  - Command not found: $PATH'de yok.
+!!!
+sudo mv ./kubectl /usr/local/bin
+  . $PATH'de tanimli bir adrese ekledik.
+kubectl version --short --client
+  - simdi gordu.
+!!!
+curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+  - birinci bolum ilgili dosyayi indirir, ikinci bolum /tmp icine unzip eder.
+  - silent: bir onceki goruntuleri vermeden ceker. 
+eksctl version
+  - command not found
+sudo mv /tmp/eksctl /usr/local/bin
+# export PATH=$PATH:/usr/local/deneme
+  - bu komutla dosyanin konumu PATH'e eklenebilirdi.
+eksctl version
+  - calisti.
+ssh-keygen -f ~/.ssh/id_rsa
+  - '-f': file ilgili dosyada
+  - sifre girerseniz sonra sorar, biz girmedik.
+aws configure
+cd .ssh
+ls 
+  - pem key ve public key urettik.
+  - id_rsa.pub: public key, ./ssh/authorize_keys e yerlestirir.
+  - id_rsa: private-key anahtari olarak size veriyor. pem key (ugur.pem gibi) Bu bilgisayara girerken pem dosyasi konumunda olunur.
+  - authorize_keys: id_rsa.pub keyleri buraya eklenir. Sisteme girerken burasi kontrol edilir. Bir hesap hem kendi hem de default olarak eklenmeli.
+  - Baskalarina acmak icin baskalari icin olusturulan public keyi authorized icine koyariz.
+cd ..
+cd .aws
+  - Altinda credentials ve config file'lar bulunur.
+    ! credentials: 
+      * credatials'lar sistem tarafindan burada tutulur.
+      * default olarak yazar. 
+      * farkli account'lar varsa buraya account name ile eklenir.
+    ! config:
+      * credentials'a baska hesap eklendiyse buraya configurasyon bilgileri de girilmeli.
+      * ayni user ile region ve json bilgisi eklenir. 
+# export $AWS_PROFILE=kepteyn
+  - bu profili kaydettik. kaydetmezsek defaultu alir.
+  - Bu hesapla calisir. Profile olusturma.
+eksctl create cluster \
+ --name my-cluster \
+ --region us-east-1 \
+ --zones=us-east-1a,us-east-1b,us-east-1c,us-east-1d
+ --nodegroup-name my-nodes \
+ --node-type t2.medium \
+ --nodes 2 \
+ --nodes-min 2 \
+ --nodes-max 3 \
+ --ssh-access \
+ --ssh-public-key  ~/.ssh/id_rsa.pub \
+ --managed
+  - eksctl ile EKS cluster ve node grup olusturduk.
+  - nodelar ile storage class'lar ayni zonda olusmali. Olmazsa zone girdisini cikar otomatik daha iyi oluyor.
+  - region, islemci, node sayilari, ssh girisi, public key adresi (node'lara tasiyacak) girilir.
+  - eksctl create cluster --region us-east-1 --node-type t2.medium --nodes 2 --nodes-min 2 --nodes-max 3 --name my-cluster
+    - bu kod da ayni seyi yapar.
+cd ..
+eksctl create cluster --help
+kubectl get no
+
+
+
+3.Hands-on:
+- EKS-02-Dynamic 
+- Create StorageClass as Dynamic Volume:
+  - Olusturulacak StorageClass Pode ile ayni AZ'de olmali, yoksa atanamaz.
+
+VSC:
+vim storage-class.yaml
+--------------------------------------------------------------------
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: aws-standard
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: kubernetes.io/aws-ebs
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  type: gp2
+  fsType: ext4  
+--------------------------------------------------------------------
+  - annotations: storageclass default yapildi.
+  - VolumeindingMode: pvc ile talep edilip poda baglayinca sc olustur secildi.
+  - hospath yok cunki EBS aciyor.
+  - pvc ile isim belirtilirse normal pv de alabilir. isim kullanmazsa storageclass alir.
+kubectl apply -f storage-class.yaml
+kubectl get storageclass
+  - iki tane olusur. Biri otomatik defaulttur. Bizimkini de default sectik.
+vi clarus-pv-claim.yaml
+-------------------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clarus-pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+  storageClassName: aws-standard
+-------------------------------------------------------------------
+  - 'ReadWriteOnce': EBS yalniz bir cihaza baglanabilir. Baska turlu secemeyiz.
+  - storageClassName: yazmazsak defaultu kullanir.
+kubectl apply -f clarus-pv-claim.yaml
+  - pvc olustu.
+kubectl get pv,pvc
+  - pv hic yok cunki pvc ile node'a eklenince olusur.
+vi pod-with-dynamic-storage.yaml
+-------------------------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-aws
+  labels:
+    app : web-nginx
+spec:
+  containers:
+  - image: nginx:latest
+    ports:
+    - containerPort: 80
+    name: test-aws
+    volumeMounts:
+    - mountPath: /usr/share/nginx/html
+      name: aws-pd
+  volumes:
+  - name: aws-pd
+    persistentVolumeClaim:
+      claimName: clarus-pv-claim
+---------------------------------------------------------------------
+  - volumeMounts name ile volumes name cakismali.
+kubectl apply -f pod-with-dynamic-storage.yaml
+kubectl get pv,pvc,pod
+  - pvc olarak olusan volumelar konsoldan kontroledilebilir. 
+
+AWS-EC2:
+> Volume > pvc ismi ile bulunur.
+
+VSC:
+kubectl exec -it test-aws bash
+# df -kh
+    - diskleri gosterir. Sc de gorulur.
+    Ctrl + p + q ile containerden guvenli cikilir.
+kubectl delete sc gp2
+  - Bir sc'yi sildik.
+kubectl get sc
+  - 'sc': storage class
+  - isim belirtmeden sc sectik. Default oldugu icin.
+kubectl delete -f pod-with-dynamic-storage.yaml
+kubectl api-resources | grep storage
+  - bilgilerini aldik.
+
+
+
+4.Hands-on:
+- EKS-02-Dynamic
+- Ingress:
+  * Tum node'larda service ile nodeport, port ve target port olusur.
+
+
+
+3. ders
+
+
+
+
+
+
+
+
+
+

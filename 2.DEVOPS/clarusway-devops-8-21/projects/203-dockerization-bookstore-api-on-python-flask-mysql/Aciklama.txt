@@ -1,0 +1,85 @@
+1.Proje:
+- Github'a gonderdigimiz projeyi 
+- 3 file yazilacak:
+  - main.tf
+  - Doclerfile
+  - docker-compose.yml
+
+VSC:
+>sudo yum update -y && sudo yum install -y yum-utils && sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo && sudo yum -y install terraform
+  - terraform yukledik.
+- instance'a .py ve .txt dosyalarini gonderdim.
+>aws configure
+  - test > .aws > credentials tan alinir.
+- .py dosyasindan configuration bilgileri ve port bilgis alinir.
+- Proje icine Dockerfile ekledik.
+- Dockerfile:
+-------------------------------------------------------
+FROM python:alpine
+COPY . /app
+WORKDIR /app
+RUN pip install -r requirements.txt
+EXPOSE 80
+CMD python ./app.py
+--------------------------------------------------------
+  - icinde pip ve python yuklu bir image sectik.
+  - "-r" ile requirements.txt cekilir.
+  - app.py dedik cunki github'tan cekerken bu sekilde ismini koyacagiz.
+- docker-compose.yml olusturulur.
+- docker-compose.yml:
+--------------------------------------------------------
+version: "3.7"
+
+services:
+    database:
+        image: mysql:5.7
+        container_name: database
+        environment:
+            MYSQL_ROOT_PASSWORD: P123456p
+            MYSQL_DATABASE: bookstore_db
+            MYSQL_USER: clarusway
+            MYSQL_PASSWORD: Clarusway_1 
+        networks:
+            - clarusnet
+    myapp:
+        image: umitceylan/bookstoreapi:latest
+        container_name: myapp
+        restart: always
+        depends_on:
+            - database
+        ports:
+            - "80:80"
+        networks:
+            - clarusnet
+networks:
+    clarusnet:
+        driver: bridge
+-----------------------------------------------------------
+  - environment variables'i ".py" dosyasindan aliriz.
+  - hangi variable'larin a
+>sudo yum install git
+
+
+Github: 
+- Klasor olusturduk
+- Klasor icine .txt, Dockerfile, docker-compose.yml, .py dosyalarini koyduk
+>git add .
+>git commit -m "w"
+>git push
+
+VSC:
+- main.tf olustur ayni klasorde
+-------------------------------------------------------
+
+
+VSC:
+>curl http://3.88.159.169/books
+>curl -H "Content-Type: application/json" -X POST -d '{"author":"Paulo Coelho","title":"The Alchemist"}' http://3.88.159.169/books
+>curl -H "Content-Type: application/json" -X PUT -d '{"author":"Franz Kafka","title":"Dava"}' http://3.88.159.169/books/3
+>curl -H "Content-Type: application/json" -X DELETE http://3.88.159.169/books/2
+
+
+
+
+
+

@@ -1,0 +1,230 @@
+1.Kurulum:
+- internette "how to activate maven profile" yazarak profile olusturma sami bulunur.
+- terraform dosyasinda key_name degistirdik.
+  * veya asagidaki kodlar girilir acilan ec2'ya:
+   sudo yum update -y
+   sudo yum install java-11-amazon-corretto -y
+   cd /home/ec2-user/
+   wget https://ftp.itu.edu.tr/Mirror/Apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
+   tar -zxvf $(ls | grep apache-maven-*-bin.tar.gz)
+   rm -rf $(ls | grep apache-maven-*-bin.tar.gz)
+   echo "M2_HOME=/home/ec2-user/$(ls | grep apache-maven)" >> /home/ec2-user/.bash_profile
+   echo 'PATH=$PATH:$M2_HOME/bin' >> /home/ec2-user/.bash_profile
+   echo 'export $PATH' >> /home/ec2-user/.bash_profile
+>cd maven-01-using-maven-as-a-build-tool
+>terraform init
+>terraform apply     # icinde java ve maven yuklu bir ec2 actik.
+
+2.SSH ile acilan ec2'ya baglandik.
+>java --version
+>mvn --version
+sudo reboot
+  - ustteki komutlar calismazsa kullanilir.
+
+!!!
+3.Maven Template Yukleme:
+- Projede kullanmak icin bir maven template yukleriz:
+  - maven.apache.org te bircok archetype vardir. Bic Maven Archetype Quickstart kullandik.
+  - Arcetype, projnin iskeletini hazirlar. Kodu maven'in sitesinden alinir.
+  - gav bilgilerini pom dosyasindan aliriz.
+  - "mvn archetype:generate" : maven projesi icin hazir bir template indirir.
+  - maven archetype yazarak nette projemize uygun bir maven template bulduk. Icinde pom, src, main ve test dosya ve alt dosyalarinin bulundugu.
+  - ilgili yukleme kodundaki groupId, artifactId ve version'u kendimize gore duzenlemeliyiz. Bunlar projenin gav'idir.
+  - groupId: klasor yapisidir. (com klasoru > clarus klasoru > maven klasoru var alt alta) En alta da ornek App.java ve AppTest.java uygulamasi indirir.
+  - artifactId: Projenin adidir. maven-experiment
+  - archetypeArtifactId: mavenin sitesinden indirdigimiz tablate'in ismi. maven-archetype-quickstart
+  - interactiveMode=false: otomatik herseyi indirir.
+!!!
+mvn archetype:generate -DgroupId=com.clarus.maven -DartifactId=maven-experiment -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+  - Maven projesi icin iskeleti belirledigimiz ornek bir template olustu.
+  - maven-experiment (artifactId ile tanimladigimiz projenin adi) dosyasi olustu. 
+  - Icinde pom dosyasi, src dosyasi, main dosyasi ve test klasorleri onlarin altinda da java ve DgoupId ile tanimlanan klasorler ve en altta App.java file olustu. 
+cd maven-experiment
+sudo yum install tree -y        # dosya dizinini gorsel olarak gosterir.
+tree                            # src'nin altindaki main ve test dosyalarinin dosya yapisi tamamen aynidir.            
+- Unit testleri asil dosya (main) ile tam karsisina koyulur test dosyasi icinde. AppTest.java unit test uygulamasidir.
+
+!!!
+4.App.Java Uygulamasi ve pom.xml Dosyasi Guncellenir:
+- Olusan Yeni template'de:
+  - App.java dosya icerigi silinerek, maven-01-using... dosyasindaki App.java icerigi eklenir.
+  - pom.xml dosya icerigi silinerek, maven-01-using... dosyasindaki pom.xml icerigi eklenir.
+
+!!
+5.Compile:
+- compile ile:
+  - gerekli dependencies internetten indirilir.
+  - .m2 klasoru ile repository ec2-user'in altinda olusur. ilgili dependenciesler buraya yuklenir. 
+  - mvn install da .m2 klasorunu olusturur.
+mvn compile
+  - Hata verdi. Compilerin java 6 ve uzeri ile calistigini ifade ediyor. 
+  - Pom dosyasinda version belirtilmedigi icin maven default olarak eski bir (java 5) versiyon indiriyor.
+  - Pom dosyasindan compileri olarak javanin versiyonunu degistiririz. source ve target compiler'e 11 atariz. 
+vim pom.xml
+------------------------------------------------------------------------------
+<properties>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+</properties> -->
+------------------------------------------------------------------------------
+  - pom dosyasina eklenir. Java 11'e gore calisir.
+mvn compile 
+  - Hata vermez bu sefer.
+  - build islemi tamamlanir ve maven-experiment ana dosyasi altinda target dosyasi olusur.
+  - target: profile islemi sonrasi maven'in raporlari olusturup sakladigi dosyadir. 
+  - App dosyasini compile ederek byte kodu olusturdu: App.class
+  - target klasorunu silsek de maven her calistiginda bu klasoru yeniler.
+
+6.Komutlarin calistirilmasi:
+- Biz bir phase'i secince ornegin "mvn test" bu komuta kadar olan komutlar sirayla calistiriliyor.
+mvn clean
+  - build (compile) ile olusan deportlari (target klasoru) siler.
+mvn test
+  - unit testi icra eder. src'nin altindaki AppTest.java'yi run eder. Testi gectigini verdi.
+  - target klasoru tekrar olusur.
+  - compile ile App.class olusmustu (compile edilmis app dosyasi), test ile de AppTest.class (compile edilmis AppTest.java) olusur. 
+  - Test dosyasini compile ettikten sonra testleri icra eder.
+  - sufire-reports plugini'ni raporlama icin kullaniyor. Test sonuclarini gosterir.
+mvn clean test 
+  - arka arkaya birden fazla fazi komut olarak girebiliriz. Once target klasorunu siler sonra clean'a kadar olan sonra test'e kadar fazlari yapar target klasorunu tekrar olusturur.
+  - .m2 klasorunde dependencies'ler onceden indirildigi icin islemleri daha hizli yapiyor.
+  - .m2 silinirse yeni komut girilirse .m2'yi tekrar olusturur.
+>>mvn package
+  - compile, test vb komutlarin hepsini calistirip target'in altinda jar dosyasi olusturur. java archive dosyasi yapiyor.
+  - jar dosyasi tasinabilir ve istenilen platformda sdk yuklu ise calistirilabilir. Jar dosyasi executable'dir.
+  - jar dosyasi executable'dir.
+
+7.Jar dosyasinin calistirilmasi/execute edilmesi:
+>cd target
+  - once jar dosyasinin bulundugu klasore gidilir.
+>java -jar maven-experiment-1.0-SNAPSHOT-jar
+  - "no main manifest attribute" hatasi verdi. 
+  - "unable to access jarfile" hatasi da olabilir.
+  - main class'i tanimlanmadigi icin hata verdi.
+  - Normalde developerlar ayarlarlar.
+>mkdir jar
+>cd jar
+>cp ../maven-experiment-1.0-SNAPSHOT.jar ./
+  - jar dosyasini bir ust klasorden bulundugumuz jar dosyasina atariz.
+!!!
+unzip maven-experiment-1.0-SNAPSHOT.jar
+  - META-INF dosyasi (unzip ile olusan) altinda MANIFEST.MF dosyasinin icinde main class olmaliydi. Hata buradan kaynakli.
+  - Plugin ekleyerek hatayi gideririz.
+  - assembly: bircok dosyadan olusmus dosya.
+  - '.jar' dosyasini acariz.
+cd ..
+cd ..
+vim pom.xml
+-----------------------------------------------------------------------------
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-assembly-plugin</artifactId>
+      <executions>
+          <execution>
+              <phase>package</phase>
+              <goals>
+                  <goal>single</goal>
+              </goals>
+              <configuration>
+                  <archive>
+                  <manifest>
+                      <mainClass>
+                          com.clarus.maven.App
+                      </mainClass>
+                  </manifest>
+                  </archive>
+                  <descriptorRefs>
+                      <descriptorRef>jar-with-dependencies</descriptorRef>
+                  </descriptorRefs>
+              </configuration>
+          </execution>
+      </executions>
+    </plugin>
+  </plugins>
+</build>
+-----------------------------------------------------------------------------
+  - Build icinde bir yere konulur. 
+  - Main class'i pom dosyasina eklemeliyiz:
+  - <artifactId>maven-assembly-plugin</artifactId> pom dosyasina eklenir.
+  - readme'den assembly plugini pluginlerin oldugu dizine eklenir. 
+  - assembly plugin'ini maven.com'da da arayabiliriz.
+  - single golu var: manifest kismina mainClass'i ekle diyor.
+  - mainClass com.clarus.maven.App class'i altinda seklinde belirtiyor.
+  - Pluginlerde App.class seklinde yazmaz App yazar.
+>cd ..
+>cd ..
+>mvn clean package
+  - pom dosyasinin oldugu klasore gelir clean ve package calistirinca olusturdugumuz jar folder dahil gereksiz dosyalari siler ve 
+  - jar dosyasi jar-with-dependencies.jar eklentisi ile olustu.
+>cd target
+>java -jar maven-experiment-1.0-SNAPSHOT-jar-with-dependencies.jar 
+  - jar dosyasini calistirmak icin mevcut klasore gelinir ve java komutuyla calistirilir.
+  - java dosyasinin calisabilecek sekilde tum dependencieslerin, resource, bytecod bir araya getirilmesine assembly denir.
+- "Cannot load the credentials from the credential profiles file..." (~/.aws/credentials) dosyasi altinda credentiali bulamamis.
+  - App.java dosyasinda credentialslarin nereden cekilecegi "AWSCredentials credentials = null;" altinda aciklar.
+>cd ~
+>mkdir .aws
+  - App.java'da aciklandigi uzere ec2-user'in altinda .aws klasoru olusturdum.
+  - Kendi bilgisayarimda C/Users/Test/.aws klasorundeki credentials file'ni ec2-user'da .aws dosyasina tasirim.
+>cd maven-experiment/target
+>java -jar maven-experiment-1.0-SNAPSHOT-jar-with-dependencies.jar 
+  - jar dosyasi calisti.
+
+8.Programin Install Edilmesi:
+- Install etmek icin oncesinde:
+  - compile edilir.
+  - test edilmeli unit testler kosularak programin calisip calismadigi kontrol edilir.
+  - build edilir.
+  - package edilmeli.
+>cd maven-experiment
+>mvn install
+  - .m2 artik tam bir artifact deposu oldu. icinde uygulama var jar dosyasi (executable versiyonu), depedencies hepsi var.
+  - .m2 dosyasini istedigimiz yere tasiyarak calistirabiliriz.
+
+9.Site:
+- Raporlama icin bir web sitesi olusturur.
+- maven-site-plugin ve maven-project-info-reports-plugin'i pom dosyasina ekleriz.
+- <artifactId>maven-site-plugin</artifactId> : web sitesi olusturur.
+- <artifactId>maven-project-info-reports-plugin</artifactId> : olusan web sitesinde kullanilacak raporlari hazirliyor.
+- plugin eklerken gav'ini muhakkak yazariz: <groupId>, <artifactId> ve <version>
+- pluginleri build icine diger plugin'lerle denk hizada ekleriz.
+>cd maven-experiment
+>mvn clean site
+  - once temizleyip sonra target altinda yalnizca site klasorunu olusturdu.
+  - clean compile, package deseydik target altinda compile ve package klasorleri de olusurdu.
+  - site klasoru altinda index.html dosyasi 
+>cd target/site
+  - site dosyasi target altinda olusur.
+>python --version
+>python -m SimpleHTTPServer
+  - Apache veya nginx kurmadan python ile site plugininin olusturdugu web sitesini acar.
+>sudo yum install -y httpd
+>sudo systemctl start httpd
+>sudo systemctl enable httpd
+  - python'a alternatif olarak apache kurarak site plugininin olusturdugu web sitesini acmak icin apache kurduk.  
+>cd ..
+>sudo cp -a site/. /var/www/html
+  - apache'nin kok dizinine (index.html dosyasini bulundugu klasor) bizim site klasorunun icerigi kopyalanir.
+  - kopyalama islemini site klasorunun bir ustunde yaptik.
+>cd site
+>sudo cp -a . /var/www/html
+  - yukardaki ile ayni sekilde mevcut dosya icerigini kopyalar.
+
+10.Dependencies:
+- java'nin aws'de calisabilmesi icin:
+  - pom dosyasina <artifactId>aws-java-sdk-bom</artifactId> yukleriz.
+  - soz konusu sdk cok buyuk oldugu icin sdk'yi <artifactId>aws-java-sdk-s3</artifactId> ve <artifactId>junit</artifactId> ile kisitlariz.
+  - Uygulamada s3 actigimiz ve unit test oldugu icin bu ikisi sadece yuklenir.
+
+
+
+
+
+
+
+
+
+
+

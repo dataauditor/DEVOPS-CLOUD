@@ -1,0 +1,34 @@
+1.Projenin Uygulamasi:
+- ssh ile instance baglan.
+>export PS1="\e[1;36m umit/\W>>> \$ \e[m "
+>vim .bashrc
+  - yukarki komutu girerek surekliligi saglanir.
+  - .bashrc genelde /home'dadir.
+>aws configuration
+- Github:
+  - phonebook isimli private repo olusturduk.
+  - Token olusturduk.
+>sudo yum update -y && sudo yum install -y yum-utils && sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo && sudo yum -y install terraform && sudo yum -y install git && sudo yum install tree -y && terraform --version && git --version && mkdir tf-files && cd tf-files && touch main.tf outputs.tf provider.tf sec-gr.tf user-data.sh
+>git --version
+>terraform --version
+
+
+
+
+
+- Hesapta hazir sg varsa uretmeden dogrudan ismini yazarak baglayabiliriz.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

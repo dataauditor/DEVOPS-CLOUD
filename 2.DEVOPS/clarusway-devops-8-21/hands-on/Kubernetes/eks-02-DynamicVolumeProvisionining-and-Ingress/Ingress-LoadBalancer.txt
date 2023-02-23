@@ -1,0 +1,57 @@
+1.Genel:
+- Target pot ve port belirlenir. Nodeport vb'yi kendisi olusturur.
+- Loadbalancer alta dogru nodeport, cluster-ip kapsar.
+
+GITHUB:
+- Sadece istenen dosyalari 
+sudo yum install yum install -y
+mkdir repo && cd repo 
+git init 
+cd .git
+cat config 
+  - ici bos 
+cd ..
+https://github.com/dataauditor/todo-app-node-project.git
+
+git remote add origin https://github.com/clarusway/clarusway-devops-8-21.git
+git config core.sparseCheckout true
+echo "hands-on/Kubernetes/eks-02-DynamicVolumeProvisionining-and-Ingress/" >> .git/info/sparse-checkout
+git pull origin main
+ls
+cd hands-on/
+ls
+cd Kubernetes/
+ls
+cd eks-02-DynamicVolumeProvisionining-and-Ingress/
+ls
+mv ./ingress-yaml-files/ /home/ec2-user/
+cd
+ls
+cd ingress-yaml-files/
+cd to-do/
+ls 
+  - 3 deployment var.
+  - 
+cat db-sevice.yaml
+ls
+cat db-sevice.yaml
+kubectl apply -f .
+kubectl get pv,pvc,service
+cd ..
+cd php-apache/
+ls
+kubectl apply -f .
+kubectl get svc
+cd ..
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/aws/deploy.yaml
+kubectl get all -n ingress-nginx
+ls
+kubectl apply -f ingress-service.yaml
+eksctl get cluster
+
+
+
+
+- Ingress icin controller yuklenir.
+
+

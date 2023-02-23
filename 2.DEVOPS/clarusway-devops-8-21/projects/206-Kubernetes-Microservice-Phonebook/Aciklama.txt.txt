@@ -1,0 +1,56 @@
+1.Genel:
+- 3 adet service icin configmap/secret kurariz iletisimi icin.
+- 
+
+Project:
+https://unix.stackexchange.com/questions/233327/is-it-possible-to-clone-only-part-of-a-git-project
+mkdir proj-206 && cd proj-206 
+git init
+git remote add origin
+git config core.sparseCheckout true
+echo "projects/206-Kubernetes-Microservice-Phonebook/" > .git/info/sparse-checkout
+cat .git/info/sparse-checkout 
+git pull origin main
+cd projects/
+cd 206-Kubernetes-Microservice-Phonebook/
+
+
+
+
+
+
+
+
+
+
+
+
+kubectl get ep mysql-service
+  - endpointi varsa baglanmis.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+- Dockerfile
+- llk once configurasyona ihtiyac var. 
+- secret-configmap
+- service
+- pv ve pvc
+- deployment hazirlanir.
+
+
+
+
+

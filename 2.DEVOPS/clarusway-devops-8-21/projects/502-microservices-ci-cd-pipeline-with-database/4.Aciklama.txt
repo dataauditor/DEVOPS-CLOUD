@@ -1,0 +1,1114 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+4.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  - kompose kuruldu. Docker-compose .yaml dosyalarini k8s objelerine convert eder.
+  - Docker-compose.yaml dosyasini kompose ile objeler yaptik.
+
+
+
+<22.Prepare Petlinic Kubernetes YAML Files>
+git checkout release
+git branch feature/msp-22
+git checkout feature/msp-22
+mkdir k8s
+curl -L https://github.com/kubernetes/kompose/releases/download/v1.22.0/kompose-linux-amd64 -o kompose
+  - kompose ismi ile kaydediyor.
+chmod +x kompose
+sudo mv ./kompose /usr/local/bin/kompose
+kompose version
+  - docker-compose ile olusturulmus file'larin k8s'e tasinmasina yardimci olur.
+  - kompose: elimizdeki hazir docker-compose file'larini objelere cevirir. 
+https://kompose.io/user-guide/
+ECR'dan kompose image cekebilmesi icin kredentialleri tanimlamaliyiz.
+- Labels'lar ile veriler verilir.
+vim k8s/docker-compose.yml
+-------------------------------------------------------------------------------
+version: '3'
+services:
+  config-server:
+    image: IMAGE_TAG_CONFIG_SERVER
+    ports:
+     - 8888:8888
+    labels:
+      kompose.image-pull-secret: "regcred"
+  discovery-server:
+    image: IMAGE_TAG_DISCOVERY_SERVER
+    ports:
+     - 8761:8761
+    labels:
+      kompose.image-pull-secret: "regcred"
+  customers-service:
+    image: IMAGE_TAG_CUSTOMERS_SERVICE
+    deploy:
+      replicas: 2
+    ports:
+    - 8081:8081
+    labels:
+      kompose.image-pull-secret: "regcred"
+  visits-service:
+    image: IMAGE_TAG_VISITS_SERVICE
+    deploy:
+      replicas: 2
+    ports:
+     - 8082:8082
+    labels:
+      kompose.image-pull-secret: "regcred"
+  vets-service:
+    image: IMAGE_TAG_VETS_SERVICE
+    deploy:
+      replicas: 2
+    ports:
+     - 8083:8083
+    labels:
+      kompose.image-pull-secret: "regcred"
+  api-gateway:
+    image: IMAGE_TAG_API_GATEWAY
+    deploy:
+      replicas: 1
+    ports:
+     - 8080:8080
+    labels:
+      kompose.image-pull-secret: "regcred"
+      kompose.service.expose: "petclinic07.clarusway.us"
+      kompose.service.type: "nodeport"
+  tracing-server:
+    image: openzipkin/zipkin
+    environment:
+    - JAVA_OPTS=-XX:+UnlockExperimentalVMOptions -Djava.security.egd=file:/dev/./urandom
+    ports:
+     - 9411:9411
+  admin-server:
+    image: IMAGE_TAG_ADMIN_SERVER
+    ports:
+     - 9090:9090
+    labels:
+      kompose.image-pull-secret: "regcred"
+  hystrix-dashboard:
+    image: IMAGE_TAG_HYSTRIX_DASHBOARD
+    ports:
+     - 7979:7979
+    labels:
+      kompose.image-pull-secret: "regcred"
+  grafana-server:
+    image: IMAGE_TAG_GRAFANA_SERVICE
+    ports:
+    - 3000:3000
+    labels:
+      kompose.image-pull-secret: "regcred"
+  prometheus-server:
+    image: IMAGE_TAG_PROMETHEUS_SERVICE
+    ports:
+    - 9091:9090
+    labels:
+      kompose.image-pull-secret: "regcred"
+
+  mysql-server:
+    image: mysql:5.7.8
+    environment: 
+      MYSQL_ROOT_PASSWORD: petclinic
+      MYSQL_DATABASE: petclinic
+    ports:
+    - 3306:3306
+-------------------------------------------------------------------------------
+  - kompose.image-pull-secret: "regcred" : ilgili secretlerin yerini gosteriyor.
+  - labels: kompose toolu icin acilir.
+  - Docker Cresdentialslari 4 sekilde tutar:
+    * register credentials (memoryde tutar)
+    * 
+  - api-gateway: uygulamaya girilen nokta. Ingress olusturulacak nokta burasi.
+mkdir /k8s/base &&  mkdir /k8s/staging && mkdir /k8s/prod
+- 3 adet klasor olusturulacak base, staging ve prod. Basta base altina atilacak kompose ile convert edilen kubernetes .yml dosyalari. 
+- Daha sonra base'deki templateler staging ve prod'a   edilerek gonderilir.
+!!!
+kompose convert -f k8s/docker-compose.yml -o k8s/base
+  - '-f' file'i convert et ve '-o': output olarak gonder.
+  - k8s objeleri olustu base'de. 
+vim /k8s/base/discovery-server-deployment.yaml
+-------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f k8s/docker-compose.yml -o k8s/base
+    kompose.image-pull-secret: regcred
+    kompose.version: 1.22.0 (955b78124)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: discovery-server
+  name: discovery-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: discovery-server
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f k8s/docker-compose.yml -o k8s/base
+        kompose.image-pull-secret: regcred
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: discovery-server
+    spec:
+      containers:
+        - image: IMAGE_TAG_DISCOVERY_SERVER
+          name: discovery-server
+          ports:
+            - containerPort: 8761
+          resources: {}
+      imagePullSecrets:
+        - name: regcred
+      restartPolicy: Always
+
+      initContainers:
+      - name: init-config-server
+        image: busybox
+        command: ['sh', '-c', 'until nc -z config-server:8888; do echo waiting for config-server; sleep 2; done;']
+status: {}
+-------------------------------------------------------------------------------
+  - compose file'da depends on olmadigi icin calisma sirasini kompose ile ayarlayacagiz.
+  - init containers ile siralama saglanir. Bu container kendisine tanimlanan gorevi tamamlayana kadar microservice kontainerleri siralar.
+  - busybox:1.28 image'indan kurulur.
+  - docker-compose'dan kompose ile cevrilen file'a  cevrilen 
+      '''
+      initContainers:
+      - name: init-config-server
+        image: busybox
+        command: ['sh', '-c', 'until nc -z config-server:8888; do echo waiting for config-server; sleep 2; done;']
+      ''' 
+      bolumunu ekledik.
+  !!!
+  - '['sh', '-c', 'until nc -z config-server:8888; do echo waiting for config-server; sleep 2; done;']'
+    - pod icinde ilk init container calisir. Kendisine verilen config server takip gorevi kapsaminda takip ettigi porttan cvp gelince kendisini sonlandirir ve bekleyen container acilir ayni podda.
+    - ilk acilacak config server haric hepsine init container eklenir. 
+    - discovery server'daki init containere config server'i dinletiriz.
+    - Geri kalan tum serverlara discovery server'i dinleme gorevi verilir.
+    - busybox ile calisir ve port dinler isi bitince podda kapanir ayni podda diger container acilir.
+vim vim /k8s/base/admin-server-deployment.yaml  
+-------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f k8s/docker-compose.yml -o k8s/base
+    kompose.image-pull-secret: regcred
+    kompose.version: 1.22.0 (955b78124)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: admin-server
+  name: admin-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: admin-server
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f k8s/docker-compose.yml -o k8s/base
+        kompose.image-pull-secret: regcred
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: admin-server
+    spec:
+      containers:
+        - image: IMAGE_TAG_ADMIN_SERVER
+          name: admin-server
+          ports:
+            - containerPort: 9090
+          resources: {}
+      imagePullSecrets:
+        - name: regcred
+      restartPolicy: Always
+
+      initContainers:
+      - name: init-discovery-server
+        image: busybox
+        command: ['sh', '-c', 'until nc -z discovery-server:8761; do echo waiting for discovery-server; sleep 2; done;']
+status: {}
+-------------------------------------------------------------------------------
+  - Burada oldugu gibi tum servicelere 
+     '''
+      initContainers:
+      - name: init-discovery-server
+        image: busybox
+        command: ['sh', '-c', 'until nc -z discovery-server:8761; do echo waiting for discovery-server; sleep 2; done;']
+       ''' ekledik.
+vim /k8s/kustomization-template.yml
+-------------------------------------------------------------------------------
+resources:
+- admin-server-deployment.yaml
+- api-gateway-deployment.yaml
+- config-server-deployment.yaml
+- customers-service-deployment.yaml
+- discovery-server-deployment.yaml
+- grafana-server-deployment.yaml
+- hystrix-dashboard-deployment.yaml
+- mysql-server-deployment.yaml
+- prometheus-server-deployment.yaml
+- tracing-server-deployment.yaml
+- vets-service-deployment.yaml
+- visits-service-deployment.yaml
+- admin-server-service.yaml
+- api-gateway-service.yaml
+- config-server-service.yaml
+- customers-service-service.yaml
+- discovery-server-service.yaml
+- grafana-server-service.yaml
+- hystrix-dashboard-service.yaml
+- mysql-server-service.yaml
+- prometheus-server-service.yaml
+- tracing-server-service.yaml
+- vets-service-service.yaml
+- visits-service-service.yaml
+- api-gateway-ingress.yaml
+
+images:
+- name: IMAGE_TAG_CONFIG_SERVER
+  newName: "${IMAGE_TAG_CONFIG_SERVER}"
+- name: IMAGE_TAG_DISCOVERY_SERVER
+  newName: "${IMAGE_TAG_DISCOVERY_SERVER}"
+- name: IMAGE_TAG_CUSTOMERS_SERVICE
+  newName: "${IMAGE_TAG_CUSTOMERS_SERVICE}"
+- name: IMAGE_TAG_VISITS_SERVICE
+  newName: "${IMAGE_TAG_VISITS_SERVICE}"
+- name: IMAGE_TAG_VETS_SERVICE
+  newName: "${IMAGE_TAG_VETS_SERVICE}"
+- name: IMAGE_TAG_API_GATEWAY
+  newName: "${IMAGE_TAG_API_GATEWAY}"
+- name: IMAGE_TAG_ADMIN_SERVER
+  newName: "${IMAGE_TAG_ADMIN_SERVER}"
+- name: IMAGE_TAG_HYSTRIX_DASHBOARD
+  newName: "${IMAGE_TAG_HYSTRIX_DASHBOARD}"
+- name: IMAGE_TAG_GRAFANA_SERVICE
+  newName: "${IMAGE_TAG_GRAFANA_SERVICE}"
+- name: IMAGE_TAG_PROMETHEUS_SERVICE
+  newName: "${IMAGE_TAG_PROMETHEUS_SERVICE}"
+-------------------------------------------------------------------------------
+  - base'de olusan tum .yaml dosyalarindaki templatelerdeki bazi isimleri degistirir.
+  - Ornegin IMAGE_TAG_CONFIG_SERVER ismini "${IMAGE_TAG_CONFIG_SERVER}" olarak degistiririz.
+vim /k8s/staging/kustomization.yml
+-------------------------------------------------------------------------------
+namespace: "petclinic-staging-ns"
+bases:
+- ../base
+patches:
+- replica-count.yml
+-------------------------------------------------------------------------------
+vim /k8s/staging/replica-count.yml
+-------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  replicas: 1
+-------------------------------------------------------------------------------
+vim /k8s/prod/kustomization.yml
+-------------------------------------------------------------------------------
+namespace: "petclinic-prod-ns"
+bases:
+- ../base
+patches:
+- replica-count.yml
+-------------------------------------------------------------------------------
+vim /k8s/prod/replica-count.yml
+-------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  replicas: 3
+-------------------------------------------------------------------------------
+curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.18.9/2020-11-02/bin/linux/amd64/kubectl
+sudo mv kubectl /usr/local/bin/kubectl
+chmod +x /usr/local/bin/kubectl
+kubectl version --short --client
+  - kubectl'i kurup izin verdik.
+export IMAGE_TAG_CONFIG_SERVER="testing-image-1"    
+export IMAGE_TAG_DISCOVERY_SERVER="testing-image-2" 
+export IMAGE_TAG_CUSTOMERS_SERVICE="testing-image-3"
+export IMAGE_TAG_VISITS_SERVICE="testing-image-4"   
+export IMAGE_TAG_VETS_SERVICE="testing-image-5"     
+export IMAGE_TAG_API_GATEWAY="testing-image-6"      
+export IMAGE_TAG_ADMIN_SERVER="testing-image-7"     
+export IMAGE_TAG_HYSTRIX_DASHBOARD="testing-image-8"
+export IMAGE_TAG_GRAFANA_SERVICE="testing-image-9"
+export IMAGE_TAG_PROMETHEUS_SERVICE="testing-image-10"
+  - ilgili degiskenleri olusturur.
+kubectl kustomize k8s/prod/
+  - yukarda olusan degiskenler deploymentlere hafizada degistirildi.
+kubectl kustomize k8s/staging/
+git add .
+git commit -m 'added Configuration YAML Files for Kubernetes Deployment'
+git push --set-upstream origin feature/msp-22
+git checkout release
+git merge feature/msp-22
+git push origin release
+
+
+
+
+<23.
+- Once bos EC2 olusturulur.
+- Jenkins'e rke cli yuklenir ve bununla bir EC2'ya Rancher kurulur.
+- Rancher:
+  * Rancher'a secure bir dns ile baglanir. Amazon Certificate manager kullanilir.
+  * Rancher'a IAM role verilir.
+  * Load balancer baglanir.
+  * SG atanir
+  * Bir EC2'ya yuklenir.
+  * Helm: Rancher'in configuration file reposu.
+
+VSC:
+git checkout release
+git branch feature/msp-23
+git checkout feature/msp-23
+
+AWS:
+> IAM > Policy > Create policy > 
+--------------------------------------------------------
+{
+"Version": "2012-10-17",
+"Statement": [
+  {
+    "Effect": "Allow",
+    "Action": [
+      "autoscaling:DescribeAutoScalingGroups",
+      "autoscaling:DescribeLaunchConfigurations",
+      "autoscaling:DescribeTags",
+      "ec2:DescribeInstances",
+      "ec2:DescribeRegions",
+      "ec2:DescribeRouteTables",
+      "ec2:DescribeSecurityGroups",
+      "ec2:DescribeSubnets",
+      "ec2:DescribeVolumes",
+      "ec2:CreateSecurityGroup",
+      "ec2:CreateTags",
+      "ec2:CreateVolume",
+      "ec2:ModifyInstanceAttribute",
+      "ec2:ModifyVolume",
+      "ec2:AttachVolume",
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:CreateRoute",
+      "ec2:DeleteRoute",
+      "ec2:DeleteSecurityGroup",
+      "ec2:DeleteVolume",
+      "ec2:DetachVolume",
+      "ec2:RevokeSecurityGroupIngress",
+      "ec2:DescribeVpcs",
+      "elasticloadbalancing:AddTags",
+      "elasticloadbalancing:AttachLoadBalancerToSubnets",
+      "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
+      "elasticloadbalancing:CreateLoadBalancer",
+      "elasticloadbalancing:CreateLoadBalancerPolicy",
+      "elasticloadbalancing:CreateLoadBalancerListeners",
+      "elasticloadbalancing:ConfigureHealthCheck",
+      "elasticloadbalancing:DeleteLoadBalancer",
+      "elasticloadbalancing:DeleteLoadBalancerListeners",
+      "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeLoadBalancerAttributes",
+      "elasticloadbalancing:DetachLoadBalancerFromSubnets",
+      "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+      "elasticloadbalancing:ModifyLoadBalancerAttributes",
+      "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+      "elasticloadbalancing:SetLoadBalancerPoliciesForBackendServer",
+      "elasticloadbalancing:AddTags",
+      "elasticloadbalancing:CreateListener",
+      "elasticloadbalancing:CreateTargetGroup",
+      "elasticloadbalancing:DeleteListener",
+      "elasticloadbalancing:DeleteTargetGroup",
+      "elasticloadbalancing:DescribeListeners",
+      "elasticloadbalancing:DescribeLoadBalancerPolicies",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetHealth",
+      "elasticloadbalancing:ModifyListener",
+      "elasticloadbalancing:ModifyTargetGroup",
+      "elasticloadbalancing:RegisterTargets",
+      "elasticloadbalancing:SetLoadBalancerPoliciesOfListener",
+      "iam:CreateServiceLinkedRole",
+      "kms:DescribeKey"
+    ],
+    "Resource": [
+      "*"
+    ]
+  }
+]
+}
+-----------------------------------------------------------
+  > next > name: call-rke-etcd-worker-policy.json > create policy
+
+
+
+{
+"Version": "2012-10-17",
+"Statement": [
+    {
+        "Effect": "Allow",
+        "Action": [
+            "ec2:DescribeInstances",
+            "ec2:DescribeRegions",
+            "ecr:GetAuthorizationToken",
+            "ecr:BatchCheckLayerAvailability",
+            "ecr:GetDownloadUrlForLayer",
+            "ecr:GetRepositoryPolicy",
+            "ecr:DescribeRepositories",
+            "ecr:ListImages",
+            "ecr:BatchGetImage"
+        ],
+        "Resource": "*"
+    }
+]
+}
+
+  rke-etcd-worker-policy.json
+
+
+sg'ler olusturuldu.
+
+aws ec2 create-key-pair --region us-east-1 --key-name call-rancher.key --query KeyMaterial --output text > ~/.ssh/call-rancher.key
+chmod 400 ~/.ssh/call-rancher.key
+  - Rancher'a baglanmak icin keypair olusturduk ve jenkins'e kaydettikcd
+  - /home/ec2-user/.ssh/call-rancher.key de kaydeder.
+
+AWS:
+launch > ubuntu 20 > t3.a > IAM role: rke-role > 16 > rancher.key > launch 
+VPC ve Subnete tag verildi.
+
+
+
+
+<23.RKE K8s Cluster Hazirlama>
+- Rancher: Birden fazla K8s clusterini yonetmeye yarayan bir tool.
+  * Clusterlar AWS, Azure vb farkli platformlarda olabilir.
+  * Rancher server tek node'tan kullanilabilirse de best practice birden fazla node'ta olmasidir.
+  * RKE: Rancher clusterini olusturmak icin kullaniliyor. Ilk bu Jenkins servera indirilir.
+  * Ilk Docker yuklenir.
+  * Once Rancher yuklenecek.
+  * Route53'ten domainname verecegiz. 
+  * ALB kuracagiz ve ranchere/clustera ulasacagiz.
+  * Rancher bilgisayari icinde k8s clusteri kuracagiz.
+  * Jenkins ile cron job ile Github repodan release brach'indan source kodu cekecek.
+  * Image'lari ECR'dan cekecek. 
+  * Maven ile olusan target klasoru microservicelere gonderilir.
+  * Tum bunlari jenkins ile yapacagiz.
+  * Instance, sg, VPC, subnets lere 'Key = kubernetes.io/cluster/Call-Rancher` and `Value = owned` taglari verilir.
+
+VSC:
+git checkout release
+git branch feature/msp-23
+git checkout feature/msp-23
+
+AWS:
+> IAM > Policy > rke-controlplane-policy.json
+> IAM > Policy > rke-etcd-worker-policy.json 
+  - seklinde iki policy onceden olusturduk.
+> IAM > roles > rke-role
+  - seklinde role olusturduk. Yukarki iki policy'i de icine kattik onceden.
+> EC2 > rke-cluster-sg
+> EC2 > rke-alb-sg  
+  - seklinde 2 sg olusturduk onceden.
+  - rke-cluster-sg ye baslangicta Docker indirirken hata verdigi icin all traffic acilir.
+  - 443 portu ile 3 adet belirli portlardan giris Rancher'in updatei icin.
+> EC2 > instances > Rancher > tags > key: kubernetes.io/cluster/Call-Rancher value: owned
+  - tag verilmis onceden.
+> VPC > default VPC > Tags > kubernetes.io/cluster/Call-Rancher
+  - tag onceden verilmis.
+> VPC > Subnets > Default VPC'nin us-east-1f (Rancher burada) > Tags > kubernetes.io/cluster/Call-Rancher
+  - tag onceden verilmis.
+> EC2 > SG > rke-cluster-sg > Tags > kubernetes.io/cluster/Call-Rancher
+  - tag verdik.
+> EC2 > Rancher > Connect > ssh codu aldik.
+
+VSC:
+- Rancher bilgisayara baglanmak icin key olusturduk ve ilgili keyi kullanarak baglanacagiz.
+cd
+cd .ssh && ls
+  - rancher.key gorulur.
+ssh -i "rancher.key" ubuntu@ec2-3-235-228-42.compute-1.amazonaws.com
+  - key'den sonra .pem geliyor onu sildik.
+  - Rancher'a baglandik.
+sudo hostnamectl set-hostname rancher-instance-1
+sudo apt-get update -y
+sudo apt-get upgrade -y
+
+VSC Rancher ile uyumlu Docker Yukleme:
+!!!
+sudo apt-get install \
+  apt-transport-https \
+  ca-certificates \
+  curl \
+  gnupg \
+  lsb-release
+    * Docker'in Rancher ile uyumlu versiyonunu indirmek icin curl, gnipg, vb toollari yukleriz.
+!!!
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  - docker-archive-keyring.png dosyasini indiriyoruz.
+  - Docker yuklemek icin bu key kullaniliyor.
+cd /usr/share/keyrings/
+  - docker-archive-keyring.png dosyasi inmis.
+!!!
+echo \
+  "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    - docker repository'sini guncelliyoruz. Bu kapsamda docker'in versiyonlarinin hepsini indiriyoruz.
+    - son versiyonu yuklememek icin tum versiyonlari indiriyoruz. 
+sudo apt-get update
+apt-cache madison docker-ce
+  - Suan localimize inmis durumdaki docker binary'lerinin versiyonlari sergiler.
+  - En son 19 ile baslayan versiyonu kullanacagiz Rancherla calissin diye.
+!!!
+sudo apt-get install docker-ce=5:19.03.15~3-0~ubuntu-focal docker-ce-cli=5:19.03.15~3-0~ubuntu-focal containerd.io
+  - sudo apt-get install docker-ce=<VERSION_STRING> docker-ce-cli=<VERSION_STRING> containerd.io
+  - 'apt-cache madison docker-ce' kodu ile aldigimiz versiyonlardan 19 ile baslayan en guncel versiyonu indiriyoruz.
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker ubuntu
+newgrp docker
+
+AWS:
+Target Group olusturuyoruz:
+> EC2 > Target Groups > create target group > instances > name: rancher-http-80-tg  
+  > default VPC > HTTP1 > Health check protocol: HTTP > Health check path: /healthz
+  > Advanced health check settings > Healthy threshold:3 > Unhealthy threshold: 3 
+  > Timeout: 5 > Interval: 10 > next 
+  > Rancher (sec) > Include as pending below > create target group
+> Load Balancer > Application Load Balancer >  create > name: rancher-alb > internet facing / IPv4 
+  > default VPC > Mappings: us-east-1f (Rancher burada) ve bir tane daha secilir. > 
+  > sg: rke-alb-sg > 
+  > Listener HTTP:80 > Forward to: rancher-http-80-tg
+  > Add listener: HTTPS > Forward to: rancher-http-80-tg
+  > Security listener > FROM ACM: *.umitdevopsaws.com
+  > create load balancer
+> Load Balancer > rancher-alb > Listeners > HTTP:80 > Edit > Forward: Remove > Add action: Redirect > HTTPS: 443 > save changes
+> Route53 > Hosted zone > umitdevopsaws.com > create record > Switch to wizard > Simple routing > next > Define simple record > rECORD NAME: rancher / A / Alias to Application and Classic Load Balancer / us-east-1 / lb: rancher-alb-
+
+VSC:
+exit
+  - Jenkins'e girilir.
+curl -SsL "https://github.com/rancher/rke/releases/download/v1.1.12/rke_linux-amd64" -o "rke_linux-amd64"
+   - RKE binary dosyasi indirilir.
+sudo mv rke_linux-amd64 /usr/local/bin/rke
+chmod +x /usr/local/bin/rke
+rke --version
+vim /infrastructure/rancher-cluster.yml
+-----------------------------------------------------------
+nodes:
+  - address: 3.237.46.200
+    internal_address: 172.31.67.23
+    user: ubuntu
+    role: [controlplane, worker, etcd]
+
+services:
+  etcd:
+    snapshot: true
+    creation: 6h
+    retention: 24h
+
+ssh_key_path: ~/.ssh/rancher.key
+
+# Required for external TLS termination with
+# ingress-nginx v0.22+
+ingress:
+  provider: nginx
+  options:
+    use-forwarded-headers: "true"
+-----------------------------------------------------------
+  - rancher'in kurulus dosyasi.
+  - address: rancher'in ip adresi
+  - internal_address: rancher'in private ip adresi
+  - snapshot: true 6 saatte bir alsin ve 24 saat tutsun.
+  - ingress: lb'lari yonlendirmek icin.
+!!!
+rke up --config ./rancher-cluster.yml
+  - RKE Kubernetes cluster'i EC2'da kurariz.
+  - .yml dosyasi ile rke clusterini kurup calistirir.
+
+AWS:
+> EC2 > SG > rancher-cluster-sg > inboud rule > 
+  > 22 / Jenkins server IP address
+  > 6443 / Jenkins server IP address seklinde degistir.
+
+VSC:
+mkdir -p ~/.kube
+mv ./infrastructure/kube_config_rancher-cluster.yml $HOME/.kube/config
+chmod 400 ~/.kube/config
+kubectl get nodes
+  - RKE'nin node'lari gorulur.
+kubectl get pods --all-namespaces
+git add .
+git commit -m 'added rancher setup files'
+git push --set-upstream origin feature/msp-23
+git checkout release
+git merge feature/msp-23
+git push origin release
+
+
+
+
+<24.RKE K8s Cluster'ina Rancher App Yukleme>
+Daha once RKE ile olusturulan Cluster'a Helm'den Rancher yukleyecegiz:
+Rancher, K8s clusteri uzerinde calisir.
+Helm packer manager ile Rancher'i yukleriz.
+Helm'in chart isimli tool'u ile Rancher icin gerekli dosyalar toplu halde artifact hub'tan indirilir.
+
+VSC Jenkins:
+!!!
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+  - helm reposunu indiriyoruz.
+  - artifact.io : chartlarin tutuldugu site. Tancher'i de buradan indiririz.
+helm version
+helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+  - Rancher'in helm chart repositories'leri eklenir. 
+  - Bu chart, Rancher'in tum ilgili dosyalarini barindirir.
+helm repo list
+kubectl create namespace cattle-system
+  - Rancher icin namespace olusturulur.
+helm install rancher rancher-latest/rancher \
+  --namespace cattle-system \
+  --set hostname=rancher.umitdevopsaws.com \
+  --set tls=external \
+  --set replicas=1
+    * Helm ile RKE K8s Clusterine Rancher yuklenir.
+    * Kendi domain addresimiz yazilir.
+    * '--set tls=external': Sertifikayi AWS'den aldigimi icin external yaziyoruz aksi takdirde tanitmamiz lazimdi.
+    * Rancher containerler ile yuklendi K8s gibi.
+kubectl -n cattle-system get deploy rancher
+  - Rancher kontrol edilir.
+kubectl -n cattle-system get pods
+
+
+
+
+
+<25.Rancher ile Staging ve Prod Env Olusturma>
+Rancher'de yapilan islemler:
+  * AWS Credentials tanitilir. (Yukarda tanitildi.)
+  * Node template yapilir. Bu template kurulacak cluster'da kullanilir.
+  * Cluster kurulur. Node template ile.
+
+Rancher:
+rancher.umitdevopsaws.com 
+  - adresi ile baglan
+> For a Helm installation, run: altindaki kodu kopyala ve VSC'den Jenkins hesabindan yapistir.
+
+VSC Jenkins:
+Rancher'dan alinan kodu yapistir. > password'u al > Rancher'a yapistir.
+
+!!!
+Rancher:
+> VSC-Jenkins'ten alinan password'u yapistirarak gir.
+> Sol ust > Cluster Management > Cloud Credentials > Create > AWS > 
+  > name: AWS-Training-Account / Access Key: AWS keyi gir / Secret Key: AWS Secret Key gir / Default Region: us-east-1 > create
+    * Rancher'e AWS credentialleri tanittik.
+> Sol ust > Cluster Management > RKE1 Configuration > Node Templates > Add Template 
+  > Amazon EC2 > us-east-1 > Cloud credentials: AWS-Training-Account (sec) > next
+  > AZ: us-east-1a > VPC/Subnet: default-vpc (Rancher'in bulundugu subnet secilir) > next
+  > Security Groups: Standard: Automatically create a rancher-nodes group > next
+  > instance type: t2.medium > Root Disk Size: 16 > AMI: ami-0e8a3347e4c5959bd (bit Ubuntu ami'si) > SSH User: rancher > Labels > Add Label > Key: os / Value: rancheros  
+    * Node Template olusturduk. ismi: AWS-RancherOs-Template
+> Sol Menu > Cluster Management > create > Amazin EC2 > 
+  > Cluster Name: petclinic-cluster-staging / Name-prefix: petclinic-k8s-instance /  count: 3 / Template: AWS-Rancher-Template / etcd (sec) / control plane worker (sec) > create
+    * K8s cluster olusturulur.
+      - Count: clusterdaki instance sayisini belirler.
+      - Template: Daha once olusturdugumuz Node Template secilir. Ona gore clusterdaki nodelar olusturulur.
+> Sol Menu > petclinic-cluster-staging > Projects/Namespaces > Create Namespace (Project:Default te olusturulur)  
+  > Name: petclinic-staging-ns > Container Resource Limit (Bu ns bu kadar CPU, RAM kullansin gibi kisitlanabilir.) > create
+    * Namespace olustu. Cluster icin ns olustu.
+> Sag Menu > Account API key > Create API Key > Scope: No Scope (nerde calissin) > Automatically expire: Never > Create
+    * Access Key ve Secret Key olustu. Jenkins'te manage credentials'tan tanitilir. Asagida tanitiliyor.
+
+Jenkins:
+> New item > name:create-ecr-docker-registry-for-petclinic-staging > freestyle > ok
+  > Build > execute shell:
+-------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_REPO_NAME="clarusway-repo/petclinic-app-staging"
+AWS_REGION="us-east-1"
+
+aws ecr create-repository \
+  --repository-name ${APP_REPO_NAME} \
+  --image-scanning-configuration scanOnPush=false \
+  --image-tag-mutability MUTABLE \
+  --region ${AWS_REGION}
+--------------------------------------------------------------------
+    - ECR repo olusturulur.
+  > save
+  > Build now
+     
+vim /jenkins/prepare-tags-ecr-for-staging-docker-images.sh
+--------------------------------------------------------------------
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-admin-server/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_ADMIN_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:admin-server-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-api-gateway/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_API_GATEWAY="${ECR_REGISTRY}/${APP_REPO_NAME}:api-gateway-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-config-server/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_CONFIG_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:config-server-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-customers-service/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_CUSTOMERS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:customers-service-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-discovery-server/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_DISCOVERY_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:discovery-server-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-hystrix-dashboard/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_HYSTRIX_DASHBOARD="${ECR_REGISTRY}/${APP_REPO_NAME}:hystrix-dashboard-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-vets-service/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_VETS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:vets-service-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-visits-service/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_VISITS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:visits-service-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+export IMAGE_TAG_GRAFANA_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:grafana-service"
+export IMAGE_TAG_PROMETHEUS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:prometheus-service"
+--------------------------------------------------------------------
+vim /jenkins/build-staging-docker-images-for-ecr.sh
+--------------------------------------------------------------------
+docker build --force-rm -t "${IMAGE_TAG_ADMIN_SERVER}" "${WORKSPACE}/spring-petclinic-admin-server"
+docker build --force-rm -t "${IMAGE_TAG_API_GATEWAY}" "${WORKSPACE}/spring-petclinic-api-gateway"
+docker build --force-rm -t "${IMAGE_TAG_CONFIG_SERVER}" "${WORKSPACE}/spring-petclinic-config-server"
+docker build --force-rm -t "${IMAGE_TAG_CUSTOMERS_SERVICE}" "${WORKSPACE}/spring-petclinic-customers-service"
+docker build --force-rm -t "${IMAGE_TAG_DISCOVERY_SERVER}" "${WORKSPACE}/spring-petclinic-discovery-server"
+docker build --force-rm -t "${IMAGE_TAG_HYSTRIX_DASHBOARD}" "${WORKSPACE}/spring-petclinic-hystrix-dashboard"
+docker build --force-rm -t "${IMAGE_TAG_VETS_SERVICE}" "${WORKSPACE}/spring-petclinic-vets-service"
+docker build --force-rm -t "${IMAGE_TAG_VISITS_SERVICE}" "${WORKSPACE}/spring-petclinic-visits-service"
+docker build --force-rm -t "${IMAGE_TAG_GRAFANA_SERVICE}" "${WORKSPACE}/docker/grafana"
+docker build --force-rm -t "${IMAGE_TAG_PROMETHEUS_SERVICE}" "${WORKSPACE}/docker/prometheus"
+--------------------------------------------------------------------
+vim /jenkins/push-staging-docker-images-to-ecr.sh
+--------------------------------------------------------------------
+aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+docker push "${IMAGE_TAG_ADMIN_SERVER}"
+docker push "${IMAGE_TAG_API_GATEWAY}"
+docker push "${IMAGE_TAG_CONFIG_SERVER}"
+docker push "${IMAGE_TAG_CUSTOMERS_SERVICE}"
+docker push "${IMAGE_TAG_DISCOVERY_SERVER}"
+docker push "${IMAGE_TAG_HYSTRIX_DASHBOARD}"
+docker push "${IMAGE_TAG_VETS_SERVICE}"
+docker push "${IMAGE_TAG_VISITS_SERVICE}"
+docker push "${IMAGE_TAG_GRAFANA_SERVICE}"
+docker push "${IMAGE_TAG_PROMETHEUS_SERVICE}"
+--------------------------------------------------------------------
+!!!
+curl -SsL "https://github.com/rancher/cli/releases/download/v2.4.13/rancher-linux-amd64-v2.4.13.tar.gz" -o "rancher-cli.tar.gz"
+  - Rancher CLI buradan yuklenecek. Jenkins uzerinden Rancher'a komutlar gonderecegiz.
+tar -zxvf rancher-cli.tar.gz
+sudo mv ./rancher-v2.4.13/rancher /usr/local/bin/rancher
+chmod +x /usr/local/bin/rancher
+rancher --version
+
+!!!
+Rancher:
+> Sag > Account API key > Create API Key > Scope: No Scope (nerde calissin) > Automatically expire: Never > Create
+  - Access Key ve Secret Key olustu. Jenkins'e tanitilir.
+
+!!!
+Jenkins:
+> Manage Jenkins > manage credentials > Jenkins (alttaki) > Global credentials > Add credentials > 
+  > ID: rancher-petclinic-credentials > Username: Access Key (Rancher'den al) > Password: Secret Key (Rancher'den al)
+
+Jenkins:
+> New item > petclinic-staging > pipeline > ok
+  > Build Triggers: Build perodically > 59 23 * * 0
+  > Pipeline > SCM > Git > repo: https://github.com/dataauditor/petclinic-microservice.git > release > ./jenkins/jenkinsfile-petclinic-staging
+  > save
+
+Rancher:
+https://rancher.umitdevopsaws.com/
+> Sol Menu > petclinic-cluster > Namespaces > Project: default > petclinic-staging-ns > Sagdaki 3 nokta > Edit YAML > field.cattle.io/projectId: c-qxpkl:p-njnz2
+    * 'field.cattle.io/projectId:' bu numara cekilerek jenkinsfile'de RANCHER_CONTEXT degerine atanir.
+
+VSC:
+vim jenkins/jenkinsfile-petclinic-staging
+--------------------------------------------------------------------
+pipeline {
+    agent any
+    environment {
+        PATH=sh(script:"echo $PATH:/usr/local/bin", returnStdout:true).trim()
+        APP_NAME="petclinic"
+        APP_REPO_NAME="clarusway-repo/petclinic-app-staging"
+        AWS_ACCOUNT_ID=sh(script:'export PATH="$PATH:/usr/local/bin" && aws sts get-caller-identity --query Account --output text', returnStdout:true).trim()
+        AWS_REGION="us-east-1"
+        ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+        RANCHER_URL="https://rancher.umitdevopsaws.com/"                        
+        // Get the project-id from Rancher UI (petclinic-cluster-staging namespace, View in API, copy projectId )
+        RANCHER_CONTEXT="c-qxpkl:p-njnz2" 
+        RANCHER_CREDS=credentials('rancher-petclinic-credentials')
+    }
+    stages {
+        stage('Package Application') {
+            steps {
+                echo 'Packaging the app into jars with maven'
+                sh ". ./jenkins/package-with-maven-container.sh"
+            }
+        }
+        stage('Prepare Tags for Staging Docker Images') {
+            steps {
+                echo 'Preparing Tags for Staging Docker Images'
+                script {
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-admin-server/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_ADMIN_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:admin-server-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-api-gateway/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_API_GATEWAY="${ECR_REGISTRY}/${APP_REPO_NAME}:api-gateway-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-config-server/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_CONFIG_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:config-server-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-customers-service/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_CUSTOMERS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:customers-service-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-discovery-server/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_DISCOVERY_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:discovery-server-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-hystrix-dashboard/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_HYSTRIX_DASHBOARD="${ECR_REGISTRY}/${APP_REPO_NAME}:hystrix-dashboard-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-vets-service/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_VETS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:vets-service-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-visits-service/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_VISITS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:visits-service-staging-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    env.IMAGE_TAG_GRAFANA_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:grafana-service"
+                    env.IMAGE_TAG_PROMETHEUS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:prometheus-service"
+                }
+            }
+        }
+        stage('Build App Staging Docker Images') {
+            steps {
+                echo 'Building App Staging Images'
+                sh ". ./jenkins/build-staging-docker-images-for-ecr.sh"
+                sh 'docker image ls'
+            }
+        }
+        stage('Push Images to ECR Repo') {
+            steps {
+                echo "Pushing ${APP_NAME} App Images to ECR Repo"
+                sh ". ./jenkins/push-staging-docker-images-to-ecr.sh"
+            }
+        }
+        stage('Deploy App on Petclinic Kubernetes Cluster'){
+            steps {
+                echo 'Deploying App on K8s Cluster'
+                sh "rancher login $RANCHER_URL --context $RANCHER_CONTEXT --token $RANCHER_CREDS_USR:$RANCHER_CREDS_PSW"
+                sh "envsubst < k8s/base/kustomization-template.yml > k8s/base/kustomization.yml"
+                sh "rancher kubectl delete secret regcred -n petclinic-staging-ns || true"
+                sh """
+                rancher kubectl create secret generic regcred -n petclinic-staging-ns \
+                --from-file=.dockerconfigjson=$JENKINS_HOME/.docker/config.json \
+                --type=kubernetes.io/dockerconfigjson
+                """
+                sh "rancher kubectl apply -k k8s/staging/"
+            }
+        }
+    }
+    post {
+        always {
+            echo 'Deleting all local images'
+            sh 'docker image prune -af'
+        }
+    }
+}
+--------------------------------------------------------------------------------------------------------------------------
+  - Rancher 2 adet veri girildi:
+    * RANCHER_CONTEXT: cluster > namespace > ilgili ns > Edit Yaml > 'field.cattle.io/projectId' degiskeninden cekilir. Ilgili projenin ns'i ile baglan.
+    * RANCHER_URL: kendi URL'imiz (domain adresimiz) girilir.
+  - RANCHER_CREDENTIALS ise Jenkins'ten alinir.
+  - 'dockerconfigjson': opaque gibi secret turudur'
+git add .
+git commit -m 'added jenkinsfile petclinic-staging for release branch'
+git push --set-upstream origin feature/msp-26
+git checkout release
+git merge feature/msp-26
+git push origin release
+
+
+
+
+<27.Production Pipeline Olusturma>
+
+VSC:
+git checkout release
+git branch feature/msp-27
+git checkout feature/msp-27
+
+Rancher:
+Sol > Cluster Management > create > Amazon EC2 > Cluster Name: petclinic-cluster > Name Prefix: petclinic-k8s-instance > Count:3 > etcd > Control plane > worker > create
+Sol > petclinic-cluster > Projects/Namespaces > Default > Namespace > petclinic-prod-ns > create
+
+VSC:
+> New item > create-ecr-docker-registry-for-petclinic-prod > freesteyle project > ok
+  > Build > Execute shell:
+--------------------------------------------------------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_REPO_NAME="clarusway-repo/petclinic-app-prod"
+AWS_REGION="us-east-1"
+aws ecr create-repository \
+  --repository-name ${APP_REPO_NAME} \
+  --image-scanning-configuration scanOnPush=false \
+  --image-tag-mutability MUTABLE \
+  --region ${AWS_REGION}
+--------------------------------------------------------------------------------------------------------------------------
+  > save 
+  > Build now
+git branch feature/msp-27
+git checkout feature/msp-27
+vim 
+
+vim
+
+vim
+
+AWS:
+> RDS > create database > standard create > MySQL > 5.7.30 > Free tier > DB identifier: petclinic
+  > Master username: root > password : petclinic > public access > 
+  > Additional configuration: Initial database name: petclinic > create
+> RDS > Databases > petclinic > Connectivity & Security > Edpoint (kopyalanir.)
+
+VSC:
+
+
+
+
+<28.
+
+VSC:
+git checkout main
+git branch feature/msp-28
+git checkout feature/msp-28
+
+RANCHER:
+> 
+
+apiVersion: v1
+kind: Config
+clusters:
+- name: "petclinic-cluster"
+  cluster:
+    server: "https://rancher.umitdevopsaws.com/k8s/clusters/c-m9zpk"
+- name: "petclinic-cluster-petclinic-k8s-instance1"
+  cluster:
+    server: "https://107.21.69.43:6443"
+    certificate-authority-data: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM0VENDQ\
+      WNtZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFTTVJBd0RnWURWUVFERXdkcmRXSmwKT\
+      FdOaE1CNFhEVEl4TVRFeU5ERTNORGcxTWxvWERUTXhNVEV5TWpFM05EZzFNbG93RWpFUU1BNEdBM\
+      VVFQXhNSAphM1ZpWlMxallUQ0NBU0l3RFFZSktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ\
+      0VCQU1VdjdLVUNBVXhXCjAwQ01PcWtrQmdEbG1uYi9aMzZvMFJYbEZIeGR2SkxkeTludFo3dUNxM\
+      zhhUGJtYmJwcEdhdlBuYlhYM0dqb28KQ0FBWC9jblBOWWUza2lSdDB1dkhKdFM2RW9jNG9hSlV6V\
+      zgzdTVMYzcyMWJGMDFvK0ZYYWZZWDJEYkV6Y1V0aAp4STlUVkZRdzBLS21jMXNjRWhqYTZodnlze\
+      FIxZ3U3M0p6cnFrTWd5OHdwazROMmdBRmMzMnhOc0tkNjBNWEppCmRjVnJieTBuNzVHVjNVUUp2d\
+      VpiY3N2N0VvY0dmTXh0Wm1uQ0liOEJra1Y2WkRFM1BwVDNKOHVPcW1RRi9VN1oKTytzTm9XNThsY\
+      mhROWJNT08yL2xoYjZxZXdiWTNIZVhaZVBTUnlGVVVxUWhWWGcxUndmL2lVbklPNXBEbk5Udgp3T\
+      kFsSEpFcWp4RUNBd0VBQWFOQ01FQXdEZ1lEVlIwUEFRSC9CQVFEQWdLa01BOEdBMVVkRXdFQi93U\
+      UZNQU1CCkFmOHdIUVlEVlIwT0JCWUVGTjUxSzF6QmZ6bStoai9NNDBUNjJMQ04wVWR3TUEwR0NTc\
+      UdTSWIzRFFFQkN3VUEKQTRJQkFRQUljVzdyN3E5aXJScm5SVFlyc0tHTnFGYjlML2xwTkgwVUNzN\
+      2hQZ0hMemQ0aWRTV0MwYnBpRjQ4agpQaWxuVnN6bjdhWkttdkZLZTBvOXMvTUQ4ODVsbEZkc24rY\
+      nRVYkpYUkdJY2JWRUF5WWhMN1pJR3RnWk5GRmNPCkJEWExKY0NpR2pzUUJKN3hyQktYT2pWTWl5Z\
+      FFlUy9XNGZpUjZ6eW9XZGxtaFZncW5EWWJqTlNJUFdSU0xnZnMKUnJDRFdpcUZlN2I4SzMyRVJGR\
+      HFyZkRwTzFFNUJsYnhVQlBCbk4xZC9XUjhTVTJlT3lOUXRTRG9tb3RKZUN1cwozZEtrM0RUVU4xT\
+      1VsM1Z6SFdkanJLcG9hQ3UwR2oxL3FEOEhlMzdqaXZ3aGRkWFFNdE44S0VreDQ0b1RUSG9kCkpTU\
+      TVNRVFDVTFVb2l4M05qQlBncElhemVsNVIKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
+- name: "petclinic-cluster-petclinic-k8s-instance2"
+  cluster:
+    server: "https://3.82.21.43:6443"
+    certificate-authority-data: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM0VENDQ\
+      WNtZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFTTVJBd0RnWURWUVFERXdkcmRXSmwKT\
+      FdOaE1CNFhEVEl4TVRFeU5ERTNORGcxTWxvWERUTXhNVEV5TWpFM05EZzFNbG93RWpFUU1BNEdBM\
+      VVFQXhNSAphM1ZpWlMxallUQ0NBU0l3RFFZSktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ\
+      0VCQU1VdjdLVUNBVXhXCjAwQ01PcWtrQmdEbG1uYi9aMzZvMFJYbEZIeGR2SkxkeTludFo3dUNxM\
+      zhhUGJtYmJwcEdhdlBuYlhYM0dqb28KQ0FBWC9jblBOWWUza2lSdDB1dkhKdFM2RW9jNG9hSlV6V\
+      zgzdTVMYzcyMWJGMDFvK0ZYYWZZWDJEYkV6Y1V0aAp4STlUVkZRdzBLS21jMXNjRWhqYTZodnlze\
+      FIxZ3U3M0p6cnFrTWd5OHdwazROMmdBRmMzMnhOc0tkNjBNWEppCmRjVnJieTBuNzVHVjNVUUp2d\
+      VpiY3N2N0VvY0dmTXh0Wm1uQ0liOEJra1Y2WkRFM1BwVDNKOHVPcW1RRi9VN1oKTytzTm9XNThsY\
+      mhROWJNT08yL2xoYjZxZXdiWTNIZVhaZVBTUnlGVVVxUWhWWGcxUndmL2lVbklPNXBEbk5Udgp3T\
+      kFsSEpFcWp4RUNBd0VBQWFOQ01FQXdEZ1lEVlIwUEFRSC9CQVFEQWdLa01BOEdBMVVkRXdFQi93U\
+      UZNQU1CCkFmOHdIUVlEVlIwT0JCWUVGTjUxSzF6QmZ6bStoai9NNDBUNjJMQ04wVWR3TUEwR0NTc\
+      UdTSWIzRFFFQkN3VUEKQTRJQkFRQUljVzdyN3E5aXJScm5SVFlyc0tHTnFGYjlML2xwTkgwVUNzN\
+      2hQZ0hMemQ0aWRTV0MwYnBpRjQ4agpQaWxuVnN6bjdhWkttdkZLZTBvOXMvTUQ4ODVsbEZkc24rY\
+      nRVYkpYUkdJY2JWRUF5WWhMN1pJR3RnWk5GRmNPCkJEWExKY0NpR2pzUUJKN3hyQktYT2pWTWl5Z\
+      FFlUy9XNGZpUjZ6eW9XZGxtaFZncW5EWWJqTlNJUFdSU0xnZnMKUnJDRFdpcUZlN2I4SzMyRVJGR\
+      HFyZkRwTzFFNUJsYnhVQlBCbk4xZC9XUjhTVTJlT3lOUXRTRG9tb3RKZUN1cwozZEtrM0RUVU4xT\
+      1VsM1Z6SFdkanJLcG9hQ3UwR2oxL3FEOEhlMzdqaXZ3aGRkWFFNdE44S0VreDQ0b1RUSG9kCkpTU\
+      TVNRVFDVTFVb2l4M05qQlBncElhemVsNVIKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
+- name: "petclinic-cluster-petclinic-k8s-instance3"
+  cluster:
+    server: "https://54.227.193.40:6443"
+    certificate-authority-data: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM0VENDQ\
+      WNtZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFTTVJBd0RnWURWUVFERXdkcmRXSmwKT\
+      FdOaE1CNFhEVEl4TVRFeU5ERTNORGcxTWxvWERUTXhNVEV5TWpFM05EZzFNbG93RWpFUU1BNEdBM\
+      VVFQXhNSAphM1ZpWlMxallUQ0NBU0l3RFFZSktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ\
+      0VCQU1VdjdLVUNBVXhXCjAwQ01PcWtrQmdEbG1uYi9aMzZvMFJYbEZIeGR2SkxkeTludFo3dUNxM\
+      zhhUGJtYmJwcEdhdlBuYlhYM0dqb28KQ0FBWC9jblBOWWUza2lSdDB1dkhKdFM2RW9jNG9hSlV6V\
+      zgzdTVMYzcyMWJGMDFvK0ZYYWZZWDJEYkV6Y1V0aAp4STlUVkZRdzBLS21jMXNjRWhqYTZodnlze\
+      FIxZ3U3M0p6cnFrTWd5OHdwazROMmdBRmMzMnhOc0tkNjBNWEppCmRjVnJieTBuNzVHVjNVUUp2d\
+      VpiY3N2N0VvY0dmTXh0Wm1uQ0liOEJra1Y2WkRFM1BwVDNKOHVPcW1RRi9VN1oKTytzTm9XNThsY\
+      mhROWJNT08yL2xoYjZxZXdiWTNIZVhaZVBTUnlGVVVxUWhWWGcxUndmL2lVbklPNXBEbk5Udgp3T\
+      kFsSEpFcWp4RUNBd0VBQWFOQ01FQXdEZ1lEVlIwUEFRSC9CQVFEQWdLa01BOEdBMVVkRXdFQi93U\
+      UZNQU1CCkFmOHdIUVlEVlIwT0JCWUVGTjUxSzF6QmZ6bStoai9NNDBUNjJMQ04wVWR3TUEwR0NTc\
+      UdTSWIzRFFFQkN3VUEKQTRJQkFRQUljVzdyN3E5aXJScm5SVFlyc0tHTnFGYjlML2xwTkgwVUNzN\
+      2hQZ0hMemQ0aWRTV0MwYnBpRjQ4agpQaWxuVnN6bjdhWkttdkZLZTBvOXMvTUQ4ODVsbEZkc24rY\
+      nRVYkpYUkdJY2JWRUF5WWhMN1pJR3RnWk5GRmNPCkJEWExKY0NpR2pzUUJKN3hyQktYT2pWTWl5Z\
+      FFlUy9XNGZpUjZ6eW9XZGxtaFZncW5EWWJqTlNJUFdSU0xnZnMKUnJDRFdpcUZlN2I4SzMyRVJGR\
+      HFyZkRwTzFFNUJsYnhVQlBCbk4xZC9XUjhTVTJlT3lOUXRTRG9tb3RKZUN1cwozZEtrM0RUVU4xT\
+      1VsM1Z6SFdkanJLcG9hQ3UwR2oxL3FEOEhlMzdqaXZ3aGRkWFFNdE44S0VreDQ0b1RUSG9kCkpTU\
+      TVNRVFDVTFVb2l4M05qQlBncElhemVsNVIKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
+
+users:
+- name: "petclinic-cluster"
+  user:
+    token: "kubeconfig-user-9smgptwmx6:nl7jkhx7kkqm8zdll6dw75wk85s627d6646ngkhlnhfdkrtntrkdj7"
+
+
+contexts:
+- name: "petclinic-cluster"
+  context:
+    user: "petclinic-cluster"
+    cluster: "petclinic-cluster"
+- name: "petclinic-cluster-petclinic-k8s-instance1"
+  context:
+    user: "petclinic-cluster"
+    cluster: "petclinic-cluster-petclinic-k8s-instance1"
+- name: "petclinic-cluster-petclinic-k8s-instance2"
+  context:
+    user: "petclinic-cluster"
+    cluster: "petclinic-cluster-petclinic-k8s-instance2"
+- name: "petclinic-cluster-petclinic-k8s-instance3"
+  context:
+    user: "petclinic-cluster"
+    cluster: "petclinic-cluster-petclinic-k8s-instance3"
+
+current-context: "petclinic-cluster"
+
+Jenkins:
+cd /var/lib/jenkins
+cd .kube/
+sudo vi petclinic-config
+chmod 400 petclinic-config 
+kubectl get ns
+export KUBECONFIG=/home/ec2-user/.kube/petclinic-config
+kubectl get ns
+kubectl create namespace cert-manager
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.0/cert-manager.crds.yaml
+helm install \
+  cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --version v1.5.0
+kubectl get pods --namespace cert-manager -o wide
+vim
+kubectl apply -f k8s/tls-cluster-issuer-prod.yml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

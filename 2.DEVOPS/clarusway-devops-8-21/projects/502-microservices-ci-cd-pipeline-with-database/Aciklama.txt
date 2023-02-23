@@ -1,0 +1,3395 @@
+1.GITFLOW WORKFLOW:
+https://nvie.com/posts/a-successful-git-branching-model/
+Gitflow Workflow:
+  * Master Branch: Production Release icin kullanilir.
+  * Develop Branch: Master branchtan olusturulur. Development islemi burada yurutulur.
+  * Feature/F1: 
+     - Stable future'lar dev bransi altinda olusturulur.
+     - Dev altinda F1, F2 ,F3 gibi bircok feature alt bransi olusturulabilir. 
+     - Feature olgunlastiktan sonra merge request gonderir ve senior developer kontrolederek Dev bransina merge eder.
+     - F1 yeni ozelligi Dev bransina eklendi.
+     - F2 ise git pull ile F1 eklenmis halini ceker.
+  * Release/V0.1.0: Dev olgunlasinca staging icin olusturulur ve testler yapilir. 
+    - Bug'lar cikinca duzeltip Dev ve f2'ye de yansitiriz.
+    - Buglardan arindirilinca seniorca merge edilir Master branch'a ve production ortamina.
+    - Beta testi: release oncesi belli kullanicilara gonderilir ve denemeleri istenir. Hatalar duzeltilir.
+  * Hotfix/HF1: 
+    - Kullanicilar den gelen hatalar icin acilir. Hemen test edilip duzeltilir. 
+    - Patchler uretilir.
+    - Yapilan duzeltmeler Dev, F2'lere aktarilir, merge edilir.
+
+Developerlarin Gorevi:
+  * Feature'lari yapar.
+  * Unit test'leri belli oranda hazirlar, dependencieslerini indirip built edip testini yapar. 
+  * Dev bransina merge icin senior'a request yapar. 
+  * Senior merge yapar.
+
+2.0.1: 2: versiyon, 0:  1: patch, ufak duzeltmeler.
+
+Jenkins:
+  - 5 pipeline kurulacak.
+    * CI-job:
+      - Dev, Feature, Bugfix branchlari ile baglantili.
+      - CI, developer reposu Webhook ile calisacak. 
+      - Her commit ile Webhook. Unit test olacak. 
+      - Jenkins, Maven, git, github, jacoco kullanilacak.
+      - Jacoco: unit test yazilma oranini belirler.
+    * Nightly:
+      - Dev bransi ile baglantili.
+      - Cronjob calisir her gece 23:59'da.
+      - Testerlarin yazdigi functional testler yapilir.
+      - Docker Swarm cluster kurulur (3 manager ve 2 worker) ve functional testleri yapip kendini terminate eder.
+      - Musterinin isteklerine yonelik testerlarin yaptigi testlerdir.
+      - Ansible, dynamic inventory, ... kullanilacak.
+    * Weekly:
+      - Release branch ile baglantili. 
+      - manuel test: her pazar gecesi kurulacak 5 makinede (3 manager ve 2 worker) docker swarm ile manuel test yapilir.
+      - Cluster silinmez hep ayakta olur.
+      - Manuel test: Uygulama kullanici gibi kullanilarak test edilir.
+      - Rancher ile clusterlar daha kolay kontrol edilir.
+      - Cronjob ile trigger edilir.
+    * Staging:
+      - Release branch:
+      - Staging env'a atilir.
+      - Cronjob weekly.
+      - Rancher kurulur.
+      - K8s ile yapilir.
+      - IP address ile ulasilir.
+      - Staging env must tarafindan kullanilabilir, testerlar tarafindan test edilebilir.
+    * Prod:
+      - Master branch:
+      - Rancher kurulur.
+      - K8s ile yapilir.
+      - Domain name baglanir.
+      - Rancher, K8s ile prod env'a aktarilir ve artik kullanilir.
+Spring:
+  - MySQL ile veriler saklanacak.
+  - Spring Framework: Java Web uygulamalarinin kolay uygulanabilmesi icin kullanilir.
+
+
+AWS Consol:
+linux-2 (t3-medium, 22 port)
+  - Development server olarak kullanilir.
+
+VSC:
+vim .bashrc
+--------------------------------------------------------------
+parse_git_branch() {
+  git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/ (\1)/'
+}
+export PS1="\[\e[36m\]\u@\h \W\[\033[32m\]\$(parse_git_branch)\[\033[00m\] $ "
+--------------------------------------------------------------
+  - .bashrc file'ina kaydedince her zaman renkli bir gosterim saglar.
+export PS1="\[\e[31m\]\u\[\e[32m\]@\h-\w:\[\e[36m\]\\$\[\e[m\]"
+  - bu da renkli gosterim saglar.
+sudo yum update -y
+sudo hostnamectl set-hostname petclinic-dev-server
+amazon-linux-extras install docker -y
+sudo systemctl start docker
+sudo systemctl enable docker
+  - systemd altinda dosya olusturur. otomatik acilmasini saglar.
+sudo usermod -a -G docker ec2-user
+sudo newgrp docker
+  - yapilan degisikligi uygulamak icin kullaniyoruz.
+curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" \
+-o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+yum install git -y
+yum install java-11-amazon-corretto -y
+  - java kurduk.
+
+Github:
+- Clarus repositorsini ec2-ya clone yapacagiz.
+- .git 'i silecegiz.
+- ec2'da olusan repoyu Github repomuza gonderecegiz.
+- Github'da repo olusturduk.
+
+VSC:
+- Clarusway Githubtan ec2'ya cekme:
+- ec2'dan kendi Github'imiza gonderme.
+
+<Claruswayden cekme>
+git clone https://github.com/clarusway/petclinic-microservices-with-db.git
+git branch
+git remote -v
+  - baglisi oldugu adresi gosterir.
+rm -rf .git
+  - .git file silinir.
+
+<Kendi repomuza gonderme>
+git init
+  - .git geldi.
+git remote -v
+  - bos gelir.
+git add .
+git commit -m "first commit"
+git config --global user.email byildiz2019@gmail.com
+git config --global user.name dataauditor
+git branch -M main
+  - Master i main olarak degistirdi.
+git remote add origin https://[your-token]@github.com/[your-git-account]/[your-repo-name-petclinic-microservices-with-db.git]
+  - 'git remote add origin https://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@github.com/dataauditor/petclinic-microservice.git'
+  - 'git remote set-url origin https://token@url' 
+    - degistirmeye yarar.
+git push origin main
+  - ec2'dan Github'a gonderdik.
+
+<Yeni branclar olusturma>
+git checkout main
+git branch dev
+  - Localde dev branch olustu.
+git branch
+  - localdeki branclari ve kullanilmakta olani gosterir.
+git branch -a 
+  - local ve remote tum branclari gosterir.
+git checkout dev
+git push --set-upstream origin dev
+  - remote'de dev branch olusturup push etti.
+git checkout main
+git branch release
+git branch -a
+  - local ve remote tum branclari gosterir.
+git checkout release
+git push --set-upstream origin release
+git checkout dev
+  - dev bransina gecilir.
+./mvnw clean test
+  - 'clean': onceden olusmus target klasorunu temizler.
+  - 'test': user testleri yapar.
+chmod +x mvnw
+  - hata verirse kullanilir.
+./mvnw clean package
+  - Once tar'i siler.
+  - Artifact (.jar, .war) dosyasi hazirlar (app'a gore). Dependencies'leri indirir. Compile eder ve .jar (exe) dosyasini hazirlar.
+  - oncesinde test de yapar.
+./mvnw clean install
+  - Baska projede kullanabilmek icin 'package'i tasinabilir kiliyor. 
+  - Oncesinde 'test' ve 'package' da yapar.
+  - .m2 dosyasinin altina paketi atar.
+
+
+
+<4.Package icin Script Hazirlama>
+git branch -a
+git checkout dev
+git branch feature/msp-4
+git checkout feature/msp-4 
+vim package-with-mvn-wrapper.sh
+----------------------------------------------------------------
+./mvnw clean package
+----------------------------------------------------------------
+git add .
+git commit -m 'added packaging script'
+git push --set-upstream origin feature/msp-4
+git checkout dev
+git merge feature/msp-4
+git push origin dev
+  - Ilk once yukarda feature/msp-4'a add ve remote'una push ettik 
+  - Daha sonra dev'e gecip localde merge ettik. Sonra da dev remote'a push ettik. 
+
+
+
+<5.Development Server CloudFormation Template>
+git checkout dev
+git branch feature/msp-5
+git checkout feature/msp-5
+mkdir infrastructure && vim dev-server-for-petclinic-app-cfn-template.yml
+----------------------------------------------------------------
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >
+  This Cloudformation template prepares development environment for Petclinic Microservices Application.
+  User needs to select appropriate key name when launching the template.
+
+Parameters:
+  KeyPairName:
+    Description: Enter the name of your Key Pair for SSH connections.
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must one of the existing EC2 KeyPair
+
+Resources:
+  PetclinicDemoSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH and HTTP for Petclinic Microservices
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9090
+          ToPort: 9090
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8081
+          ToPort: 8081
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8082
+          ToPort: 8082
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8083
+          ToPort: 8083
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8888
+          ToPort: 8888
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9411
+          ToPort: 9411
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 7979
+          ToPort: 7979
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9091
+          ToPort: 9091
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8761
+          ToPort: 8761
+          CidrIp: 0.0.0.0/0
+  PetclinicServerLT:
+    Type: "AWS::EC2::LaunchTemplate"
+    Properties:
+      LaunchTemplateData:
+        ImageId: ami-01cc34ab2709337aa
+        InstanceType: t3.medium
+        KeyName: !Ref KeyPairName
+        SecurityGroupIds:
+          - !GetAtt PetclinicDemoSG.GroupId
+        UserData:
+          Fn::Base64: |
+            #! /bin/bash
+            yum update -y
+            hostnamectl set-hostname petclinic-dev-server
+            amazon-linux-extras install docker -y
+            systemctl start docker
+            systemctl enable docker
+            usermod -a -G docker ec2-user
+            newgrp docker
+            curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" \
+            -o /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
+            yum install git -y
+            yum install java-11-amazon-corretto -y
+            git clone https://github.com/clarusway/petclinic-microservices-with-db.git
+            cd petclinic-microservices
+            git checkout dev
+  PetclinicServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref PetclinicServerLT
+        Version: !GetAtt PetclinicServerLT.LatestVersionNumber
+      Tags:                
+        - Key: Name
+          Value: !Sub Petclinic App Dev Server of ${AWS::StackName}
+Outputs:
+  PetclinicServerDNSName:
+    Description: Petclinic App URL
+    Value: !GetAtt PetclinicServer.PublicDnsName
+----------------------------------------------------------------
+git add .
+git commit -m 'added cloudformation template for dev server'
+git push --set-upstream origin feature/msp-5
+git checkout dev
+git merge feature/msp-5
+git push origin dev
+
+
+<6.Dockerfiles for Microservices>
+git checkout dev
+git branch feature/msp-6
+git checkout feature/msp-6
+vim /spring-petclinic-admin-server/Dockerfile
+----------------------------------------------------------------
+FROM openjdk:11-jre
+ARG DOCKERIZE_VERSION=v0.6.1
+ARG EXPOSED_PORT=9090
+ENV SPRING_PROFILES_ACTIVE docker,mysql
+ADD https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-alpine-linux-amd64-${DOCKERIZE_VERSION}.tar.gz dockerize.tar.gz
+RUN tar -xzf dockerize.tar.gz
+RUN chmod +x dockerize
+ADD ./target/*.jar /app.jar
+EXPOSE ${EXPOSED_PORT}
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+----------------------------------------------------------------
+  - ARG: Kendisi islem yapmaz yalnizca degisken tanimlar.
+    * Diger RUN, EXPOSE vb satirlar ARG'tan degiskeni cekerler.
+    * Kendisinde tanimli deger default deger olup built islemi esnasinda baska deger verilebilir.
+    * 'docker build --build-arg DOCKERIZE_VERSION=v0.6.2' seklinde disaridan mudahale ile degisiklik yapilir.
+  - dockerize tool indirildi.
+  - built islemi sonrasi olusan farkli isimlerdeki .jar dosyalari kendi serverlarina giderken app.jar olarak gonderildi.
+  - Spring platformundan kaynakli olarak 'docker,mysql' lar profile olarak tanitilir.
+  - ADD: hem COPY gibi localden containere copy yapar hem de verilen net adresinden indirme yapar.
+  - ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    * 'java -jar app.jar' seklinde bashte calisir.
+    * "-Djava.security.egd=file:/dev/./urandom": uygulamaya(sanal makina) dışarda gelecek randon bir değer ile bypass yapılmasını engelliyor.
+vim /spring-petclinic-api-gateway/Dockerfile
+----------------------------------------------------------------
+FROM openjdk:11-jre
+ARG DOCKERIZE_VERSION=v0.6.1
+ARG EXPOSED_PORT=8080
+ENV SPRING_PROFILES_ACTIVE docker,mysql
+ADD https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-alpine-linux-amd64-${DOCKERIZE_VERSION}.tar.gz dockerize.tar.gz
+RUN tar -xzf dockerize.tar.gz
+RUN chmod +x dockerize
+ADD ./target/*.jar /app.jar
+EXPOSE ${EXPOSED_PORT}
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+----------------------------------------------------------------
+vim /spring-petclinic-config-server/Dockerfile
+----------------------------------------------------------------
+FROM openjdk:11-jre
+ARG DOCKERIZE_VERSION=v0.6.1
+ARG EXPOSED_PORT=8888
+ENV SPRING_PROFILES_ACTIVE docker,mysql
+ADD https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-alpine-linux-amd64-${DOCKERIZE_VERSION}.tar.gz dockerize.tar.gz
+RUN tar -xzf dockerize.tar.gz
+RUN chmod +x dockerize
+ADD ./target/*.jar /app.jar
+EXPOSE ${EXPOSED_PORT}
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+----------------------------------------------------------------
+vim /spring-petclinic-customer-service/Dockerfile
+----------------------------------------------------------------
+FROM openjdk:11-jre
+ARG DOCKERIZE_VERSION=v0.6.1
+ARG EXPOSED_PORT=8081
+ENV SPRING_PROFILES_ACTIVE docker,mysql
+ADD https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-alpine-linux-amd64-${DOCKERIZE_VERSION}.tar.gz dockerize.tar.gz
+RUN tar -xzf dockerize.tar.gz
+RUN chmod +x dockerize
+ADD ./target/*.jar /app.jar
+EXPOSE ${EXPOSED_PORT}
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+----------------------------------------------------------------
+vim /spring-petclinic-discovery-server/Dockerfile
+----------------------------------------------------------------
+FROM openjdk:11-jre
+ARG DOCKERIZE_VERSION=v0.6.1
+ARG EXPOSED_PORT=8761
+ENV SPRING_PROFILES_ACTIVE docker,mysql
+ADD https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-alpine-linux-amd64-${DOCKERIZE_VERSION}.tar.gz dockerize.tar.gz
+RUN tar -xzf dockerize.tar.gz
+RUN chmod +x dockerize
+ADD ./target/*.jar /app.jar
+EXPOSE ${EXPOSED_PORT}
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+----------------------------------------------------------------
+vim /spring-petclinic-hystrix-dashboard/Dockerfile
+----------------------------------------------------------------
+FROM openjdk:11-jre
+ARG DOCKERIZE_VERSION=v0.6.1
+ARG EXPOSED_PORT=7979
+ENV SPRING_PROFILES_ACTIVE docker,mysql
+ADD https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-alpine-linux-amd64-${DOCKERIZE_VERSION}.tar.gz dockerize.tar.gz
+RUN tar -xzf dockerize.tar.gz
+RUN chmod +x dockerize
+ADD ./target/*.jar /app.jar
+EXPOSE ${EXPOSED_PORT}
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+----------------------------------------------------------------
+vim /spring-petclinic-vets-service/Dockerfile
+----------------------------------------------------------------
+FROM openjdk:11-jre
+ARG DOCKERIZE_VERSION=v0.6.1
+ARG EXPOSED_PORT=8083
+ENV SPRING_PROFILES_ACTIVE docker,mysql
+ADD https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-alpine-linux-amd64-${DOCKERIZE_VERSION}.tar.gz dockerize.tar.gz
+RUN tar -xzf dockerize.tar.gz
+RUN chmod +x dockerize
+ADD ./target/*.jar /app.jar
+EXPOSE ${EXPOSED_PORT}
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+----------------------------------------------------------------
+vim /spring-petclinic-visits-service/Dockerfile
+----------------------------------------------------------------
+FROM openjdk:11-jre
+ARG DOCKERIZE_VERSION=v0.6.1
+ARG EXPOSED_PORT=8082
+ENV SPRING_PROFILES_ACTIVE docker,mysql
+ADD https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-alpine-linux-amd64-${DOCKERIZE_VERSION}.tar.gz dockerize.tar.gz
+RUN tar -xzf dockerize.tar.gz
+RUN chmod +x dockerize
+ADD ./target/*.jar /app.jar
+EXPOSE ${EXPOSED_PORT}
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+----------------------------------------------------------------
+git checkout feature/msp-6 
+  - bu bransa gec.
+git add .
+git commit -m 'added Dockerfiles for microservices'
+git push --set-upstream origin feature/msp-6
+git checkout dev
+git merge feature/msp-6
+git push origin dev
+
+
+<7.Script For Build Images>
+git checkout dev
+git co -b feature/msp-7
+  - git branch feature/msp-8 ve git checkout feature/msp-8 kapsar.
+vim build-dev-docker-images.sh
+-------------------------------------------------------
+./mvnw clean package
+docker build --force-rm -t "petclinic-admin-server:dev" ./spring-petclinic-admin-server
+docker build --force-rm -t "petclinic-api-gateway:dev" ./spring-petclinic-api-gateway
+docker build --force-rm -t "petclinic-config-server:dev" ./spring-petclinic-config-server
+docker build --force-rm -t "petclinic-customers-service:dev" ./spring-petclinic-customers-service
+docker build --force-rm -t "petclinic-discovery-server:dev" ./spring-petclinic-discovery-server
+docker build --force-rm -t "petclinic-hystrix-dashboard:dev" ./spring-petclinic-hystrix-dashboard
+docker build --force-rm -t "petclinic-vets-service:dev" ./spring-petclinic-vets-service
+docker build --force-rm -t "petclinic-visits-service:dev" ./spring-petclinic-visits-service
+docker build --force-rm -t "petclinic-grafana-server:dev" ./docker/grafana
+docker build --force-rm -t "petclinic-prometheus-server:dev" ./docker/prometheus
+-------------------------------------------------------
+  - Script ana klasor altinda olusturulur. 
+  - Dockerfile'lari konumlarindan ulasarak image yapar.
+chmod +x build-dev-docker-images.sh
+./build-dev-docker-images.sh
+docker images
+git add .
+git commit -m 'added script for building docker images'
+git push --set-upstream origin feature/msp-7
+git checkout dev
+git merge feature/msp-7
+git push origin dev
+
+
+<8.Docker-Compose File>
+git checkout dev
+git checkout -b feature/msp-8
+vim docker-compose-local.yml
+-------------------------------------------------------
+version: '2'
+services: 
+  config-server:
+    image: petclinic-config-server:dev
+    container_name: config-server
+    mem_limit: 512M
+    ports: 
+      - 8888:8888
+
+  discovery-server:
+    image: petclinic-discovery-server:dev
+    container_name: discovery-server
+    mem_limit: 512M
+    ports: 
+      - 8761:8761
+    depends_on: 
+      - config-server
+    entrypoint: ["./dockerize", "-wait=tcp://config-server:8888", "-timeout=160s", "--", "java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+
+  customers-service:
+    image: petclinic-customers-service:dev
+    container_name: customers-service
+    mem_limit: 512M
+    ports:
+     - 8081:8081
+    depends_on: 
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize", "-wait=tcp://discovery-server:8761", "-timeout=160s", "--", "java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar" ]
+  
+  visits-service:
+    image: petclinic-visits-service:dev
+    container_name: visits-service
+    mem_limit: 512M
+    ports:
+     - 8082:8082
+    depends_on: 
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize", "-wait=tcp://discovery-server:8761", "-timeout=160s", "--", "java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar" ]
+  
+  vets-service:
+    image: petclinic-vets-service:dev
+    container_name: vets-service
+    mem_limit: 512M
+    ports:
+     - 8083:8083
+    depends_on: 
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize", "-wait=tcp://discovery-server:8761", "-timeout=160s", "--", "java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar" ]
+  
+  api-gateway:
+    image: petclinic-api-gateway:dev
+    container_name: api-gateway
+    mem_limit: 512M
+    ports:
+     - 8080:8080
+    depends_on: 
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize", "-wait=tcp://discovery-server:8761", "-timeout=160s", "--", "java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar" ]
+  
+  admin-server:
+    image: petclinic-admin-server:dev
+    container_name: admin-server
+    mem_limit: 512M
+    ports:
+     - 9090:9090
+    depends_on: 
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize", "-wait=tcp://discovery-server:8761", "-timeout=160s", "--", "java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar" ]
+
+  hystrix-dashboard:
+    image: petclinic-hystrix-dashboard:dev
+    container_name: hystrix-dashboard
+    mem_limit: 512M
+    ports:
+     - 7979:7979
+    depends_on: 
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize", "-wait=tcp://discovery-server:8761", "-timeout=160s", "--", "java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar" ]
+
+  tracing-server:
+    image: openzipkin/zipkin
+    container_name: tracing-server
+    mem_limit: 512M
+    environment:
+    - JAVA_OPTS=-XX:+UnlockExperimentalVMOptions -Djava.security.egd=file:/dev/./urandom
+    ports:
+     - 9411:9411 
+  
+  grafana-server:
+    image: petclinic-grafana-server:dev
+    container_name: grafana-server
+    mem_limit: 256M
+    ports:
+    - 3000:3000
+
+  prometheus-server:
+    image: petclinic-prometheus-server:dev
+    container_name: prometheus-server
+    mem_limit: 256M
+    ports:
+    - 9091:9090
+
+  mysql-server:
+    image: mysql:5.7.8
+    container_name: mysql-server
+    environment: 
+      MYSQL_ROOT_PASSWORD: petclinic
+      MYSQL_DATABASE: petclinic
+    mem_limit: 256M
+    ports:
+    - 3306:3306
+-------------------------------------------------------
+  - Ana klasor altinda olusturduk.
+  - Containerler olustu.
+  - mem_limit: containerlerin kullanabilecegi limit.
+  - dockerize: Bir tool. Dockerfile'lar ile indiriyoruz. 8888'i 160sn dinle. Sinyal gelmezse 123 kodu tahasi ver. Config server'in acilmasi kosuluna gore diger containerleri acar.
+  - "--": baska bir komuta gecilidi ikazi.
+docker-compose -f docker-compose-local.yml up
+chmod +x test-local-deployment.sh
+./test-local-deployment.sh
+  - scriptin altina docker-compose -f docker-compose-local.yml up yazdi.
+git add .
+git commit -m 'added docker-compose file and script for local deployment'
+git push --set-upstream origin feature/msp-8
+git checkout dev
+git merge feature/msp-8
+git push origin dev
+
+
+
+<9.Jacoco ile Code Coverege Report>
+https://www.eclemma.org/jacoco/trunk/doc/maven.html
+  - jacoco hakkinda bilgi verir.
+git checkout dev
+git checkout -b feature/msp-9
+!!!
+cd /spring-petclinic-customers-service/src
+  - Herbir microservice altinda src dosyasi var.
+  - src altinda da main ve test klasorleri var.
+  - main altina kod yazilirken, test altina unit test'ler yazilir developer tarafindan.
+  - main > customers altindaki model ve web altindaki .java dosyalarina test yapacagiz.
+  - main icindeki .java filelerinin test folder'de unit test dosyalari alinir.
+- test/./..> customers altina model folder olusturduk.
+vim /spring-petclinic-customers-service/src/test/java/org/springframework/samples/petclinic/customers/model/PetTest.java
+---------------------------------------------------------------------
+package org.springframework.samples.petclinic.customers.model;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.Date;
+
+import org.junit.jupiter.api.Test;
+public class PetTest {
+    @Test
+    public void testGetName(){
+        //Arrange
+        Pet pet = new Pet();
+        //Act
+        pet.setName("Fluffy");
+        //Assert
+        assertEquals("Fluffy", pet.getName());
+    }
+    @Test
+    public void testGetOwner(){
+        //Arrange
+        Pet pet = new Pet();
+        Owner owner = new Owner();
+        owner.setFirstName("Call");
+        //Act
+        pet.setOwner(owner);
+        //Assert
+        assertEquals("Call", pet.getOwner().getFirstName());
+    }
+    @Test
+    public void testBirthDate(){
+        //Arrange
+        Pet pet = new Pet();
+        Date bd = new Date();
+        //Act
+        pet.setBirthDate(bd);
+        //Assert
+        assertEquals(bd,pet.getBirthDate());
+    }
+}
+---------------------------------------------------------------------
+  - Buradaki junit app ile yazilan test asil file'in saglamasini yapar.
+  - Burada model ve web folderlari altindaki .java file'lari icin test yazilabilir. 
+  - Hangilerine test yapilacagi senior tarafindan belirlenir.
+cd spring-petclinic-customers-service/
+  - yalniz bir (ilgili) microservice'e test yapmak icin icine girilir.
+!!!
+../mvnw clean
+  - "..": Bir yukardaki executable mvnm file kullanilir ama mevcut konumdaki maven dosyalari maven ile calistirilir.
+  - Birinci '.' yukari demek ve './' mevcut konumdaki dosyayi calistir demektir.
+  - targeti sildik.
+../mvnw clean test
+  - testte hata verirse 'failure' olarak gosterir.
+  - Once target siler sonra unit testleri yapar bu microservice icin. 
+git add .
+git commit -m 'added 3 UTs for customer-service'
+git push --set-upstream origin feature/msp-9
+vim pom.xml
+---------------------------------------------------------------------
+<plugin>
+    <groupId>org.jacoco</groupId>
+    <artifactId>jacoco-maven-plugin</artifactId>
+    <version>0.8.2</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>prepare-agent</goal>
+            </goals>
+        </execution>
+        <!-- attached to Maven test phase -->
+        <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+                <goal>report</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
+---------------------------------------------------------------------
+  - </plugins> uzerine yapistirdik. 
+  - jacoco pluginini ana klasorun altindaki pom.xml'e yukledik.
+  - jacoco test oranini ve hatalari gosterecek.
+../mvnw test
+  - unit test 'Build Success' aldi. 
+  - target klasoru altindaki site klasoru altinda jacoco klasoru olusur.
+  - Icinde bircok file olusur.
+cd /home/ec2-user/petclinic-microservices/spring-petclinic-customers-service/target/site/jacoco
+  - burada index.html altindan jacoco sonuc gosterir.
+!!!
+python3 -m http.server
+  - Jacoco'nun hazirladigi index.html'i acar testleri ve code coverege'lerini gosterir.
+
+Browser:
+http://0.0.0.0:8000/
+  - index.html'i acar ve jacoco'nun gosterdigi testleri ve code coverege'lerini goruruz.
+  - test'lere basinca method bazinda gosterir.
+
+VSC:
+git add .
+git commit -m 'updated POM with Jacoco plugin'
+git push
+git checkout dev
+git merge feature/msp-9
+git push
+
+
+
+<10.Selenium Test>
+- Fonksiyonel testleri otomatik olarak yapar.
+
+git checkout dev
+git checkout -b feature/msp-10
+docker-compose -f docker-compose-local.yml up
+  - uygulamayi ayaga kaldiriyoruz.
+  - Microserviceleri containerler icinde aciyoruz.
+!!!
+Functional Test:
+  Manual test: 
+    - siteyi acip manuel olarak yapilan islevsel testlerdir.
+    - Testerlar bunlari tek tek test eder.
+  Selenium Test:
+    - Fuctional testleri otomatik yapar.
+    - Asagida 3 tane Selenium test yukleyecegiz.
+cd petclinic-microservices
+mkdir selenium-jobs && cd selenium-jobs
+vim test_owners_all_headless.py
+---------------------------------------------------------------------
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from time import sleep
+import os
+
+# Set chrome options for working with headless mode (no screen)
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument("headless")
+chrome_options.add_argument("no-sandbox")
+chrome_options.add_argument("disable-dev-shm-usage")
+
+# Update webdriver instance of chrome-driver with adding chrome options
+driver = webdriver.Chrome(options=chrome_options)
+# driver = webdriver.Chrome("/Users/home/Desktop/chromedriver")
+# Connect to the application
+APP_IP = os.environ['MASTER_PUBLIC_IP']
+url = "http://"+APP_IP.strip()+":8080/"
+# url = "http://localhost:8080"
+print(url)
+driver.get(url)
+sleep(3)
+owners_link = driver.find_element_by_link_text("OWNERS")
+owners_link.click()
+sleep(2)
+all_link = driver.find_element_by_link_text("ALL")
+all_link.click()
+sleep(2)
+
+# Verify that table loaded
+sleep(1)
+verify_table = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "table")))
+
+print("Table loaded")
+
+driver.quit()
+---------------------------------------------------------------------
+vim test_owners_register_headless.py
+---------------------------------------------------------------------
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from time import sleep
+import random
+import os
+# Set chrome options for working with headless mode (no screen)
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument("headless")
+chrome_options.add_argument("no-sandbox")
+chrome_options.add_argument("disable-dev-shm-usage")
+
+# Update webdriver instance of chrome-driver with adding chrome options
+driver = webdriver.Chrome(options=chrome_options)
+
+# Connect to the application
+APP_IP = os.environ['MASTER_PUBLIC_IP']
+url = "http://"+APP_IP.strip()+":8080/"
+print(url)
+driver.get(url)
+owners_link = driver.find_element_by_link_text("OWNERS")
+owners_link.click()
+sleep(2)
+all_link = driver.find_element_by_link_text("REGISTER")
+all_link.click()
+sleep(2)
+# Register new Owner to Petclinic App
+fn_field = driver.find_element_by_name('firstName')
+fn = 'Callahan' + str(random.randint(0, 100))
+fn_field.send_keys(fn)
+sleep(1)
+fn_field = driver.find_element_by_name('lastName')
+fn_field.send_keys('Clarusway')
+sleep(1)
+fn_field = driver.find_element_by_name('address')
+fn_field.send_keys('Ridge Corp. Street')
+sleep(1)
+fn_field = driver.find_element_by_name('city')
+fn_field.send_keys('McLean')
+sleep(1)
+fn_field = driver.find_element_by_name('telephone')
+fn_field.send_keys('+1230576803')
+sleep(1)
+fn_field.send_keys(Keys.ENTER)
+
+# Wait 10 seconds to get updated Owner List
+sleep(10)
+# Verify that new user is added to Owner List
+if fn in driver.page_source:
+    print(fn, 'is added and found in the Owners Table')
+    print("Test Passed")
+else:
+    print(fn, 'is not found in the Owners Table')
+    print("Test Failed")
+driver.quit()
+---------------------------------------------------------------------
+vim test_veterinarians_headless.py
+---------------------------------------------------------------------
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from time import sleep
+import os
+
+# Set chrome options for working with headless mode (no screen)
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument("headless")
+chrome_options.add_argument("no-sandbox")
+chrome_options.add_argument("disable-dev-shm-usage")
+
+# Update webdriver instance of chrome-driver with adding chrome options
+driver = webdriver.Chrome(options=chrome_options)
+
+# Connect to the application
+APP_IP = os.environ['MASTER_PUBLIC_IP']
+url = "http://"+APP_IP.strip()+":8080/"
+print(url)
+driver.get(url)
+sleep(3)
+vet_link = driver.find_element_by_link_text("VETERINARIANS")
+vet_link.click()
+
+# Verify that table loaded
+sleep(5)
+verify_table = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "table")))
+
+print("Table loaded")
+
+driver.quit()
+---------------------------------------------------------------------
+  - 3 adet dosya olusturduk. Ana dosya altinda olusturdugumuz selenium-jobs klasoru icinde.
+  - Bu testler ile fonksiyonel testler otomatik yapilir.
+  - Her code eklendikce functional testlerin tekrarlanmasi gerek.
+cd ..
+git add .
+git commit -m 'added selenium jobs written in python'
+git push --set-upstream origin feature/msp-10
+git checkout dev
+git merge feature/msp-10
+git push 
+cd selenium-jobs
+python3 test_owners_all_headless.py
+python3 test_owners_register_headless.py
+python3 test_veterinarians_headless.py
+   - Tek tek siteyi acar, dugmelere tiklar, isim, rakam vb girer ve bir kullanici gibi uygulamayi test eder.
+
+
+<11.CFN ile Jenkins Server Kurulumu>
+AWS CloudFormation:
+- petclinic-microservice > infrastructure > msp-11-jenkins-server-cfn-template.yml ile Jenkins icin bir ec2 acilir.
+  * Cfn'i oraya koyariz ve ayni zamanda CloudFormation icin template olarak kullaniriz.
+
+VSC:
+cd infrastructure
+vim msp-11-jenkins-server-cfn-template.yml
+---------------------------------------------------------------------------------------
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >
+  This Cloudformation Template creates a Jenkins Server using JDK 11 on EC2 Instance.
+  Jenkins Server is enabled with Git, Docker and Docker Compose,
+  AWS CLI Version 2, Python 3, Ansible, and Boto3. 
+  Jenkins Server will run on Amazon Linux 2 EC2 Instance with
+  custom security group allowing HTTP(80, 8080) and SSH (22) connections from anywhere.
+
+Parameters:
+  KeyPairName:
+    Description: Enter the name of your Key Pair for SSH connections.
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must one of the existing EC2 KeyPair
+Resources:
+  EmpoweringRoleforJenkinsServer:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
+        - arn:aws:iam::aws:policy/AWSCloudFormationFullAccess
+        - arn:aws:iam::aws:policy/AdministratorAccess
+  JenkinsServerEC2Profile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Roles: #required
+        - !Ref EmpoweringRoleforJenkinsServer
+  JenkinsServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH and HTTP for Jenkins Server
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+  JenkinsServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0947d2ba12ee1ff75
+      InstanceType: t3a.medium
+      KeyName: !Ref KeyPairName
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp2
+            VolumeSize: '16'
+      IamInstanceProfile: !Ref JenkinsServerEC2Profile
+      SecurityGroupIds:
+        - !GetAtt JenkinsServerSecurityGroup.GroupId
+      Tags:                
+        - Key: Name
+          Value: !Sub Jenkins Server of ${AWS::StackName}
+        - Key: server
+          Value: jenkins
+      UserData:
+        Fn::Base64: |
+          #! /bin/bash
+          # update os
+          yum update -y
+          # set server hostname as jenkins-server
+          hostnamectl set-hostname jenkins-server
+          # install git
+          yum install git -y
+          # install java 11
+          yum install java-11-amazon-corretto -y
+          # install jenkins
+          wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
+          rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+          amazon-linux-extras install epel
+          yum install jenkins -y
+          systemctl daemon-reload
+          systemctl start jenkins
+          systemctl enable jenkins
+          # install docker
+          amazon-linux-extras install docker -y
+          systemctl start docker
+          systemctl enable docker
+          usermod -a -G docker ec2-user
+          usermod -a -G docker jenkins
+          # configure docker as cloud agent for jenkins
+          cp /lib/systemd/system/docker.service /lib/systemd/system/docker.service.bak
+          sed -i 's/^ExecStart=.*/ExecStart=\/usr\/bin\/dockerd -H tcp:\/\/127.0.0.1:2375 -H unix:\/\/\/var\/run\/docker.sock/g' /lib/systemd/system/docker.service
+          systemctl daemon-reload
+          systemctl restart docker
+          systemctl restart jenkins
+          # install docker compose
+          curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" \
+          -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          # uninstall aws cli version 1
+          rm -rf /bin/aws
+          # install aws cli version 2
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          ./aws/install
+          # install python 3
+          yum install python3 -y
+          # install ansible
+          pip3 install ansible
+          # install boto3
+          pip3 install boto3
+          
+Outputs:
+  JenkinsDNS:
+    Description: Jenkins Server DNS Name 
+    Value: !Sub 
+      - ${PublicAddress}
+      - PublicAddress: !GetAtt JenkinsServer.PublicDnsName
+  JenkinsURL:
+    Description: Jenkins Server URL
+    Value: !Sub 
+      - http://${PublicAddress}:8080
+      - PublicAddress: !GetAtt JenkinsServer.PublicDnsName
+---------------------------------------------------------------------------------------
+  - cp /lib/systemd/system/docker.service /lib/systemd/system/docker.service.bak
+    * .service dosyasini .bak ile kaydederek yedekliyoruz. Hata durumuna karsin.
+  - sed -i 's/^ExecStart=.*/ExecStart=\/usr\/bin\/dockerd -H tcp:\/\/127.0.0.1:2375 -H unix:\/\/\/var\/run\/docker.sock/g' /lib/systemd/system/docker.service
+    * 'sed -i 's/^ExecStart': ExecStart ile baslayan satiri bulup '=' den sonra yazan kodu tanitiyor. 
+    * ^ExecStart: ExecStart ile baslayan demek.  
+    * ExecStart=usr\/bin\/dockerd -H tcp:\/\/127.0.0.1:2375 -H unix:\/\/\/var\/run\/docker.sock/ olarak degistirir.
+    * Aradaki /\ vb isaretler degisir konuma giderken.
+    * Docker'a 2375 portundan komutlar gelecek icra et diyoruz.
+    * '-H': listen (Docker daemon/engine'e 2375'ten dinle diyoruz. Daha sonra komutlari calistir.)
+    * Daha sonra systemd'deki islemlerin calismasi icin systemctl daemon-reload , systectl restart docker ve systemctl restart jenkins.
+  - Jenkins ile AWS kaynaklarina erisim icin verilen roller:
+    * AmazonECSContainerRegistryFullAccess: ECR kullanilacak.
+    * AWSCloudFormationFullAccess: CFN kullanilacak.
+    * AdministratorAccess: Genel isler icin kullanilacak.
+      - Rolleri tanimlamak yerine credentials tanitilarak da yapilabilirdi ama riskli.
+   !!! Profile: Tanimlanan Rol buraya refere edilir. Profil de EC2'ya tanimlanarak roller verilir.
+git checkout dev
+git branch feature/msp-11
+git checkout feature/msp-11
+git add .
+git commit -m 'added jenkins server cfn template'
+git push --set-upstream origin feature/msp-11
+git checkout dev
+git merge feature/msp-11
+git push
+
+
+
+<12.Jenkins Configuration>
+- Jenkins pluginler ile bircok programla calisir. 
+- Maven, build tool olarak Java ile calisir, Python ile baska bir built tool calisir. 
+- Tum build toollar Jenkins ile calisir. 
+- Docker'in agent olarak kullanimi.
+
+Browser:
+- Public IP:8080
+  * Jenkins default 8080 portunu kullanir.
+
+VSC Jenkins:
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword 
+  - Jenkinsin browserinden alindi adres.
+
+Browser:
+> Alinan sifre yazilir. > Install suggested plugins > Admin user'i kendince tanimla > save > start
+> Manage Jenkins > Manage plugins > Available > jacoco / Docker Pipeline / GitHub Integration / Docker > install without restart
+> Manage Jenkins > Manage Nodes and Clouds > Configure clouds > Docker sec (plugini yukledigimiz icin cikar. Cloud olarak Docker calisir.) 
+  > Docker Cloud details > Docker Host URI: tcp://localhost:2375 > save  
+  - tcp://localhost:2375 'ten Jenkins talimat verecek Docker'a. Docker da container calistiracak. Docker, Jenkins icin bir agent.
+  - Buradan cloud ve Node tanitilabilir.
+
+docker-test:
+> New item > docker-test / Pipeline /ok 
+Pipeline script
+----------------------------------------------------------
+pipeline {
+    agent {
+        docker { image 'node:14-alpine' }
+    }
+    stages {
+        stage('Test') {
+            steps {
+                sh 'node --version'
+            }
+        }
+    }
+}
+----------------------------------------------------------
+    - agent olarak docker tanimlaniyor.
+    - Projede docker, agent olarak kullanilmayacak. Burada sadece tanitildi.
+    - node:14-alpine image ile docker agenti calistirir.
+    - node --version: tek islemi node versiyon vermek.
+  > save
+  > Build now (node:14-alpine image'ini localde arar sonra indirir ve container kurar. Sonra versiyonu gosterir.)
+    - agent: islemlerin yapilacagi node, cloud, program (docker engine, K8s)'i gosterir.
+    - Jenkins server tum isleri yapmasin diye reacta ihtiyac varsa react container, pythona ihtiyac varsa python container veya slave node vb ile gorevleri dagitiriz.
+https://www.jenkins.io/doc/book/pipeline/docker/
+  - agent ile ilgili bilgiler.
+
+AWS Consol:
+- Ilk makine kapatilir. Yalniz Jenkins makinesi kalir.
+
+Github:
+petclinic-microservice reposu > dev (branch sec) > Code > HTTPS adresi tikla al.
+
+VSC:
+git clone https://github.com/dataauditor/petclinic-microservice.git
+cd petclinic-microservices
+git branch
+  - yalniz main gozukuyor localde ama remote da hepsi var.
+git checkout dev
+  - remote'da oldugu icin burada da cildi dev bransi.
+git branch -a
+  - local ve remote branck'lari ve mevcut branch'i gosterir.
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+1. JENKINS JOB (WEBHOOK ILE UNIT TESTS VE JACOCO)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+<13.CI Olusturma - Webhook - Unit Test - JaCoCo>
+- 1. Jenkins Job olusturuluyor: 
+  * Webhook ile Github'tan veriler cekilip maven'da unit testleri yapar.
+- petclinic-ci-job
+  * Jacoco plugin indirilir.
+  * Jacoco, Post build ile eklenir.
+
+VSC:
+git checkout dev
+git branch feature/msp-13
+git checkout feature/msp-13
+mkdir jenkins
+
+Browser:
+petclinic-ci-job:
+New item > petclinic-ci-job > Freestyle job > ok
+  > GitHub project: https://github.com/dataauditor/petclinic-microservice/ > 
+    - '.git' siz alinacak. '/': olup olmamasi onemli degil.
+  > Source Code Management > Git > https://github.com/dataauditor/petclinic-microservice.git
+  > Branch Specifier: */dev
+  > Add branch: */feature**
+  > Add branch: */bugfix** (bug cikarsa hatayi duzeltmek icin kullanilir.)
+  > Build Triggers > GitHub hook trigger for GITScm polling (Webhook)
+  > Build Environment > Add timestamps to the Console Output
+  > Build > Execute shell :
+!!!
+echo 'Running Unit Tests on Petclinic Application'
+docker run --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/app -w /app maven:3.6-openjdk-11 mvn clean test
+     - petclinic-ci-job calisinca once workspace altinda petclinic-ci-job isimli klasor olusturup github repoyu oraya indirir.
+     - '--rm': container stop edince sil.
+     - Jenkins'te islem yapinca kendi $HOME directorysi /var/lib/jenkins/ altinda olusturdugu /workspace/petclinic-ci-job klasorunde islem yapar.
+     - '-v $HOME/.m2:/root/.m2': '$HOME': /var/lib/jenkins/ : jenkins'in home direcyory'si. (ec2-user'in home directorysi de /home/ec2-user)
+     - host ile containerin .m2 klasorlerini eslememizin sebebi bu container silinip yeni container kuruldugunda dosyalari (dependenciesleri) hazir olacak.
+     - 'maven:3.6-openjdk-11': containerin cakecegi image.
+     - 'mvn clean test': bu kod calisinca $HOME altinda .m2 klasoru olusacak.
+     - '/root': containerdeki root user'in home directory'si. /root klasoru altinda .m2 klasoru de hazir var.
+     - `pwd`: `` komut olarak calistirir. /var/lib/jenkins/workspace/petclinic-ci-job adresini isaret eder.
+     - 'petclinic-ci-job': klasor komutla olusur ve icinie girilir. SCM ile tanimlanan Github reposunu buraya tasir.
+     - '-w /app': bu konumda calisir.
+     - Bu komutla containerdeki .m2 klasorune compile edilmis kod gelir. Ayni konumda mvn komutu calistirilir. Alinan image maven image'i oldugu icin mvn komutu icinde calisir.
+  > Post-build Actions > Record JaCoCo coverage report > Path to exec files > 
+      - inclusion: dahil et demektir.
+      - Exclusion: dahil etme demektir.
+    > Change build status according to the defined thresholds (oran verilecekse sec)
+    > Always run coverage collection, even if build is FAILED or ABORTED (oran verilecekse sec) > line 80 > line 60
+      - 80 altindaysa basarisiz. 
+      - alta 60 yazarsak 60-80 arasi unstable 
+      - 60 alti basarisiz olur.
+      - Teamulen buradaki degerler 0 olarak tutulur. Ustu basarili alti basarisiz olur. Grafikten sonuclari goruruz.
+    > Fail to build if coverage degrades more than the delta thresholds (oran verilecekse sec): Yukarki coverage'a gore muteakip seferde belirlenen ornegin 10 oranindan fazla dusus varsa yine basarisiz der.
+    > hepsi 0 kalir. (normalde hicbiri tiklenmez) > save
+  > Build now 
+    - belirlenen yuzdenin altinda olursa basarisiz olur.
+
+Github:
+> petclinic-microservice > settings > Webhooks > Add webhook 
+  > http://3.235.147.77:8080/github-webhook/ > add webhook
+
+VSC:
+cd petclinic-microservices
+vim /jenkins/jenkins-petclinic-ci-job.sh
+------------------------------------------------------------------------
+echo 'Running Unit Tests on Petclinic Application'
+docker run --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/app -w /app maven:3.6-openjdk-11 mvn clean test
+------------------------------------------------------------------------
+git config --global user.email byildiz2019@gmail.com
+git config --global user.name dataauditor
+git add .
+git commit -m 'added Jenkins Job for CI pipeline'
+git push --set-upstream origin feature/msp-13
+  - build now olur
+git checkout dev
+git merge feature/msp-13
+git push origin dev
+  !!!
+  - build now olmaz. yukarda zaten degisiklik olmustu, yeni degisiklik yok.
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+2. JENKINS JOB (NIGHTLY FUNCTIONAL TESTS):
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  * 14: Jenkins ile ECR repo olusturma. 
+  * 15: 14'teki komutun script'e kaydedilmesi.
+  * 16: Jenkins'te 'test-creating-qa-automation-infrastructure' job olusturulur.
+         - $PATH:/usr/local/bin tanitilarak aws ve ansible binary'ler executable olur.
+         - AWS ve Jenkins ec2'da isim verilerek pem file olusturulur. 
+         - CFN stack ile functionel testler icin Docker Swarm kullanmak icin 5 node olusturulur.
+           * Docker Swarm ilgili portlar acilir.
+           * Dynamic inventory icin manager ve workerlara taglar atanir.
+           * ECR'a ulasim icin grand-manager'a role atanir.
+           * Daha once olusturulan keypairi ceker.        
+           * Dynamic inventory olusturulur. Worker, Manager ve Grand-manager vb seklindeki taglarina gore gruplanir.
+           * Ansible ile instance'lere Docker Swarm ... vb kurulur.
+           * Docker Swarm ile dynamic inventory kullanilarak manager ve workerlar Docker Swarm master'a baglanir.
+
+ 
+
+
+<14.Jenkins-Shell ile ECR Repo Olusturma>
+- Jenkins ile ECR repo olusturma.
+- Bunun icin Jenkins'in makinesine EC2ContainerRegistryFullAccess rolu tanimlandi 11'de.
+Pipeline Functional Test with Docker Swarm:
+- Imageler hazirlanir.
+- Docker Swarm: 3 Manager ve 2 Worker'dan kurulacak.
+- ECR repo olusturulacak.
+- CFN ile 5 node acilir.
+- ansible ile Docker Swarm kurulur node'lara.
+
+Jenkins:
+> New item > create-ecr-docker-registry-for-dev > freestyle project 
+  > Build > Execute shell:
+--------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_REPO_NAME="umitceylan-repo/petclinic-app-dev"
+AWS_REGION="us-east-1"
+
+aws ecr create-repository \
+  --repository-name ${APP_REPO_NAME} \
+  --image-scanning-configuration scanOnPush=false \
+  --image-tag-mutability MUTABLE \
+  --region ${AWS_REGION}
+---------------------------------------------------------------------------
+    - Mutable: ayni isimde image yazilirsa uzerine yazmaya izin verir.
+    - scan: kontrol etmek
+  > save 
+  > Build now
+
+AWS ECR:
+
+
+<15.ECR repo olusturma scriptini kayit>
+git checkout dev
+git branch feature/msp-15
+git checkout feature/msp-15
+vim /infrastructure/create-ecr-docker-registry-for-dev.sh
+---------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_REPO_NAME="clarusway-repo/petclinic-app-dev"
+AWS_REGION="us-east-1"
+
+aws ecr create-repository \
+  --repository-name ${APP_REPO_NAME} \
+  --image-scanning-configuration scanOnPush=false \
+  --image-tag-mutability MUTABLE \
+  --region ${AWS_REGION}
+---------------------------------------------------------------------------
+git add .
+git commit -m 'added script for creating ECR registry for dev'
+git push --set-upstream origin feature/msp-15
+git checkout dev
+git merge feature/msp-15
+git push origin dev
+  - petclinic-ci-job trigger olur.
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+2.NIGHLY 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+- Cron-job
+- Docker swarm yuklenir.
+- Maven ile package olan dosyalar microsersicelere gonderilir.
+- Functional testler 
+
+
+
+<16.Functionel Testler icin Docker Swarm ile 5 Node Olusturma>
+- 'test-creating-qa-automation-infrastructure' Jenkins job olusturulur.
+
+VSC:
+vim infrastructure/dev-docker-swarm-infrastructure-cfn-template.yml
+---------------------------------------------------------------------------
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >
+  This Cloudformation template prepares development environment for Petclinic Microservices Application.
+  User needs to select appropriate key name when launching the template.
+
+Parameters:
+  KeyPairName:
+    Description: Enter the name of your Key Pair for SSH connections.
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must one of the existing EC2 KeyPair
+
+Resources:
+  PetclinicDemoSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH and HTTP for Petclinic Microservices
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9090
+          ToPort: 9090
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8081
+          ToPort: 8081
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8082
+          ToPort: 8082
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8083
+          ToPort: 8083
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8888
+          ToPort: 8888
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9411
+          ToPort: 9411
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 7979
+          ToPort: 7979
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9091
+          ToPort: 9091
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8761
+          ToPort: 8761
+          CidrIp: 0.0.0.0/0
+  PetclinicServerLT:
+    Type: "AWS::EC2::LaunchTemplate"
+    Properties:
+      LaunchTemplateData:
+        ImageId: ami-01cc34ab2709337aa
+        InstanceType: t3.medium
+        KeyName: !Ref KeyPairName
+        SecurityGroupIds:
+          - !GetAtt PetclinicDemoSG.GroupId
+        UserData:
+          Fn::Base64: |
+            #! /bin/bash
+            yum update -y
+            hostnamectl set-hostname petclinic-dev-server
+            amazon-linux-extras install docker -y
+            systemctl start docker
+            systemctl enable docker
+            usermod -a -G docker ec2-user
+            newgrp docker
+            curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" \
+            -o /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
+            yum install git -y
+            yum install java-11-amazon-corretto -y
+            git clone https://github.com/clarusway/petclinic-microservices-with-db.git
+            cd petclinic-microservices-with-db
+            git checkout dev
+  PetclinicServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref PetclinicServerLT
+        Version: !GetAtt PetclinicServerLT.LatestVersionNumber
+      Tags:                
+        - Key: Name
+          Value: !Sub Petclinic App Dev Server of ${AWS::StackName}
+Outputs:
+  PetclinicServerDNSName:
+    Description: Petclinic App URL
+    Value: !GetAtt PetclinicServer.PublicDnsName
+---------------------------------------------------------------------------
+  - 
+git add .
+git commit -m 'added cloudformation template for Docker Swarm infrastructure'
+git push --set-upstream origin feature/msp-16
+
+Jenkins:
+> New Item: 
+  > test-creating-qa-automation-infrastructure > freestyle project > ok
+  > SCM: Git > https://github.com/dataauditor/petclinic-microservice.git > Branch Specifier: */feature/msp-16
+  > Build Environment > Add timestamps to the Console Output
+  > Build > Execute shell:
+------------------------------------------------------------------------
+echo $PATH
+whoami
+PATH="$PATH:/usr/local/bin"
+python3 --version
+pip3 --version
+ansible --version
+aws --version
+------------------------------------------------------------------------
+    - Dynamic Inventory icin python3, pip3 ve ansible gerekli. 
+    - echo $PATH: /sbin:/usr/sbin:/bin:/usr/bin
+    - whoami: jenkins
+    - PATH="$PATH:/usr/local/bin"
+       - Hem ansible hem de aws binary'si /usr/local/bin altindadir. Executable olsun diye.
+  > Save
+  > Build now
+!!!
+------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+AWS_REGION="us-east-1"
+aws ec2 create-key-pair --region ${AWS_REGION} --key-name ${CFN_KEYPAIR} --query "KeyMaterial" --output text > ${CFN_KEYPAIR}
+chmod 400 ${CFN_KEYPAIR}
+echo ${CFN_KEYPAIR}
+------------------------------------------------------------------------
+  - pem file, key pair dosyasi olusturur. 
+  - Pem dosyasi hem AWS'de hem de '> ${CFN_KEYPAIR}' komutu ile /var/lib/jenkins/workspace/test-creating-qa-automation-infrastructure da olusur.
+  - '--query "KeyMaterial" --output text': olusan key degeri text file olarak olusturur.
+------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_NAME="Petclinic"
+APP_STACK_NAME="call-$APP_NAME-App-${BUILD_NUMBER}"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+CFN_TEMPLATE="./infrastructure/dev-docker-swarm-infrastructure-cfn-template.yml"
+AWS_REGION="us-east-1"
+aws cloudformation create-stack --region ${AWS_REGION} --stack-name ${APP_STACK_NAME} --capabilities CAPABILITY_IAM --template-body file://${CFN_TEMPLATE} --parameters ParameterKey=KeyPairName,ParameterValue=${CFN_KEYPAIR}
+------------------------------------------------------------------------
+  - Gunluk olarak gece yapilacak unit testler icin cfn ile 5 node'luk cluster kuruluyor.
+  - Role ile AmazonEC2ContainerRegistryFullAccess yetkisi veriliyor manager'a image'lari ceksin diye.
+  - Docker swarm'da iletisim icin ilgili port'lar acildi.
+  - Dynamic inventory'de kullanmak uzere tag'ler verildi manager ve workerlara.
+  - ${BUILD_NUMBER}: kendimiz Cloudformation'daki son stack numarasini gireriz.
+  - 'ParameterKey=KeyPairName': KeyPair name'ler secilir.
+  - 'ParameterValue=${CFN_KEYPAIR}': "call-ansible-test-dev.key" ismini ceker. Kod hic gelmez buraya.
+  - '--template-body file://' template'i ceker.
+  - '--capabilities CAPABILITY_IAM': Stack'de normalde IAM role kabul ediyonmu sorusuna evet demektir.
+  - Daha once olusturulan "call-ansible-test-dev.key" keypair'i cekiyor. 
+  - /var/liv/jenkins/workspace/test-creating-qa-automation-infrastructure klasorunde 'call-ansible-test-dev.key' keyini olusturdu.
+------------------------------------------------------------------------
+CFN_KEYPAIR="call-ansible-test-dev.key"
+ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${WORKSPACE}/${CFN_KEYPAIR} ec2-user@172.31.91.243 hostname
+------------------------------------------------------------------------
+    - 'ssh -i ${WORKSPACE}/${CFN_KEYPAIR} ec2-user@172.31.91.243': standart ssh baglanma kodu.
+    - 'hostname': baglanilan instance'in hostname'ini gosterir. 'pwd': deseydik baglanilan mevcut konumu gosterirdi.
+    - Jenkinsten bir node'a baglanildi.
+    - Docker Swarm'da kullanilan herhangi bir (5 node'dan birinin) node'un private ip'si girildi.
+    - 'UserKnownHostsFile=': /var/lib/jenkins/workspace/.ssh/authorized_keys dosyasi yerine key'leri boşluğa gönder. key'ler buraya gonderilir normalde.
+    - /dev/null : bosluga yaz. Keyi 'authorized_keys' file'a kaydetme demek. Hergun yeni key girecegimiz icin key'leri kaydetmeyiz, sisme olmasin diye.
+    - 'StrictHostKeyChecking=no': soru sorma otomatik devam et. Cevap veremeyecegimiz icin otomatik yapariz.
+    - instance'ye baglanip ip adresini alir.
+    - 'CFN_KEYPAIR="call-ansible-test-dev.key"': CFN_KEYPAIR, onceden tanimli ismiyle cekildi.
+    - ${WORKSPACE}: /var/lib/jenkins/workspace/test-creating-qa-automation-infrastructure
+    - Bu komuttan maksat bir node'a baglanabiliyoruz mu gormekti. 
+  > save
+  > Build now
+    - instance'a baglanilip hostname alindi.
+
+VSC:
+mkdir ansible && cd ansible && mkdir inventory && cd inventory
+vim hosts.ini
+------------------------------------------------------------------------
+172.31.91.243   ansible_user=ec2-user  
+172.31.87.143   ansible_user=ec2-user
+172.31.90.30    ansible_user=ec2-user
+172.31.92.190   ansible_user=ec2-user
+172.31.88.8     ansible_user=ec2-user
+------------------------------------------------------------------------
+    - node'larin privat ip'leri girilerek static inventory olusturulur.
+    - Bir onceki kod ile baglanilabildigini test ettik. Artik static inventory'i baglayabiliriz.
+  - save
+  - Build now
+
+VSC:
+cd ..
+cd ..
+git add .
+git commit -m 'added ansible static inventory host.ini for testing'
+git push
+
+Jenkins:
+test-creating-qa-automation-infrastructure > configure:
+!!!
+------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+export ANSIBLE_INVENTORY="${WORKSPACE}/ansible/inventory/hosts.ini"
+export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${CFN_KEYPAIR}"
+export ANSIBLE_HOST_KEY_CHECKING=False
+ansible all -m ping
+------------------------------------------------------------------------
+    !!!
+    - ansible ile islem yapabilmek icin inventory dosyasini, key dosyasini ve key kontrolunu shell degiskeni olarak atiyoruz ki ansible calissin.
+    - PATH'e ise ansible binary'nin konumu tanitilir. 
+    - ansible env'a kaydedilen inventory ve keypair adresi ile otomatik olarak calisir.
+  > save
+  > Build now 
+    - 5 adet pong gelir.
+
+VSC:
+cd /ansible/inventory
+vim dev_stack_dynamic_inventory_aws_ec2.yaml
+!!!
+------------------------------------------------------------------------
+plugin: aws_ec2
+regions:
+  - "us-east-1"
+filters:
+  tag:app-stack-name: APP_STACK_NAME
+  tag:environment: dev
+keyed_groups:
+  - key: tags['app-stack-name']
+    prefix: 'app_stack_'
+    separator: ''
+  - key: tags['swarm-role']
+    prefix: 'role_'
+    separator: ''
+  - key: tags['environment']
+    prefix: 'env_'
+    separator: ''
+  - key: tags['server']
+    separator: ''
+hostnames:
+  - "private-ip-address"
+compose:
+  ansible_user: "'ec2-user'"
+------------------------------------------------------------------------
+  - dynamic inventory olusturuluyor.
+  - Asagisa sed komutu ile 'APP_STACK_NAME' yerine asil isim yaziliyor.
+  - 'key: tags['app-stack-name']': key deherine gore filtreliyor. Value'yi dikkate almiyor. Sonra basina da 'app_stack_' ekliyor.
+  - 'hostnames': private ip'yi verir.
+  !!!
+  - 'compose': degisken tanimliyoruz/ekliyoruz.
+  - Proje boyunca asil surekli kullanilacak dynamic inventory bu. 
+  - Alttaki 3 tane dynamic inventory kullanilmayacak sadece gosterim maksatlilar. Asagidaki 3 file ile yapilan islemi burada tek file ile icra ederiz.
+  - Tag'ler cfn ile verilmisti.
+vim dev_stack_swarm_grand_master_aws_ec2.yaml
+------------------------------------------------------------------------
+plugin: aws_ec2
+regions:
+  - "us-east-1"
+filters:
+  tag:app-stack-name: APP_STACK_NAME
+  tag:environment: dev
+  tag:swarm-role: grand-master
+hostnames:
+  - "private-ip-address"
+compose:
+  ansible_user: "'ec2-user'"
+------------------------------------------------------------------------
+  - dynamic inventory olusturuluyor.
+vim dev_stack_swarm_managers_aws_ec2.yaml
+------------------------------------------------------------------------
+plugin: aws_ec2
+regions:
+  - "us-east-1"
+filters:
+  tag:app-stack-name: APP_STACK_NAME
+  tag:environment: dev
+  tag:swarm-role: manager
+hostnames:
+  - "private-ip-address"
+compose:
+  ansible_user: "'ec2-user'"
+------------------------------------------------------------------------
+  - dynamic inventory olusturuluyor.
+  - Grand master'da bir manager oldugu icin o da alir.
+vim dev_stack_swarm_workers_aws_ec2.yaml
+------------------------------------------------------------------------
+plugin: aws_ec2
+regions:
+  - "us-east-1"
+filters:
+  tag:app-stack-name: APP_STACK_NAME
+  tag:environment: dev
+  tag:swarm-role: worker
+hostnames:
+  - "private-ip-address"
+compose:
+  ansible_user: "'ec2-user'"
+------------------------------------------------------------------------
+  - dynamic inventory olusturuluyor.
+git checkout feature/msp-16
+git add .
+git commit -m 'added ansible dynamic inventory files for dev environment'
+git push
+git checkout dev
+git merge feature/msp-16
+git push
+https://docs.ansible.com/ansible/latest/collections/amazon/aws/aws_ec2_inventory.html
+
+Jenkins:
+------------------------------------------------------------------------
+APP_NAME="Petclinic"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+PATH="$PATH:/usr/local/bin"
+export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${CFN_KEYPAIR}"
+export ANSIBLE_HOST_KEY_CHECKING=False
+export APP_STACK_NAME="call-$APP_NAME-App-${BUILD_NUMBER}"
+# Dev Stack
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml
+cat ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml
+ansible-inventory -v -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml --graph
+# Dev Stack Grand Master
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_swarm_grand_master_aws_ec2.yaml
+cat ./ansible/inventory/dev_stack_swarm_grand_master_aws_ec2.yaml
+ansible-inventory -v -i ./ansible/inventory/dev_stack_swarm_grand_master_aws_ec2.yaml --graph
+# Dev Stack Managers
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_swarm_managers_aws_ec2.yaml
+cat ./ansible/inventory/dev_stack_swarm_managers_aws_ec2.yaml
+ansible-inventory -v -i ./ansible/inventory/dev_stack_swarm_managers_aws_ec2.yaml --graph
+# Dev Stack Workers
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_swarm_workers_aws_ec2.yaml
+cat ./ansible/inventory/dev_stack_swarm_workers_aws_ec2.yaml
+ansible-inventory -v -i ./ansible/inventory/dev_stack_swarm_workers_aws_ec2.yaml --graph
+------------------------------------------------------------------------
+    - 'sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_swarm_workers_aws_ec2.yaml'
+      * sed degistirir. -i kaydeder.
+    - '-i': inventory gosterir.
+    - '-v': aciklayici bilgi verir.
+    - 'Build-number': Cloudformation'da stack'in yaninda yazan kacinci sefer oldugu yazilir. Ben 10 yazdim.
+    - CFN_KEYPAIR, APP_STACK_NAME ve BUILD_NUMBER (cfn stack'ten alinir) degistirilir.
+    - ${BUILD_NUMBER}, 8 seklinde yazilir ornegin.
+  > Build now  
+    - Dynamic inventory ile kategorize edilmis instance namelerini verir.
+------------------------------------------------------------------------
+APP_NAME="Petclinic"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+PATH="$PATH:/usr/local/bin"
+export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${CFN_KEYPAIR}"
+export ANSIBLE_HOST_KEY_CHECKING=False
+export APP_STACK_NAME="call-$APP_NAME-App-${BUILD_NUMBER}"
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml
+ansible -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml all -m ping
+------------------------------------------------------------------------
+  > Build now
+    - tum node'lar pong gonderdi.
+cd ..
+mkdir /ansible/playbooks && cd /ansible/playbooks
+vim pb_setup_for_all_docker_swarm_instances.yaml
+------------------------------------------------------------------------
+- hosts: all
+  tasks:
+  - name: update os
+    yum:
+      name: '*'
+      state: present
+  - name: install docker
+    command: amazon-linux-extras install docker=latest -y
+  - name: start docker
+    service:
+      name: docker
+      state: started
+      enabled: yes
+  - name: add ec2-user to docker group
+    shell: "usermod -a -G docker ec2-user"
+  - name: install docker compose.
+    get_url:
+      url: https://github.com/docker/compose/releases/download/1.26.2/docker-compose-Linux-x86_64
+      dest: /usr/local/bin/docker-compose
+      mode: 0755
+  - name: uninstall aws cli v1
+    file:
+      path: /bin/aws
+      state: absent
+  - name: download awscliv2 installer
+    unarchive:
+      src: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+      dest: /tmp
+      remote_src: yes
+      creates: /tmp/aws
+      mode: 0755
+  - name: run the installer
+    command:
+    args:
+      cmd: "/tmp/aws/install"
+      creates: /usr/local/bin/aws
+------------------------------------------------------------------------
+  !!!
+  - ansible yum module seklinde browserde arat. Aciklama ve ornekler var.
+  - ansible command module seklinde browserde arat.
+  - ansible file, get_url, service, unarchive module seklinde browserde arat.
+  - unarchive komutunda: dest: /tmp e indirilir, remote_src: yes ile acilir, creates: /tmp/aws ile unzipli hali kaydedilir.
+  - command komutu ile cmd: "/tmp/aws/install" calistirilir. Muhtemelen creates: /usr/local/bin/aws ile PATH'e binary gonderilir.
+  - command ile shell module farki:
+    * command, shell'de calismaz. Bu yuzden shell degiskenlerini $HOME vb goremez.
+  - '0755': 0 sistem geregi konur.
+  - Cluster'a Docker Swarm kuruyoruz.
+vim pb_initialize_docker_swarm.yaml
+------------------------------------------------------------------------
+- hosts: role_grand_master
+  tasks:
+  - name: initialize docker swarm
+    shell: docker swarm init
+  - name: install git
+    yum:
+      name: git
+      state: present
+  - name: run the visualizer app for docker swarm
+    shell: |
+      docker service create \
+        --name=viz \
+        --publish=8088:8080/tcp \
+        --constraint=node.role==manager \
+        --mount=type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
+        dockersamples/visualizer
+------------------------------------------------------------------------
+   - 'docker service': Swarm'a has komut.
+vim pb_join_docker_swarm_managers.yaml
+------------------------------------------------------------------------
+- hosts: role_grand_master
+  tasks:
+  - name: Get swarm join-token for managers
+    shell: docker swarm join-token manager | grep -i 'docker'
+    register: join_command_for_managers
+
+  - debug: msg='{{ join_command_for_managers.stdout.strip() }}'
+  
+  - name: register grand_master with variable
+    add_host:
+      name: "grand_master"
+      manager_join: "{{ join_command_for_managers.stdout.strip() }}"
+
+- hosts: role_manager
+  tasks:
+  - name: Join managers to swarm
+    shell: "{{ hostvars['grand_master']['manager_join'] }}"
+    register: result_of_joining
+
+  - debug: msg='{{ result_of_joining.stdout }}'
+------------------------------------------------------------------------
+  - 'register: join_command_for_managers': yukarki komutun ciktisini rama kaydeder. Ayni zamanda ilgili komutun back_up file, changed, diff, msg, rc, stdout, ... vb bircok verisini verir.
+    - 'join_command_for_managers.stdout.strip()' ile verinin stdout yani ciktisini aliriz ve strip ile on ve arkadaki bosluklari sileriz.
+  - token cekme.
+  - debug: kirpma, temizleme
+  - kodu managerlara vererek swarm'a katma.
+  - 'hostvars': buyulu degisken   
+vim pb_join_docker_swarm_workers.yaml
+------------------------------------------------------------------------
+- hosts: role_grand_master
+  tasks:
+  - name: Get swarm join-token for workers
+    shell: docker swarm join-token worker | grep -i 'docker'
+    register: join_command_for_workers
+
+  - debug: msg='{{ join_command_for_workers.stdout.strip() }}'
+  
+  - name: register grand_master with variable
+    add_host:
+      name: "grand_master"
+      worker_join: "{{ join_command_for_workers.stdout.strip() }}"
+
+- hosts: role_worker
+  tasks:
+  - name: Join workers to swarm
+    shell: "{{ hostvars['grand_master']['worker_join'] }}"
+    register: result_of_joining
+
+  - debug: msg='{{ result_of_joining.stdout }}'
+------------------------------------------------------------------------
+  !!!
+  - 'register': tokeni rama kaydeder.
+  !!!
+  - 'add_host': bu task register ile cekilen degiskeni hostvars yapmaya yarar. Burada register edilen token grand master'a atanir.
+  !!!
+  - 'hostvars': bir degiskeni hostvars yaparsak diger herhangi bir hosttan hostvars degiskenini alabiliriz. 
+  - 'hostvars['grand_master']['worker_join']': grand_master'dan worker_join tokenini al.
+  - ikinci register da sonucu kaydeder ama gostermek icin.
+cd ..
+cd ..
+git add .
+git commit -m 'added ansible playbooks for dev environment'
+git push
+
+Jenkins:
+test-creating-qa-automation-infrastructure > Build > Execute Shell
+------------------------------------------------------------------------
+APP_NAME="Petclinic"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+PATH="$PATH:/usr/local/bin"
+export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${CFN_KEYPAIR}"
+export ANSIBLE_HOST_KEY_CHECKING=False
+export APP_STACK_NAME="call-$APP_NAME-App-${BUILD_NUMBER}"
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml
+# Swarm Setup for all nodes (instances)
+ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_setup_for_all_docker_swarm_instances.yaml
+# Swarm Setup for Grand Master node
+ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_initialize_docker_swarm.yaml
+# Swarm Setup for Other Managers nodes
+ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_join_docker_swarm_managers.yaml
+# Swarm Setup for Workers nodes
+ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_join_docker_swarm_workers.yaml
+------------------------------------------------------------------------
+  - '-b': root yetkisi
+Build now
+
+------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_NAME="Petclinic"
+AWS_STACK_NAME="call-$APP_NAME-App-${BUILD_NUMBER}"
+AWS_REGION="us-east-1"
+aws cloudformation delete-stack --region ${AWS_REGION} --stack-name ${AWS_STACK_NAME}
+------------------------------------------------------------------------
+Build now
+  - instance'leri siler.
+------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+CFN_KEYPAIR="call-ansible-test-dev.key"
+AWS_REGION="us-east-1"
+aws ec2 delete-key-pair --region ${AWS_REGION} --key-name ${CFN_KEYPAIR}
+rm -rf ${CFN_KEYPAIR}
+------------------------------------------------------------------------
+  - key-pairi sileriz.
+  - Hergun yeni bir key-pair olustururuz.
+Build now
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<17.Nightly Functional Tests with Docker Swarm>
+- Filezilla ile yapilacak. 
+  - Microserviceler icin containerler calistiriliyor. Icine de maven ile olusan target dosyasi '.jar' dosyalari konuyor.
+  - Image'lerin ECR isimleri olusturularak degisken olarak kaydediliyor.
+  - 
+
+
+VSC:
+git checkout dev
+git branch feature/msp-17
+git checkout feature/msp-17
+vim jenkins/package-with-maven-container.sh
+------------------------------------------------------------------------
+docker run --rm -v $HOME/.m2:/root/.m2 -v $WORKSPACE:/app -w /app maven:3.6-openjdk-11 mvn clean package
+------------------------------------------------------------------------
+  - sirasiyla:
+    * run maven:3.6-openjdk-11
+    * -v $WORKSPACE:/app
+    * -w /app
+    * -v $HOME/.m2:/root/.m2
+    * --rm
+vim jenkins/prepare-tags-ecr-for-dev-docker-images.sh
+------------------------------------------------------------------------
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-admin-server/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_ADMIN_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:admin-server-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-api-gateway/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_API_GATEWAY="${ECR_REGISTRY}/${APP_REPO_NAME}:api-gateway-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-config-server/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_CONFIG_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:config-server-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-customers-service/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_CUSTOMERS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:customers-service-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-discovery-server/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_DISCOVERY_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:discovery-server-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-hystrix-dashboard/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_HYSTRIX_DASHBOARD="${ECR_REGISTRY}/${APP_REPO_NAME}:hystrix-dashboard-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-vets-service/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_VETS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:vets-service-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-visits-service/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_VISITS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:visits-service-v${MVN_VERSION}-b${BUILD_NUMBER}"
+export IMAGE_TAG_GRAFANA_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:grafana-service"
+export IMAGE_TAG_PROMETHEUS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:prometheus-service"
+------------------------------------------------------------------------
+  !!!
+  - '.': Ilgili dosyayi executable gibi calistiriyor ve icindeki esitligi terminale yazmis gibi islem yapiyor.
+  - Daha sonra terminalde yazilmis degiskeni biz $ ile cekiyoruz.
+  !!!
+  - '.': dosyadaki veriyi source olarak atiyor. Source command'i ile ayni isi yapiyor. 
+  - . pom.properties && echo version   seklinde yazinca dosya icindeki degiskeni verir.
+  !!!
+  - ip/8080/enc-vars.html/ ile jenkins degiskenlerini gorebiliriz.
+  - Buradan maksat her yeni image'a yeni tag vermek.
+vim jenkins/build-dev-docker-images-for-ecr.sh
+------------------------------------------------------------------------
+docker build --force-rm -t "${IMAGE_TAG_ADMIN_SERVER}" "${WORKSPACE}/spring-petclinic-admin-server"
+docker build --force-rm -t "${IMAGE_TAG_API_GATEWAY}" "${WORKSPACE}/spring-petclinic-api-gateway"
+docker build --force-rm -t "${IMAGE_TAG_CONFIG_SERVER}" "${WORKSPACE}/spring-petclinic-config-server"
+docker build --force-rm -t "${IMAGE_TAG_CUSTOMERS_SERVICE}" "${WORKSPACE}/spring-petclinic-customers-service"
+docker build --force-rm -t "${IMAGE_TAG_DISCOVERY_SERVER}" "${WORKSPACE}/spring-petclinic-discovery-server"
+docker build --force-rm -t "${IMAGE_TAG_HYSTRIX_DASHBOARD}" "${WORKSPACE}/spring-petclinic-hystrix-dashboard"
+docker build --force-rm -t "${IMAGE_TAG_VETS_SERVICE}" "${WORKSPACE}/spring-petclinic-vets-service"
+docker build --force-rm -t "${IMAGE_TAG_VISITS_SERVICE}" "${WORKSPACE}/spring-petclinic-visits-service"
+docker build --force-rm -t "${IMAGE_TAG_GRAFANA_SERVICE}" "${WORKSPACE}/docker/grafana"
+docker build --force-rm -t "${IMAGE_TAG_PROMETHEUS_SERVICE}" "${WORKSPACE}/docker/prometheus"
+------------------------------------------------------------------------
+  - Image olusturmak icin microservice'ler altindaki Dockerfile'lari kullaniriz.
+  - ECR'da ayni image ismi olmamali yoksa hata verir.
+vim /jenkins/push-dev-docker-images-to-ecr.sh
+------------------------------------------------------------------------
+aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY} 
+docker push "${IMAGE_TAG_ADMIN_SERVER}"
+docker push "${IMAGE_TAG_API_GATEWAY}"
+docker push "${IMAGE_TAG_CONFIG_SERVER}"
+docker push "${IMAGE_TAG_CUSTOMERS_SERVICE}"
+docker push "${IMAGE_TAG_DISCOVERY_SERVER}"
+docker push "${IMAGE_TAG_HYSTRIX_DASHBOARD}"
+docker push "${IMAGE_TAG_VETS_SERVICE}"
+docker push "${IMAGE_TAG_VISITS_SERVICE}"
+docker push "${IMAGE_TAG_GRAFANA_SERVICE}"
+docker push "${IMAGE_TAG_PROMETHEUS_SERVICE}"
+------------------------------------------------------------------------
+  - ECR'a kendimizi tanitacagiz.
+  - ECR'a push edecegiz.
+!!!
+git remote set-url origin https://token@github.com/dataauditor/petclinic-microservice
+  - GITHUB baglanti sorunu olursa hesabi tanitiriz.
+git add .
+git commit -m 'added scripts for qa automation environment'
+git push --set-upstream origin feature/msp-17
+
+
+vim docker-compose-swarm-dev.yml
+------------------------------------------------------------------------
+version: '3.8'
+
+services:
+  config-server:
+    image: "${IMAGE_TAG_CONFIG_SERVER}"
+    networks:
+      - clarusnet
+    ports:
+      - 8888:8888
+
+  discovery-server:
+    image: "${IMAGE_TAG_DISCOVERY_SERVER}"
+    depends_on:
+      - config-server
+    entrypoint: ["./dockerize","-wait=tcp://config-server:8888","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+      - 8761:8761
+
+  customers-service:
+    image: "${IMAGE_TAG_CUSTOMERS_SERVICE}"
+    deploy:
+      replicas: 3
+      update_config:
+          parallelism: 2
+          delay: 5s
+          order: start-first
+    depends_on:
+      - config-server
+      - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+      - 8081:8081
+
+  visits-service:
+    image: "${IMAGE_TAG_VISITS_SERVICE}"
+    deploy:
+      replicas: 3
+      update_config:
+          parallelism: 2
+          delay: 5s
+          order: start-first
+    depends_on:
+      - config-server
+      - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+      - 8082:8082
+
+  vets-service:
+    image: "${IMAGE_TAG_VETS_SERVICE}"
+    deploy:
+      replicas: 3
+      update_config:
+          parallelism: 2
+          delay: 5s
+          order: start-first
+    depends_on:
+      - config-server
+      - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+      - 8083:8083
+
+  api-gateway:
+    image: "${IMAGE_TAG_API_GATEWAY}"
+    deploy:
+      replicas: 3
+      update_config:
+          parallelism: 2
+          delay: 5s
+          order: start-first
+    depends_on:
+      - config-server
+      - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+      - 8080:8080
+
+  tracing-server:
+    image: openzipkin/zipkin
+    environment:
+      - JAVA_OPTS=-XX:+UnlockExperimentalVMOptions -Djava.security.egd=file:/dev/./urandom
+    networks:
+      - clarusnet
+    ports:
+      - 9411:9411
+
+  admin-server:
+    image: "${IMAGE_TAG_ADMIN_SERVER}"
+    depends_on:
+      - config-server
+      - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+      - 9090:9090
+
+  hystrix-dashboard:
+    image: "${IMAGE_TAG_HYSTRIX_DASHBOARD}"
+    depends_on:
+      - config-server
+      - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+      - 7979:7979
+
+  ## Grafana / Prometheus
+
+  grafana-server:
+    image: "${IMAGE_TAG_GRAFANA_SERVICE}"
+    networks:
+      - clarusnet
+    ports:
+      - 3000:3000
+
+  prometheus-server:
+    image: "${IMAGE_TAG_PROMETHEUS_SERVICE}"
+    networks:
+      - clarusnet
+    ports:
+      - 9091:9090
+    
+  mysql-server:
+    image: mysql:5.7.8
+    environment: 
+      MYSQL_ROOT_PASSWORD: petclinic
+      MYSQL_DATABASE: petclinic
+    networks:
+      - clarusnet
+    ports:
+      - 3306:3306
+
+networks:
+  clarusnet:
+    driver: overlay
+------------------------------------------------------------------------
+  - dependency ile onceki container calissa da pending olabiliyor. dockerize takipteki containeri kontrol edip biraz daha bekletiyor mevcut containeri.
+vim ansible/playbooks/pb_deploy_app_on_docker_swarm.yaml
+------------------------------------------------------------------------
+- hosts: role_grand_master
+  tasks:
+  - name: Copy docker compose file to grand master
+    copy:
+      src: "{{ workspace }}/docker-compose-swarm-dev-tagged.yml"
+      dest: /home/ec2-user/docker-compose-swarm-dev-tagged.yml
+
+  - name: get login credentials for ecr
+    shell: "export PATH=$PATH:/usr/local/bin/ && aws ecr get-login-password --region {{ aws_region }} | docker login --username AWS --password-stdin {{ ecr_registry }}"
+
+  - name: deploy the app stack on swarm
+    shell: "docker stack deploy --with-registry-auth -c /home/ec2-user/docker-compose-swarm-dev-tagged.yml {{ app_name }}"
+    register: output
+
+  - debug: msg="{{ output.stdout }}"
+------------------------------------------------------------------------
+  - {{ workspace }}: '{{   }}' ansible'da degisken olarak gosterir.
+vim ansible/scripts/deploy_app_on_docker_swarm.sh
+------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_NAME="petclinic"
+envsubst < docker-compose-swarm-dev.yml > docker-compose-swarm-dev-tagged.yml
+ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b --extra-vars "workspace=${WORKSPACE} app_name=${APP_NAME} aws_region=${AWS_REGION} ecr_registry=${ECR_REGISTRY}" ./ansible/playbooks/pb_deploy_app_on_docker_swarm.yaml
+------------------------------------------------------------------------
+  !!!
+  - 'envsubst < docker-compose-swarm-dev.yml > docker-compose-swarm-dev-tagged.yml': 
+    * 'envsubst': jenkins bilgisayarinda tanimladigimiz env variable'lerini docker-compose file olarak containere gonderirsek containerde cekmez.
+    * Bu yuzden 'envsubst' kodu ile docker-compose-swarm-dev.yml dosyasindaki degiskenlerinin karsiliklarini atayarak docker-compose-swarm-dev-tagged.yml dosyasini olusturuyoruz.
+vim selenium-jobs/dummy_selenium_test_headless.py
+------------------------------------------------------------------------
+from selenium import webdriver
+
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument("headless")
+chrome_options.add_argument("no-sandbox")
+chrome_options.add_argument("disable-dev-shm-usage")
+driver = webdriver.Chrome(options=chrome_options)
+
+base_url = "https://www.google.com/"
+driver.get(base_url)
+source = driver.page_source
+
+if "I'm Feeling Lucky" in source:
+  print("Test passed")
+else:
+  print("Test failed")
+driver.close()
+------------------------------------------------------------------------
+  - selenium'un duzgun calsip calismadigi kontrol edilir.
+    * 'base_url' ile google'a baglanip ana sayfada "I'm Feeling Lucky" yazisinin duzgun calisip calismadugunu test edecek.
+vim ansible/playbooks/pb_run_dummy_selenium_job.yaml
+------------------------------------------------------------------------
+- hosts: all
+  tasks:
+  - name: run dummy selenium job
+    shell: "docker run --rm -v {{ workspace }}:{{ workspace }} -w {{ workspace }} callahanclarus/selenium-py-chrome:latest python {{ item }}"
+    with_fileglob: "{{ workspace }}/selenium-jobs/dummy*.py"
+    register: output
+  
+  - name: show results
+    debug: msg="{{ item.stdout }}"
+    with_items: "{{ output.results }}"
+------------------------------------------------------------------------
+  !!!
+  - 'with_fileglob': mevcut konumdaki tum dummy*.py dosyalarini {{ item }}'a atar. Sirasiyla calistirilir.
+  - 'register': return_value (bircoktur.) Genelde stdout kullanilir.
+  - 'debug': register edilen outputun istedigimiz degerini gosterir.
+
+vim /ansible/scripts/run_dummy_selenium_job.sh
+------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+ansible-playbook --connection=local --inventory 127.0.0.1, --extra-vars "workspace=${WORKSPACE}" ./ansible/playbooks/pb_run_dummy_selenium_job.yaml
+------------------------------------------------------------------------
+  - '--inventory 127.0.0.1': dogrudan instance atiyoruz. 
+  - '--connection=local': mevcut bilgisayarda calisiyor.
+
+Jenkins:
+New item > test-running-dummy-selenium-job > ok
+  > SCM > https://github.com/dataauditor/petclinic-microservice.git > */feature/msp-17 > 
+  > Build > Execute shell:
+PATH="$PATH:/usr/local/bin"
+ansible-playbook --connection=local --inventory 127.0.0.1, --extra-vars "workspace=${WORKSPACE}" ./ansible/playbooks/pb_run_dummy_selenium_job.yaml
+  > Build now
+    - Google'a gitti. 
+
+
+VSC:
+vim ansible/playbooks/pb_run_selenium_jobs.yaml
+------------------------------------------------------------------------
+- hosts: all
+  tasks:
+  - name: run all selenium jobs
+    shell: "docker run --rm --env MASTER_PUBLIC_IP={{ master_public_ip }} -v {{ workspace }}:{{ workspace }} -w {{ workspace }} callahanclarus/selenium-py-chrome:latest python {{ item }}"
+    register: output
+    with_fileglob: "{{ workspace }}/selenium-jobs/test*.py"
+  
+  - name: show results
+    debug: msg="{{ item.stdout }}"
+    with_items: "{{ output.results }}"
+------------------------------------------------------------------------
+vim ansible/scripts/run_selenium_jobs.sh
+------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+ansible-playbook -vvv --connection=local --inventory 127.0.0.1, --extra-vars "workspace=${WORKSPACE} master_public_ip=${GRAND_MASTER_PUBLIC_IP}" ./ansible/playbooks/pb_run_selenium_jobs.yaml
+------------------------------------------------------------------------
+  - '--inventory 127.0.0.1': kendi bilgisayarimizda calistiriyor.
+vim jenkins/jenkinsfile-petclinic-nightly
+------------------------------------------------------------------------
+pipeline {
+    agent { label "master" }
+    environment {
+        PATH=sh(script:"echo $PATH:/usr/local/bin", returnStdout:true).trim()
+        APP_NAME="petclinic"
+        APP_STACK_NAME="Callet-${APP_NAME}-app-${BUILD_NUMBER}"
+        APP_REPO_NAME="claruswayset-repo/${APP_NAME}-app-dev"
+        AWS_ACCOUNT_ID=sh(script:'export PATH="$PATH:/usr/local/bin" && aws sts get-caller-identity --query Account --output text', returnStdout:true).trim()
+        AWS_REGION="us-east-1"
+        ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+        CFN_KEYPAIR="call-${APP_NAME}-dev-${BUILD_NUMBER}.key"
+        CFN_TEMPLATE="./infrastructure/dev-docker-swarm-infrastructure-cfn-template.yml"
+        ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${CFN_KEYPAIR}"
+        ANSIBLE_HOST_KEY_CHECKING="False"
+    }
+    stages {
+        stage('Create ECR Repo') {
+            steps {
+                echo "Creating ECR Repo for ${APP_NAME} app"
+                sh """
+                aws ecr create-repository \
+                    --repository-name ${APP_REPO_NAME} \
+                    --image-scanning-configuration scanOnPush=false \
+                    --image-tag-mutability MUTABLE \
+                    --region ${AWS_REGION}
+                """
+            }
+        }
+        stage('Package Application') {
+            steps {
+                echo 'Packaging the app into jars with maven'
+                sh ". ./jenkins/package-with-maven-container.sh"
+            }
+        }
+        stage('Prepare Tags for Docker Images') {
+            steps {
+                echo 'Preparing Tags for Docker Images'
+                script {
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-admin-server/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_ADMIN_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:admin-server-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-api-gateway/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_API_GATEWAY="${ECR_REGISTRY}/${APP_REPO_NAME}:api-gateway-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-config-server/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_CONFIG_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:config-server-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-customers-service/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_CUSTOMERS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:customers-service-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-discovery-server/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_DISCOVERY_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:discovery-server-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-hystrix-dashboard/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_HYSTRIX_DASHBOARD="${ECR_REGISTRY}/${APP_REPO_NAME}:hystrix-dashboard-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-vets-service/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_VETS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:vets-service-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-visits-service/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_VISITS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:visits-service-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    env.IMAGE_TAG_GRAFANA_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:grafana-service"
+                    env.IMAGE_TAG_PROMETHEUS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:prometheus-service"
+                }
+            }
+        }
+        stage('Build App Docker Images') {
+            steps {
+                echo 'Building App Dev Images'
+                sh ". ./jenkins/build-dev-docker-images-for-ecr.sh"
+                sh 'docker image ls'
+            }
+        }
+        stage('Push Images to ECR Repo') {
+            steps {
+                echo "Pushing ${APP_NAME} App Images to ECR Repo"
+                sh ". ./jenkins/push-dev-docker-images-to-ecr.sh"
+            }
+        }
+        stage('Create Key Pair for Ansible') {
+            steps {
+                echo "Creating Key Pair for ${APP_NAME} App"
+                sh "aws ec2 create-key-pair --region ${AWS_REGION} --key-name ${CFN_KEYPAIR} --query KeyMaterial --output text > ${CFN_KEYPAIR}"
+                sh "chmod 400 ${CFN_KEYPAIR}"
+            }
+        }
+        stage('Create QA Automation Infrastructure') {
+            steps {
+                echo 'Creating QA Automation Infrastructure for Dev Environment with Cloudfomation'
+                sh "aws cloudformation create-stack --region ${AWS_REGION} --stack-name ${APP_STACK_NAME} --capabilities CAPABILITY_IAM --template-body file://${CFN_TEMPLATE} --parameters ParameterKey=KeyPairName,ParameterValue=${CFN_KEYPAIR}"
+
+                script {
+                    while(true) {
+                        echo "Docker Grand Master is not UP and running yet. Will try to reach again after 10 seconds..."
+                        sleep(10)
+
+                        ip = sh(script:"aws ec2 describe-instances --region ${AWS_REGION} --filters Name=tag-value,Values=grand-master Name=tag-value,Values=${APP_STACK_NAME} --query Reservations[*].Instances[*].[PublicIpAddress] --output text", returnStdout:true).trim()
+
+                        if (ip.length() >= 7) {
+                            echo "Docker Grand Master Public Ip Address Found: $ip"
+                            env.GRAND_MASTER_PUBLIC_IP = "$ip"
+                            break
+                        }
+                    }
+                    while(true) {
+                        try{
+                            sh "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${WORKSPACE}/${CFN_KEYPAIR} ec2-user@${GRAND_MASTER_PUBLIC_IP} hostname"
+                            echo "Docker Grand Master is reachable with SSH."
+                            break
+                        }
+                        catch(Exception){
+                            echo "Could not connect to Docker Grand Master with SSH, I will try again in 10 seconds"
+                            sleep(10)
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Create Docker Swarm for QA Automation Build') {
+            steps {
+                echo "Setup Docker Swarm for QA Automation Build for ${APP_NAME} App"
+                echo "Update dynamic environment"
+                sh "sed -i 's/APP_STACK_NAME/${APP_STACK_NAME}/' ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml"
+                echo "Swarm Setup for all nodes (instances)"
+                sh "ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_setup_for_all_docker_swarm_instances.yaml"
+                echo "Swarm Setup for Grand Master node"
+                sh "ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_initialize_docker_swarm.yaml"
+                echo "Swarm Setup for Other Managers nodes"
+                sh "ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_join_docker_swarm_managers.yaml"
+                echo "Swarm Setup for Workers nodes"
+                sh "ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_join_docker_swarm_workers.yaml"
+            }
+        }
+
+        stage('Deploy App on Docker Swarm'){
+            steps {
+                echo 'Deploying App on Swarm'
+                sh 'envsubst < docker-compose-swarm-dev.yml > docker-compose-swarm-dev-tagged.yml'
+                sh 'ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml -b --extra-vars "workspace=${WORKSPACE} app_name=${APP_NAME} aws_region=${AWS_REGION} ecr_registry=${ECR_REGISTRY}" ./ansible/playbooks/pb_deploy_app_on_docker_swarm.yaml'
+            }
+        }
+
+        stage('Test the Application Deployment'){
+            steps {
+                echo "Check if the ${APP_NAME} app is ready or not"
+                script {
+
+                    while(true) {
+                        try{
+                            sh "curl -s ${GRAND_MASTER_PUBLIC_IP}:8080"
+                            echo "${APP_NAME} app is successfully deployed."
+                            break
+                        }
+                        catch(Exception){
+                            echo "Could not connect to ${APP_NAME} app"
+                            sleep(5)
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Run QA Automation Tests'){
+            steps {
+                echo "Run the Selenium Functional Test on QA Environment"
+                sh 'ansible-playbook -vvv --connection=local --inventory 127.0.0.1, --extra-vars "workspace=${WORKSPACE} master_public_ip=${GRAND_MASTER_PUBLIC_IP}" ./ansible/playbooks/pb_run_selenium_jobs.yaml'
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Deleting all local images'
+            sh 'docker image prune -af'
+            echo 'Delete the Image Repository on ECR'
+            sh """
+                aws ecr delete-repository \
+                  --repository-name ${APP_REPO_NAME} \
+                  --region ${AWS_REGION}\
+                  --force
+                """
+            echo 'Tear down the Docker Swarm infrastructure using AWS CLI'
+            sh "aws cloudformation delete-stack --region ${AWS_REGION} --stack-name ${APP_STACK_NAME}"
+            echo "Delete existing key pair using AWS CLI"
+            sh "aws ec2 delete-key-pair --region ${AWS_REGION} --key-name ${CFN_KEYPAIR}"
+            sh "rm -rf ${CFN_KEYPAIR}"
+        }
+    }
+}
+------------------------------------------------------------------------
+  - Jenkinsfile
+  - 'env.IMAGE_TAG_ADMIN_SERVER': env. kullanarak IMAGE_TAG_ADMIN_SERVER i, env degiskeni olarak tanimliyoruz. Groovy diline has.
+  - trim(): bas ve sondaki bosluklari atar.
+  - 'aws sts get-caller-identity ': account id'mizi alir. '--query Account --output text' okur output olarak rama yazar.
+  !!! 
+  - ansible config.html seklinde aratinca standart env variables cikar. Biz istedigimize atama yaparak kullanabiliriz. Bazi degiskenlerin de default tanimlari vardir (inventory /etc/ansible/hosts)
+  - Buradaki degiskenlere atama yaparak degiskenleri env'dan cekebiliriz.
+  !!!
+  - Configuration file'in sistem tarafindan aranma sirasi:
+    1. ANSIBLE_CONFIG (environment variable if set)
+    2. ansible.cfg (in the current directory)
+    3. ~/.ansible.cfg (in the home directory)
+    4. /etc/ansible/ansible.cfg
+
+Jenkins:
+> New item: > petclinic-nightly > pipeline > ok
+  > Github project: https://github.com/dataauditor/petclinic-microservice.git
+  > Build triggers > Build periodically > 0 0 * * * min hr da mou week (cron job)
+  > Pipeline > Pipeline script from SCM > SCM: Git > https://github.com/dataauditor/petclinic-microservice.git > branch: dev > /jenkins/jenkinsfile-petclinic-nightly 
+  > apply
+    > Failure (jenkinsfile-petclinic-nightly) bulamiyor.
+      - jenkins/jenkinsfile-petclinic-nightly veya ./jenkins/jenkinsfile-petclinic-nightly  seklinde yazariz adresi.
+    > Failure label master yok diyor. Jenkins makinesine veya baska bir makineye labellayarak master ismi verilmemis. Ya master ismi ver manage jenkins ile veya { label "master" } yerine any yaz.
+      !!!
+      > Manage jenkins > Manage Nodes and Clouds > Built in Bode sag tarafindaki isaret (configure) > Labels: Master > save yaparak labellariz.
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+3.PETCLINIC WEEKLY QA TEST WEEKLY
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  - Release branc'inda manuel olarak testler yapilir.
+  - Tespit edilen buglar duzeltilir.
+  -  
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+3.WEEKLY QA TEST
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+- CFN ile 5 node acilir.
+  * Key verilir.
+  * ECR full access rolu verilir > profile > template > EC2
+  * Docker Swarm portlari aciliyor.
+- 
+
+
+
+<18.Petclinic>
+- QA testler: testerlar tarafindan yapilan ve moda mod tum programin uygulamali olarak calistirildigi testtir.
+- QA test bir anlamda functional test gibidir ama bazi konulari FT ile yapmak zordur. QA test manuel olarak test yapmaktir.
+- QA test daha az maliyetlidir. FT icin kodlama gerek. QA icin sadece kademe kademe yapilacak islemler yazilir ve uygulanir.
+- QA testler farkli OS'ler icin yapilmalidir. 
+- QA testleri gunlerce surebilir 7/24 cluster ayaktadir. Haftada bir uygulama degistirilir.
+- Bug rapor edilince, duzeltilince uygulama yeniden deploy edilir. Bu kapsamda Jenkins, Jenkins'teki degisiklikle mvn'i calistirir. Yeni package gonderilir.
+- Cloudformation ve Ansible ile Docker Swarm Environment Kurulumu:
+
+VSC:
+vim /infrastructure/qa-docker-swarm-infrastructure-cfn-template.yml
+--------------------------------------------------------------------------
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >
+  This Cloudformation Template creates an infrastructure for Docker Swarm
+  with five EC2 Instances with Amazon Linux 2. Instances are configured
+  with custom security group allowing SSH (22), HTTP (80) UDP (4789, 7946), 
+  and TCP(2377, 7946, 8080) connections from anywhere.
+  User needs to select appropriate key name when launching the template.
+
+Parameters:
+  KeyPairName:
+    Description: Enter the name of your Key Pair for SSH connections.
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must one of the existing EC2 KeyPair
+
+Resources:  
+  RoleEnablingEC2forECR:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
+  EC2Profile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Roles: #required
+        - !Ref RoleEnablingEC2forECR
+  DockerMachinesSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH and HTTP for Docker Machines
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 2377
+          ToPort: 2377
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 7946
+          ToPort: 7946
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: 7946
+          ToPort: 7946
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: 4789
+          ToPort: 4789
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8088
+          ToPort: 8088
+          CidrIp: 0.0.0.0/0
+  DockerMachineLT:
+    Type: "AWS::EC2::LaunchTemplate"
+    Properties:
+      LaunchTemplateData:
+        ImageId: ami-0947d2ba12ee1ff75
+        InstanceType: t3a.medium
+        KeyName: !Ref KeyPairName
+        IamInstanceProfile: 
+          Arn: !GetAtt EC2Profile.Arn
+        SecurityGroupIds:
+          - !GetAtt DockerMachinesSecurityGroup.GroupId
+        TagSpecifications: 
+          - ResourceType: instance
+            Tags: 
+              - Key: app-stack-name
+                Value: !Sub ${AWS::StackName}
+              - Key: environment
+                Value: qa
+  DockerInstance1:
+    Type: AWS::EC2::Instance
+    DependsOn:
+        - "DockerInstance2"
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref DockerMachineLT
+        Version: !GetAtt DockerMachineLT.LatestVersionNumber
+      Tags:                
+        - Key: server
+          Value: docker-instance-1                       
+        - Key: swarm-role
+          Value: grand-master                       
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Docker Machine 1st        
+  DockerInstance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref DockerMachineLT
+        Version: !GetAtt DockerMachineLT.LatestVersionNumber
+      Tags:                
+        - Key: server
+          Value: docker-instance-2                       
+        - Key: swarm-role
+          Value: manager                       
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Docker Machine 2nd
+  DockerInstance3:
+    Type: AWS::EC2::Instance
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref DockerMachineLT
+        Version: !GetAtt DockerMachineLT.LatestVersionNumber
+      Tags:                
+        - Key: server
+          Value: docker-instance-3                       
+        - Key: swarm-role
+          Value: manager                       
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Docker Machine 3rd
+  DockerInstance4:
+    Type: AWS::EC2::Instance
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref DockerMachineLT
+        Version: !GetAtt DockerMachineLT.LatestVersionNumber
+      Tags:                
+        - Key: server
+          Value: docker-instance-4                       
+        - Key: swarm-role
+          Value: worker                       
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Docker Machine 4th
+  DockerInstance5:
+    Type: AWS::EC2::Instance
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref DockerMachineLT
+        Version: !GetAtt DockerMachineLT.LatestVersionNumber
+      Tags:                
+        - Key: server
+          Value: docker-instance-5                       
+        - Key: swarm-role
+          Value: worker                       
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Docker Machine 5th
+Outputs:
+  1stDockerInstanceDNSName:
+    Description: 1st Docker Instance DNS Name
+    Value: !Sub 
+      - ${PublicAddress}
+      - PublicAddress: !GetAtt DockerInstance1.PublicDnsName
+  2ndDockerInstanceDNSName:
+    Description: 2nd Docker Instance DNS Name
+    Value: !Sub 
+      - ${PublicAddress}
+      - PublicAddress: !GetAtt DockerInstance2.PublicDnsName
+  3rdDockerInstanceDNSName:
+    Description: 3rd Docker Instance DNS Name
+    Value: !Sub 
+      - ${PublicAddress}
+      - PublicAddress: !GetAtt DockerInstance3.PublicDnsName
+  4thDockerInstanceDNSName:
+    Description: 4th Docker Instance DNS Name
+    Value: !Sub 
+      - ${PublicAddress}
+      - PublicAddress: !GetAtt DockerInstance4.PublicDnsName
+  5thDockerInstanceDNSName:
+    Description: 5th Docker Instance DNS Name
+    Value: !Sub 
+      - ${PublicAddress}
+      - PublicAddress: !GetAtt DockerInstance5.PublicDnsName
+--------------------------------------------------------------------------
+  - cfn template'ten tek farki tag'lamadadir.
+vim /jenkins/create-permanent-key-pair-for-qa-environment.sh
+----------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_NAME="petclinic"
+CFN_KEYPAIR="dt-${APP_NAME}-qa.key"
+AWS_REGION="us-east-1"
+aws ec2 create-key-pair --region ${AWS_REGION} --key-name ${CFN_KEYPAIR} --query "KeyMaterial" --output text > ${CFN_KEYPAIR}
+chmod 400 ${CFN_KEYPAIR}
+mkdir -p ${JENKINS_HOME}/.ssh
+mv ${CFN_KEYPAIR} ${JENKINS_HOME}/.ssh/${CFN_KEYPAIR}
+ls -al ${JENKINS_HOME}/.ssh
+----------------------------------------------------------------------------
+  - /var/lib/jenkins/workspace/create-permanent-key-pair-for-qa-environment.sh icinde olusur. 
+  - Sonrasinda /var/lib/jenkins/ icine tasinir.  
+
+Jenkins:
+create-permanent-key-pair-for-petclinic-qa-env:
+> New item > create-permanent-key-pair-for-petclinic-qa-env > Freestyle project > ok
+  > Build > Execute shell > 
+-----------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_NAME="petclinic"
+CFN_KEYPAIR="dt-${APP_NAME}-qa.key"
+AWS_REGION="us-east-1"
+aws ec2 create-key-pair --region ${AWS_REGION} --key-name ${CFN_KEYPAIR} --query "KeyMaterial" --output text > ${CFN_KEYPAIR}
+chmod 400 ${CFN_KEYPAIR}
+mkdir -p ${JENKINS_HOME}/.ssh
+mv ${CFN_KEYPAIR} ${JENKINS_HOME}/.ssh/${CFN_KEYPAIR}
+ls -al ${JENKINS_HOME}/.ssh
+-----------------------------------------------------------------------------
+  > save 
+  > built now
+    - key olustu. Bu key surekli kullanilacak.
+
+vim /infrastructure/create-qa-infrastructure-cfn.sh
+-----------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_NAME="petclinic"
+APP_STACK_NAME="dt-$APP_NAME-App-QA-${BUILD_NUMBER}"
+CFN_KEYPAIR="dt-${APP_NAME}-qa.key"
+CFN_TEMPLATE="./infrastructure/qa-docker-swarm-infrastructure-cfn-template.yml"
+AWS_REGION="us-east-1"
+aws cloudformation create-stack --region ${AWS_REGION} --stack-name ${APP_STACK_NAME} --capabilities CAPABILITY_IAM --template-body file://${CFN_TEMPLATE} --parameters ParameterKey=KeyPairName,ParameterValue=${CFN_KEYPAIR}
+-----------------------------------------------------------------------------
+  - stack olusturur.
+vim /ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml
+-----------------------------------------------------------------------------
+plugin: aws_ec2
+regions:
+  - "us-east-1"
+filters:
+  tag:app-stack-name: APP_STACK_NAME
+  tag:environment: qa
+keyed_groups:
+  - key: tags['app-stack-name']
+    prefix: 'app_stack_'
+    separator: ''
+  - key: tags['swarm-role']
+    prefix: 'role_'
+    separator: ''
+  - key: tags['environment']
+    prefix: 'env_'
+    separator: ''
+  - key: tags['server']
+    separator: ''
+hostnames:
+  - "private-ip-address"
+compose:
+  ansible_user: "'ec2-user'"
+-----------------------------------------------------------------------------
+vim /ansible/scripts/qa_build_deploy_environment.sh
+-----------------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_NAME="petclinic"
+CFN_KEYPAIR="dt-${APP_NAME}-qa.key"
+APP_STACK_NAME="dt-$APP_NAME-App-QA-${BUILD_NUMBER}"
+export ANSIBLE_PRIVATE_KEY_FILE="${JENKINS_HOME}/.ssh/${CFN_KEYPAIR}"
+export ANSIBLE_HOST_KEY_CHECKING=False
+sed -i "s/APP_STACK_NAME/$APP_STACK_NAME/" ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml
+# Swarm Setup for all nodes (instances)
+ansible-playbook -i ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_setup_for_all_docker_swarm_instances.yaml
+# Swarm Setup for Grand Master node
+ansible-playbook -i ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_initialize_docker_swarm.yaml
+# Swarm Setup for Other Managers nodes
+ansible-playbook -i ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_join_docker_swarm_managers.yaml
+# Swarm Setup for Workers nodes
+ansible-playbook -i ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_join_docker_swarm_workers.yaml
+-----------------------------------------------------------------------------
+vim /jenkins/jenkinsfile-create-qa-environment-on-docker-swarm
+-----------------------------------------------------------------------------
+pipeline {
+    agent any
+    environment {
+        PATH=sh(script:"echo $PATH:/usr/local/bin", returnStdout:true).trim()
+        APP_NAME="petclinic"
+        APP_STACK_NAME="dt-$APP_NAME-App-QA-${BUILD_NUMBER}"
+        AWS_REGION="us-east-1"
+        CFN_KEYPAIR="dt-${APP_NAME}-qa.key"
+        CFN_TEMPLATE="./infrastructure/qa-docker-swarm-infrastructure-cfn-template.yml"
+        ANSIBLE_PRIVATE_KEY_FILE="${JENKINS_HOME}/.ssh/${CFN_KEYPAIR}"
+        ANSIBLE_HOST_KEY_CHECKING="False"
+    }
+    stages {
+        stage('Create QA Environment Infrastructure') {
+            steps {
+                echo 'Creating Infrastructure for QA Environment with Cloudfomation'
+                sh "aws cloudformation create-stack --region ${AWS_REGION} --stack-name ${APP_STACK_NAME} --capabilities CAPABILITY_IAM --template-body file://${CFN_TEMPLATE} --parameters ParameterKey=KeyPairName,ParameterValue=${CFN_KEYPAIR}"
+
+                script {
+                    while(true) {
+                        echo "Docker Grand Master is not UP and running yet. Will try to reach again after 10 seconds..."
+                        sleep(10)
+
+                        ip = sh(script:"aws ec2 describe-instances --region ${AWS_REGION} --filters Name=tag-value,Values=grand-master Name=tag-value,Values=${APP_STACK_NAME} --query Reservations[*].Instances[*].[PublicIpAddress] --output text", returnStdout:true).trim()
+
+                        if (ip.length() >= 7) {
+                            echo "Docker Grand Master Public Ip Address Found: $ip"
+                            env.GRAND_MASTER_PUBLIC_IP = "$ip"
+                            break
+                        }
+                    }
+                    while(true) {
+                        try{
+                            sh "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${JENKINS_HOME}/.ssh/${CFN_KEYPAIR} ec2-user@${GRAND_MASTER_PUBLIC_IP} hostname"
+                            echo "Docker Grand Master is reachable with SSH."
+                            break
+                        }
+                        catch(Exception){
+                            echo "Could not connect to Docker Grand Master with SSH, I will try again in 10 seconds"
+                            sleep(10)
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Create Docker Swarm for QA Environment') {
+            steps {
+                echo "Setup Docker Swarm for QA Environment for ${APP_NAME} App"
+                echo "Update dynamic environment"
+                sh "sed -i 's/APP_STACK_NAME/${APP_STACK_NAME}/' ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml"
+                echo "Swarm Setup for all nodes (instances)"
+                sh "ansible-playbook -i ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_setup_for_all_docker_swarm_instances.yaml"
+                echo "Swarm Setup for Grand Master node"
+                sh "ansible-playbook -i ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_initialize_docker_swarm.yaml"
+                echo "Swarm Setup for Other Managers nodes"
+                sh "ansible-playbook -i ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_join_docker_swarm_managers.yaml"
+                echo "Swarm Setup for Workers nodes"
+                sh "ansible-playbook -i ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml -b ./ansible/playbooks/pb_join_docker_swarm_workers.yaml"
+            }
+        }
+    }
+    post {
+        failure {
+            echo 'Tear down the Docker Swarm infrastructure using AWS CLI'
+            sh "aws cloudformation delete-stack --region ${AWS_REGION} --stack-name ${APP_STACK_NAME}"
+        }
+    }
+}
+-----------------------------------------------------------------------------
+  - 'agent { label = master }' veya agent any vb baska bir instance tanimlanabilir.
+  - Once ip atanmis mi kontrol edilir sonra ssh ile baglanilabiliyor mu kontrol edilerek ec2'nun calisip calismadigi kontrol edilir.
+  - Icinde uygulama olmayan bir Cluster olusturur.
+git checkout dev
+git checkout -b feature/msp-18
+git add .
+git commit -m "w"
+git push
+  171  git checkout dev
+  172  git merge feature/msp-18
+  173  git push
+
+Jenkins:
+New item > create-qa-environment-on-docker-swarm > pipeline > ok
+  > Pipeline > SCM: Git > https://github.com/dataauditor/petclinic-microservice.git > */dev > ./jenkins/jenkinsfile-create-qa-environment-on-docker-swarm
+  > save
+  > Build now
+
+
+
+
+
+<19.>
+
+VSC:
+git checkout dev
+git branch feature/msp-19
+git checkout feature/msp-19
+
+Jenkins:
+> New item > create-ecr-docker-registry-for-petclinic-qa > Freestyle project > ok
+  > Build > Execute shell:
+-------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_REPO_NAME="clarusway-repo/petclinic-app-qa"
+AWS_REGION="us-east-1"
+
+aws ecr create-repository \
+  --repository-name ${APP_REPO_NAME} \
+  --image-scanning-configuration scanOnPush=false \
+  --image-tag-mutability MUTABLE \
+  --region ${AWS_REGION}
+-------------------------------------------------------------------
+    - ECR repo olusturuyor.
+    - AWS'de ayni isimli repo olmamali.
+  > save 
+  > Build now
+    - ECR repo olustu.
+
+VSC:
+vim /jenkins/prepare-tags-ecr-for-qa-docker-images.sh
+-------------------------------------------------------------------
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-admin-server/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_ADMIN_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:admin-server-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-api-gateway/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_API_GATEWAY="${ECR_REGISTRY}/${APP_REPO_NAME}:api-gateway-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-config-server/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_CONFIG_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:config-server-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-customers-service/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_CUSTOMERS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:customers-service-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-discovery-server/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_DISCOVERY_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:discovery-server-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-hystrix-dashboard/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_HYSTRIX_DASHBOARD="${ECR_REGISTRY}/${APP_REPO_NAME}:hystrix-dashboard-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-vets-service/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_VETS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:vets-service-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+MVN_VERSION=$(. ${WORKSPACE}/spring-petclinic-visits-service/target/maven-archiver/pom.properties && echo $version)
+export IMAGE_TAG_VISITS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:visits-service-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+export IMAGE_TAG_GRAFANA_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:grafana-service"
+export IMAGE_TAG_PROMETHEUS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:prometheus-service"
+-------------------------------------------------------------------
+  - Her build edilen image tagine gore saklanmali.
+  - Build-bumber jenkins'ten geliyor.
+vim /jenkins/build-qa-docker-images-for-ecr.sh
+-------------------------------------------------------------------
+docker build --force-rm -t "${IMAGE_TAG_ADMIN_SERVER}" "${WORKSPACE}/spring-petclinic-admin-server"
+docker build --force-rm -t "${IMAGE_TAG_API_GATEWAY}" "${WORKSPACE}/spring-petclinic-api-gateway"
+docker build --force-rm -t "${IMAGE_TAG_CONFIG_SERVER}" "${WORKSPACE}/spring-petclinic-config-server"
+docker build --force-rm -t "${IMAGE_TAG_CUSTOMERS_SERVICE}" "${WORKSPACE}/spring-petclinic-customers-service"
+docker build --force-rm -t "${IMAGE_TAG_DISCOVERY_SERVER}" "${WORKSPACE}/spring-petclinic-discovery-server"
+docker build --force-rm -t "${IMAGE_TAG_HYSTRIX_DASHBOARD}" "${WORKSPACE}/spring-petclinic-hystrix-dashboard"
+docker build --force-rm -t "${IMAGE_TAG_VETS_SERVICE}" "${WORKSPACE}/spring-petclinic-vets-service"
+docker build --force-rm -t "${IMAGE_TAG_VISITS_SERVICE}" "${WORKSPACE}/spring-petclinic-visits-service"
+docker build --force-rm -t "${IMAGE_TAG_GRAFANA_SERVICE}" "${WORKSPACE}/docker/grafana"
+docker build --force-rm -t "${IMAGE_TAG_PROMETHEUS_SERVICE}" "${WORKSPACE}/docker/prometheus"
+-------------------------------------------------------------------
+  - Dockerfile'lari taglayarak image'ler olusturuyoruz.
+  - '--force-rm' onceki layerlari siliyor. hatali layer olursa onu da siler.
+vim /jenkins/push-qa-docker-images-to-ecr.sh
+-------------------------------------------------------------------
+aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+docker push "${IMAGE_TAG_ADMIN_SERVER}"
+docker push "${IMAGE_TAG_API_GATEWAY}"
+docker push "${IMAGE_TAG_CONFIG_SERVER}"
+docker push "${IMAGE_TAG_CUSTOMERS_SERVICE}"
+docker push "${IMAGE_TAG_DISCOVERY_SERVER}"
+docker push "${IMAGE_TAG_HYSTRIX_DASHBOARD}"
+docker push "${IMAGE_TAG_VETS_SERVICE}"
+docker push "${IMAGE_TAG_VISITS_SERVICE}"
+docker push "${IMAGE_TAG_GRAFANA_SERVICE}"
+docker push "${IMAGE_TAG_PROMETHEUS_SERVICE}"
+-------------------------------------------------------------------
+  - 'docker login --username AWS --password-stdin ${ECR_REGISTRY}': '|'den delen passwordu standardin olarak kullanarak  ${ECR_REGISTRY}'ya baglanir.
+  - ECR'a olusturulan image'lar gonderiliyor.
+vim docker-compose-swarm-qa.yml
+-------------------------------------------------------------------
+version: '3.8'
+
+services:
+  config-server:
+    image: "${IMAGE_TAG_CONFIG_SERVER}"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - clarusnet
+    ports:
+     - 8888:8888
+
+  discovery-server:
+    image: "${IMAGE_TAG_DISCOVERY_SERVER}"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      - config-server
+    entrypoint: ["./dockerize","-wait=tcp://config-server:8888","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+     - 8761:8761
+
+  customers-service:
+    image: "${IMAGE_TAG_CUSTOMERS_SERVICE}"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+      replicas: 3
+      update_config:
+          parallelism: 2
+          delay: 5s
+          order: start-first
+    depends_on:
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+    - 8081:8081
+
+  visits-service:
+    image: "${IMAGE_TAG_VISITS_SERVICE}"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+      replicas: 3
+      update_config:
+          parallelism: 2
+          delay: 5s
+          order: start-first
+    depends_on:
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+     - 8082:8082
+
+  vets-service:
+    image: "${IMAGE_TAG_VETS_SERVICE}"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+      replicas: 3
+      update_config:
+          parallelism: 2
+          delay: 5s
+          order: start-first
+    depends_on:
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+     - 8083:8083
+
+  api-gateway:
+    image: "${IMAGE_TAG_API_GATEWAY}"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+      replicas: 5
+      update_config:
+          parallelism: 2
+          delay: 5s
+          order: start-first
+    depends_on:
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+     - 8080:8080
+
+  tracing-server:
+    image: openzipkin/zipkin
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    environment:
+    - JAVA_OPTS=-XX:+UnlockExperimentalVMOptions -Djava.security.egd=file:/dev/./urandom
+    networks:
+      - clarusnet
+    ports:
+     - 9411:9411
+
+  admin-server:
+    image: "${IMAGE_TAG_ADMIN_SERVER}"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+     - 9090:9090
+
+  hystrix-dashboard:
+    image: "${IMAGE_TAG_HYSTRIX_DASHBOARD}"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+     - config-server
+     - discovery-server
+    entrypoint: ["./dockerize","-wait=tcp://discovery-server:8761","-timeout=60s","--","java", "-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+    networks:
+      - clarusnet
+    ports:
+     - 7979:7979
+
+  ## Grafana / Prometheus
+
+  grafana-server:
+    image: "${IMAGE_TAG_GRAFANA_SERVICE}"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - clarusnet
+    ports:
+    - 3000:3000
+
+  prometheus-server:
+    image: "${IMAGE_TAG_PROMETHEUS_SERVICE}"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - clarusnet
+    ports:
+    - 9091:9090
+  
+  mysql-server:
+    image: mysql:5.7.8
+    environment: 
+      MYSQL_ROOT_PASSWORD: petclinic
+      MYSQL_DATABASE: petclinic
+    networks:
+      - clarusnet
+    ports:
+      - 3306:3306
+
+networks:
+  clarusnet:
+    driver: overlay
+-------------------------------------------------------------------
+  - cluster olusturuyor.
+vim /ansible/playbooks/pb_deploy_app_on_qa_environment.yaml
+-------------------------------------------------------------------
+- hosts: role_grand_master
+  tasks:
+  - name: Copy docker compose file to grand master
+    copy:
+      src: "{{ workspace }}/docker-compose-swarm-qa-tagged.yml"
+      dest: /home/ec2-user/docker-compose-swarm-qa-tagged.yml
+
+  - name: get login credentials for ecr
+    shell: "export PATH=$PATH:/usr/local/bin/ && aws ecr get-login-password --region {{ aws_region }} | docker login --username AWS --password-stdin {{ ecr_registry }}"
+    register: output
+
+  - name: deploy the app stack on swarm
+    shell: "docker stack deploy --with-registry-auth -c /home/ec2-user/docker-compose-swarm-qa-tagged.yml {{ app_name }}"
+    register: output
+
+  - debug: msg="{{ output.stdout }}"
+-------------------------------------------------------------------
+vim /ansible/scripts/deploy_app_on_qa_environment.sh
+-------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_NAME="petclinic"
+sed -i "s/APP_STACK_NAME/${APP_STACK_NAME}/" ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml
+envsubst < docker-compose-swarm-qa.yml > docker-compose-swarm-qa-tagged.yml
+ansible-playbook -i ./ansible/inventory/qa_stack_dynamic_inventory_aws_ec2.yaml -b --extra-vars "workspace=${WORKSPACE} app_name=${APP_NAME} aws_region=${AWS_REGION} ecr_registry=${ECR_REGISTRY}" ./ansible/playbooks/pb_deploy_app_on_qa_environment.yaml
+-------------------------------------------------------------------
+  - 'envsubst < docker-compose-swarm-qa.yml > docker-compose-swarm-qa-tagged.yml': 'docker-compose-swarm-qa.yml'in degiskenlerini tanimla ve 'docker-compose-swarm-qa-tagged.yml' dosyasini olustur.
+git add .
+git commit -m 'added build scripts for QA Environment'
+git push --set-upstream origin feature/msp-19
+git checkout dev
+git merge feature/msp-19
+git push origin dev
+
+
+
+
+
+<20.Build and Deploy App on QA Environment Manually>
+
+VSC:
+git checkout dev
+git branch feature/msp-20
+git checkout feature/msp-20
+vim /jenkins/build-and-deploy-petclinic-on-qa-env-manually.sh
+-------------------------------------------------------------------
+PATH="$PATH:/usr/local/bin"
+APP_NAME="petclinic"
+APP_REPO_NAME="clarusway-repo/petclinic-app-qa"
+APP_STACK_NAME="dt-petclinic-App-QA-1"
+CFN_KEYPAIR="dt-petclinic-qa.key"
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+AWS_REGION="us-east-1"
+ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+export ANSIBLE_PRIVATE_KEY_FILE="${JENKINS_HOME}/.ssh/${CFN_KEYPAIR}"
+export ANSIBLE_HOST_KEY_CHECKING="False"
+echo 'Packaging the App into Jars with Maven'
+. ./jenkins/package-with-maven-container.sh
+echo 'Preparing QA Tags for Docker Images'
+. ./jenkins/prepare-tags-ecr-for-qa-docker-images.sh
+echo 'Building App QA Images'
+. ./jenkins/build-qa-docker-images-for-ecr.sh
+echo "Pushing App QA Images to ECR Repo"
+. ./jenkins/push-qa-docker-images-to-ecr.sh
+echo 'Deploying App on Swarm'
+. ./ansible/scripts/deploy_app_on_qa_environment.sh
+echo 'Deleting all local images'
+docker image prune -af
+-------------------------------------------------------------------
+git add .
+git commit -m 'added script for jenkins job to build and deploy app on QA environment'
+git push --set-upstream origin feature/msp-20
+git checkout dev
+git merge feature/msp-20
+git push origin dev
+git checkout release
+git merge dev
+git push origin release
+
+
+
+
+<21.Prepare Development Server Cloudformation Template>
+
+VSC:
+git checkout dev
+git branch feature/msp-21
+git checkout feature/msp-21
+vim /jenkins/jenkinsfile-petclinic-weekly-qa
+-------------------------------------------------------------------
+pipeline {
+    agent any
+    environment {
+        PATH=sh(script:"echo $PATH:/usr/local/bin", returnStdout:true).trim()
+        APP_NAME="petclinic"
+        APP_REPO_NAME="clarusway-repo/petclinic-app-qa"
+        APP_STACK_NAME="dt-petclinic-App-QA-1"
+        CFN_KEYPAIR="dt-petclinic-qa.key"
+        AWS_ACCOUNT_ID=sh(script:'export PATH="$PATH:/usr/local/bin" && aws sts get-caller-identity --query Account --output text', returnStdout:true).trim()
+        AWS_REGION="us-east-1"
+        ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+        ANSIBLE_PRIVATE_KEY_FILE="${JENKINS_HOME}/.ssh/${CFN_KEYPAIR}"
+        ANSIBLE_HOST_KEY_CHECKING="False"
+    }
+    stages {
+        stage('Package Application') {
+            steps {
+                echo 'Packaging the app into jars with maven'
+                sh ". ./jenkins/package-with-maven-container.sh"
+            }
+        }
+        stage('Prepare Tags for Docker Images') {
+            steps {
+                echo 'Preparing Tags for Docker Images'
+                script {
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-admin-server/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_ADMIN_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:admin-server-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-api-gateway/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_API_GATEWAY="${ECR_REGISTRY}/${APP_REPO_NAME}:api-gateway-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-config-server/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_CONFIG_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:config-server-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-customers-service/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_CUSTOMERS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:customers-service-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-discovery-server/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_DISCOVERY_SERVER="${ECR_REGISTRY}/${APP_REPO_NAME}:discovery-server-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-hystrix-dashboard/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_HYSTRIX_DASHBOARD="${ECR_REGISTRY}/${APP_REPO_NAME}:hystrix-dashboard-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-vets-service/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_VETS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:vets-service-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    MVN_VERSION=sh(script:'. ${WORKSPACE}/spring-petclinic-visits-service/target/maven-archiver/pom.properties && echo $version', returnStdout:true).trim()
+                    env.IMAGE_TAG_VISITS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:visits-service-qa-v${MVN_VERSION}-b${BUILD_NUMBER}"
+                    env.IMAGE_TAG_GRAFANA_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:grafana-service"
+                    env.IMAGE_TAG_PROMETHEUS_SERVICE="${ECR_REGISTRY}/${APP_REPO_NAME}:prometheus-service"
+                }
+            }
+        }
+        stage('Build App Docker Images') {
+            steps {
+                echo 'Building App Dev Images'
+                sh ". ./jenkins/build-qa-docker-images-for-ecr.sh"
+                sh 'docker image ls'
+            }
+        }
+        stage('Push Images to ECR Repo') {
+            steps {
+                echo "Pushing ${APP_NAME} App Images to ECR Repo"
+                sh ". ./jenkins/push-qa-docker-images-to-ecr.sh"
+            }
+        }
+        stage('Deploy App on Docker Swarm'){
+            steps {
+                echo 'Deploying App on Swarm'
+                sh '. ./ansible/scripts/deploy_app_on_qa_environment.sh'
+            }
+        }
+    }
+    post {
+        always {
+            echo 'Deleting all local images'
+            sh 'docker image prune -af'
+        }
+    }
+}
+-------------------------------------------------------------------
+git add .
+git commit -m 'added jenkinsfile petclinic-weekly-qa for release branch'
+git push --set-upstream origin feature/msp-21
+git checkout dev
+git merge feature/msp-21
+git push origin dev
+git checkout release
+git merge dev
+git push origin release
+
+Jenkins:
+> New item > petclinic-weekly-qa > pipeline > ok
+  > Build Triggers > Build periodicaly > 59 23 * * 0
+  > Pipeline > Git > https://github.com/dataauditor/petclinic-microservice.git > */release > ./jenkins/jenkinsfile-petclinic-wekkly-qa
+  > save 
+  > Build now
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+vim test.txt
+------------------------------------------------------------------------
+one
+two
+------------------------------------------------------------------------
+sed -i "s/one(bir/" test.txt
+cat test.txt
+------------------------------------------------------------------------
+bir
+two
+------------------------------------------------------------------------
+
+
+git remote set-url origin https://[token]@[github-repo-url]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
