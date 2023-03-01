@@ -1,0 +1,222 @@
+Genel:
+- Ayni VM'de acacak sekilde schedule edebiliriz bircok container'i.
+- Lifecycle, resources, local network ve staorage'i container'ler paylasirlar.
+- Resource Manager template veya Yaml file ile Container group deploy edilir.
+
+
+
+
+A.Application ve Database'den Olusan Container Group Deployment:
+
+1.Once Database RDS'e Yuklenir ve Locale de MySQL Workbech Yuklenir ve Database'in Calistigi Test Edilir. 
+a.RDS Olusturulur:
+> Azure Database for MySQL > Create
+  > Name: mysqlserver20 
+  > Admin username: sqladmin | Password: 123
+  > Create
+
+
+b.Local'e MySQL Workbench Install Edilir:
+> https://www.mysql.com/products/workbench/ > Download now
+  - Install edilir.
+
+
+
+c.Workbench'ten Ulasabilmek icin Mevcut Local IP'ye RDS'e Ulasim Izni Verme ve Verileri Alma:
+> mysqlserver20 
+  > Connection security 
+    > + Add current client IP address
+    > Save
+  > Connection strings
+    > ADO.NET: Server=mysqlserver20.mysql.database.azure.com; Port=3306; Database={your _database}; Uid=sqladmin@mysqlserver20; Pwd={your_password}; SslMode=Preferred;  - copy
+      - VS'daki source code'da connection string'e yapistirilir.
+      - database ismi ve password ismi duzenlenir.
+  > Overview 
+    > Server name: mysqlserver20.mysql.database.azure.com - copy
+    > Server admin login name: sqladmin@mysqlserver20  - copy
+
+
+
+d.Workbench Konfigurasyonu:
+> Workbench > + 
+  > Connection Name: AzureMySQL | Connection Method: Standard (TCP/IP) 
+  > Hostname: mysqlserver20.mysql.database.azure.com - past
+  > Username: sqladmin@mysqlserver20 - past
+  > OK
+
+
+
+
+e.Workbench ile Baglanma: 
+> Workbench > AzureMySQL
+  > Password: 123
+  > OK
+> Query 1
+---------------------------------------------------------------------
+CREATE DATABASE appdb;
+
+USE appdb;
+
+CREATE TABLE Products;
+(
+  ProductID int,
+  ProductName varchar(1000),
+  Quantity int
+);
+
+INSERT INTO Products(ProductID,ProductName,Quantity) VALUES(1,'Mobile',100);
+INSERT INTO Products(ProductID,ProductName,Quantity) VALUES(2,'Laptop',200);
+INSERT INTO Products(ProductID,ProductName,Quantity) VALUES(1,'Tabs',300);
+
+SELECT * FROM Products;
+---------------------------------------------------------------------
+  - Localdeki programaa connection string uzerinden RDS'e baglandigimiz icin Browser'da localhost:7137'den goruyoruz.
+
+
+
+f.RDS Silinir:
+- Localden RDS testi gectigi icin RDS silinir.
+
+
+
+2.MySQL Database Container Olusturma PuTTY ile:
+docker run --name=mysql-instance -p 3306:3306 --restart on-failure -d -e MYSQL_ROOT_PASSWORD=Azure123 mysql
+  - "-e": Environment variable.
+docker ps -a
+docker exec -it mysql-instance mysql -uroot -p
+  - Sondaki mysql: mysql komutlari girilecegini gosterir.
+  - "-uroot": Default username: root oldugu icin boyle girdik.
+  - Password'u Azure123 olarak gireriz.Calistirirken environment variable olarak bu sekilde tanimlamistik.
+----------------------------------------------------------------------
+show databases;
+
+CREATE DATABASE appdb;
+
+USE appdb;
+
+CREATE TABLE Products;
+(
+  ProductID int,
+  ProductName varchar(1000),
+  Quantity int
+);
+
+INSERT INTO Products(ProductID,ProductName,Quantity) VALUES(1,'Mobile',100);
+INSERT INTO Products(ProductID,ProductName,Quantity) VALUES(2,'Laptop',200);
+INSERT INTO Products(ProductID,ProductName,Quantity) VALUES(1,'Tabs',300);
+
+SELECT * FROM Products;
+----------------------------------------------------------------------
+  - Burada yaptigimiz baglantinin aynisini Workbench ile de yapabiliriz.
+  - Bu yuzden yukarda girilen kodlari girmiyoruz Workbench'te girecegiz.
+docker stop 008
+docker rm 008 
+
+
+
+3.MySQL Container'i Worhbench ile Baglanip Database'i Customize Etme:
+- Yukarda dogrudan VM uzerinden baglandik.
+a.Hostname'in VM'den Alinmasi:
+> linuxvm > Overview > Public IP address: 20.107.2.34  - copy
+
+
+b.Workbench'in Konfigure Edilmesi:
+> Workbench > + 
+  > Connection name: linuxvm
+  > Hostname: 20.107.2.34  - past
+  > Port: 3306
+  > Username: root
+  > OK
+
+
+c.Workbench ile Database Container'e Baglanma:
+> Workbench > linuxvm > Password: Azure123 > OK
+  
+
+d.Visual Studio Code ile SQL Code Dosyasinin Olusturulmasi: 
+> VSC > sqlapp ile ayni hizada | RC | Add Folder: CustomMySQL
+  > CustomMySQL | RC | Add file: 01.sql
+-----------------------------------------------------------------------
+CREATE DATABASE appdb;
+
+USE appdb;
+
+CREATE TABLE Products;
+(
+  ProductID int,
+  ProductName varchar(1000),
+  Quantity int
+);
+
+INSERT INTO Products(ProductID,ProductName,Quantity) VALUES(1,'Mobile',100),(2,'Laptop',200),(1,'Tabs',300);
+-----------------------------------------------------------------------
+  - Virgul ile ayni insert kode'lari birlestirilebilir.
+
+
+f.Dockerfile Olusturma:
+a.VSC ile Dockerfile Olusturma:
+> VSC > CustomMySQL | RC | New file: Dockerfile
+-----------------------------------------------------------------------
+FROM mysql as base
+ENV MYSQL_ROOT_PASSWORD=Azure123
+ENV MYSQL_DATABASE=appdb
+
+COPY 01.sql /docker-entrypoint-init.d/
+-----------------------------------------------------------------------
+
+
+g.WinSCP ile CustomMySQL Folder'in VM'e Tasinmasi:
+> C:\tmp2\CustomMySQL ve C:\tmp2\sqlapp folder'lari sol taraftan localden kopyalanir.
+  > /home/linuxusr/ dosyasi icinde Sag tarafta her iki dosya yapistirilir.
+    - /home/linuxusr/CustomMySQL, /home/linuxusr/sqlapp seklinde VM'e kaydedilir.
+    - Dockerfile ve 01.sql file da tasinmis olur. 
+
+
+h.PuTTY ile Custom Image Olusturma:
+cd CustomMySQL	
+docker build -t appsqlimage .
+docker -d -p 3306:3306 --name appsql aasqlimage
+docker ps -a
+docker exec -it appsql bash
+  - Container'e baglandik. 
+mysql -uroot -p
+  - Azure123 girilir.
+  - Database'e baglandik.
+show databases;
+use appdb;
+show tables;
+  - Product table gorulur.
+SELECT * FROM Product;
+
+
+
+i.ConnectionString'i App Uzerinde Degistirerek Localden Database Container'e Baglanma:
+> VS > connectionString = "Server=20.123.2.34; Port=3306; Database=appdb; Uid=root; Pwd=Azure123; SslMode=Preferred;
+  > Run
+  > https://localhost:7137
+    - Localdeki app ile VM icindeki container'deki database'e baglandik.
+
+
+
+4.VM'deki Image'i ACR'e Push Etme:
+a.ACR'den Verileri Alma:
+> appregistry30 > Access keys 
+  > Registry name: appregistry30  - copy
+  > Login server: appregistry30.azurecr.io  - copy
+  > Admin user: Enabled
+  > User name: appregistry30  - copy
+  > password: 89iojRTFV4Fr44FGVACVBG3  - copy
+
+
+b.VM'deki Image'i Tag'layip ACR'a Push Etme:
+sudo az acr login --name appregistry30 --username appregistry30 --password 89iojRTFV4Fr44FGVACVBG3
+sudo docker tag appsqlimage appregistry30.azurecr.io/appsqlimage
+sudo docker push appregistry30.azurecr.io/appsqlimage
+
+
+c.ACR'de Image'i Kontrol Etme:
+> appregistry30 > Repositories
+  > appsqlimage
+
+
+

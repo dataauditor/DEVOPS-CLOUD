@@ -1,0 +1,38 @@
+1.ACR'den Container Instance Olusturma:
+> Container Instances > Create
+  > Name: appinstance 
+  > Image source: Azure Container Registry
+      - Quickstart images, Other registry de secilebilir.
+    > Registry: appregistry30 | Image: sqlapp | Image tag: latest
+  > Networking type: Public
+  > Ports: 80
+  > Create
+
+
+
+2.Browser:
+<appinstance IP address>
+
+
+
+3.Calisan Container'leri Portal'dan Gorme:
+> appinstance > Containers
+  > appinstance
+      - Calisiyor.
+    > Events
+      - Start, stop vb durumlari inceleyebiliriz.
+    > Logs
+      - Loglari gorebiliriz.
+    > Connect
+      > bash > Connect
+---------------------------------------------------------------------
+mysql -uroot -p
+show databases;
+use appdb;
+show tables;
+SELECT * FROM Products;
+---------------------------------------------------------------------
+
+
+
+

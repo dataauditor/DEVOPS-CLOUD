@@ -1,0 +1,66 @@
+Genel:
+sudo docker run --name deneme -p 80:80 -d nginx
+  - nginx image'ini docker hub'tan indirir.
+docker images
+  - mevcut image'ler.
+docker ps -a
+
+
+
+1..NET Applikasyonunu Visual Studio'dan Dockerize Etme:
+a.VS'de sqlapp'de Dockerfile Olusturulur:
+> VS > sqlapp/Dockerfile
+----------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/aspnet:6.0
+WORKDIR /app
+COPY . .
+EXPOSE 80
+ENTYPOINT [ "dotnet","sqlapp.dll"]
+----------------------------------------------------------
+  - FROM: docker hub'tan alinacak base image'i gosterir.
+  - COPY: /home/linuxusr/publish folderi icindeki tum file/folder'lari containerin /app folderinin altina kopyalar.
+  - ENTYPOINT ["dotnet","sqlapp.dll"]: dotnet'i ve sqlapp icindeki sqlapp.dll dosyasini calistirir.
+ 
+
+
+b.VS'den Applikasyonu Local'e Publish Etme:
+- Applikasyonu localden locale atiyoruz.
+> sqlapp | RC | Publish | + New
+  > Target: Folder | Location: bin\Release\net6.0\publish\
+  > Finish
+  > Publish
+
+
+
+c.WinSCP ile Applikasyonu Localden VM'e Atiyoruz.
+- Onceden bir Ubuntu VM olusturup WinSCP ile baglandik.
+- Tasiyip birakma yolu ile localde olusturdugumuz app dosyasini VM'e tasiyoruz.
+> WinSCP > C:\tmp\sqlapp\bin\Release\net6.0\publish\
+    - "publish" folder'ini folder olarak aliyoruz ve /home/linuxusr/ dosyasina tasiyoruz VM'de.
+  > /home/linuxusr/publish
+    - linuxusr kullanici home adresine publish dosyasi tasindi.
+
+
+d.VM'de Container Olusturma:
+cd /home/linuxusr/publish
+sudo docker build -t sqlapp .
+  - Mevcut konumdaki Dockerfile'dan sqlapp isminde bir image olusturur.
+docker images
+  - sqlapp, nginx ve mcr.microsoft.com/dotnet/aspnet:6.0 image'leri var.
+docker stop 21w
+  - nginx container'ini stop ederiz, cunki 80 portu iki containerde cakisacak.
+docker run --name sqlapp-1 -p 80:80 -d sqlapp
+docker ps -a
+
+
+e.Browser'dan App'a Ulasma:
+<VM'nin public IP address>
+  - containerde calisan sqlapp'a 80 portundan ulastik.
+
+
+f.Container'i Stop Edip Image'i Silme:
+docker stop d4l
+docker imageges
+docker image rm sqlapp
+
+

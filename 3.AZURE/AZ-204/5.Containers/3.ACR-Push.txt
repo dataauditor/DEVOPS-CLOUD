@@ -1,0 +1,65 @@
+1.ACR Olusturma:
+> Container Registry > Create 
+  > Name: appregistry30
+  > Create
+
+
+ 
+2.ACR'e Ulasim icin Access Key Enable Edilir:
+> appregistry30 > Access keys > Admin user: Enabled
+
+
+
+3.Azure CLI'in VM'e Install Edilmesi:
+- Image'leri ACR'a gonderecegimiz VM'e Azure CLI install edilir.
+> PuTTY > Hostname | 22 | user | password
+----------------------------------------------------
+sudo apt-get update
+sudo apt-get install ca-certificates curl apt-transport-https lsb-release gnupg
+sudo mkdir -p /etc/apt/keyrings
+curl -sLS https://packages.microsoft.com/keys/microsoft.asc |
+    gpg --dearmor |
+    sudo tee /etc/apt/keyrings/microsoft.gpg > /dev/null
+sudo chmod go+r /etc/apt/keyrings/microsoft.gpg
+AZ_REPO=$(lsb_release -cs)
+echo "deb [arch=`dpkg --print-architecture` signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" |
+    sudo tee /etc/apt/sources.list.d/azure-cli.list
+sudo apt-get update
+sudo apt-get install azure-cli
+----------------------------------------------------
+  - https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt
+    - docsAzure CLI for linux 
+
+
+4.VM'de Azure CLI Uzerinden ACR'e Login Olunmasi:
+- ACR'den alinan veriler VM'e baglanip CLI ile tanimlanir.
+> ACR > Access keys
+  > Username appregistry30 - copy
+  > password QRTJcRUVJDFFM5IMe4 - copy
+
+
+> PuTTY > Hostname | 22 | user | password
+----------------------------------------------------
+sudo az acr login --name appregistry30 --username appregistry30 --password QRTJcRUVJDFFM5IMe4
+----------------------------------------------------
+  - name, username ve password ACR'dan alinir.
+  - Login olundu.
+
+
+5.VM'deki Image'i Tag'layarak ACR'a Push Etme:
+> appregistry30 > Access key > Login server: appregistry30.azurecr.io  - copy
+
+> PuTTY > Hostname | 22 | user | password
+----------------------------------------------------
+docker tag sqlapp appregistry30.azurecr.io/sqlapp
+docker push appregistry30.azurecr.io/sqlapp
+----------------------------------------------------
+  - ACR'in ismi/image ismi seklinde taglanir.
+  - tagli image'i push edince ACR'e login ise ACR'e gider.
+
+
+
+6.ACR'de Image'lerin Kontrolu:
+> ACR > Repositories
+  > sql
+    - sql ismi ile image'i gorebiliriz.

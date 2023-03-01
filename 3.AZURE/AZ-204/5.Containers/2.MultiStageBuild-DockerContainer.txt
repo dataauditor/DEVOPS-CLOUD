@@ -1,0 +1,66 @@
+Genel:
+- Kendisi once bir layer'da build vb islemlerini yapip sonra image olusturuyor.
+- Layer'lari refere ederek calisiyor ve son layer disindaki layer'lar islemleri bitince artifact'i kalip kendisi kapaniyor.
+
+
+
+
+1..NET Applikasyonunu Visual Studio'dan Container Instance'a Multi Layer Olarak Gonderme:
+a.VS'de sqlapp'de Multi Layer Dockerfile Olusturulur:
+> VS > sqlapp/Dockerfile
+----------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+WORKDIR /source
+
+COPY *.csproj ./
+RUN dotnet restore
+
+COPY . .
+RUN dotnet publish -c Release -o out
+
+
+FROM mcr.microsoft.com/dotnet/aspnet:6.0
+WORKDIR /app
+COPY --from=build /source/out .
+EXPOSE 80
+ENTYPOINT [ "dotnet","sqlapp.dll"]
+----------------------------------------------------------
+  - mcr.microsoft.com/dotnet/sdk:6.0: Ilk image build islemi yapiyor.
+  - FROM: docker hub'tan alinacak base image'i gosterir.
+  - "RUN dotnet restore": dependenciesi yukler.
+  - "RUN dotnet publish -c Release -o out": Codu build edip /source/out klasorune koyar.
+  - "COPY --from=build /source/out ." : build layer'indaki /source/out dosyasinda olusan build edilmis kodu /app'a tasir.
+  - ENTYPOINT ["dotnet","sqlapp.dll"]: dotnet'i ve sqlapp icindeki sqlapp.dll dosyasini calistirir.
+  - Stage seklinde yaptigimiz icin islem bitince o stage'i remove eder.
+
+
+b.WinSCP ile Applikasyonu Localden VM'e Atiyoruz.
+- Onceden bir Ubuntu VM olusturup WinSCP ile baglandik.
+- Tasiyip birakma yolu ile localdeki build edilmemis app dosyasini VM'e tasiyoruz.
+> WinSCP > C:\tmp\sqlapp
+    - "publish" folder'ini folder olarak aliyoruz ve /home/linuxusr/ dosyasina tasiyoruz VM'de.
+  > /home/linuxusr/sqlapp
+    - linuxusr kullanici home adresine publish dosyasi tasindi.
+
+
+c.VM'de Container Olusturma:
+cd /home/linuxusr/sqlapp
+sudo docker build -t sqlapp-new .
+  - Mevcut konumdaki Dockerfile'dan sqlapp-new isminde bir image olusturur.
+docker images
+  - sqlapp-new, mcr.microsoft.com/dotnet/aspnet:6.0 image'leri var.
+docker run --name sqlapp-2 -p 80:80 -d sqlapp-new
+docker ps -a
+
+
+e.Browser'dan App'a Ulasma:
+<VM'nin public IP address>
+  - containerde calisan sqlapp'a 80 portundan ulastik.
+
+
+f.Container'i Stop Edip Image'i Silme:
+docker stop d4l
+docker imageges
+docker image rm sqlapp
+
+

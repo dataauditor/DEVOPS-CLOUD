@@ -1,0 +1,100 @@
+Genel:
+- Azure Function bir Storage account'a ihtiyac duyar.
+
+
+
+1.HTTP Request ile Trigger Olan Function Olusturma:
+a.Fuction App Olusturma:
+> Function App > Create 
+  > Name: appfunction200030.azurewebsites.net | Publish: Code | Runtime stack: .NET | Version: 6 | Storage account: appgrpaf58 
+    - Storage account mevcut degilse bizim icin olusturur.
+    - Storage Account: triggers, logs ve manage etmek icin kullanilir.
+  > Operation system: Windows
+    - .NET 6 her iki OS'de de calisabilir.
+  > Plan type: App service plan 
+    - Onceden App service planimiz oldugu icin bunu sectik.
+  > Windows Plan (North Europe): ASP-appgrp-a3a1
+    - Mevcut App service plan'i otomatik secti.
+  > Enable Application Insights: Yes
+  > Enable
+
+
+
+b.Function Olusturma:
+> appfunction200030 > Functions > + Create
+  > Development environment: Develop in portal
+  > Select a template: HTTP trigger
+    - Trigger tipi secilir.
+  > New Function: demofunction | Authorize level: Function
+  > Create
+
+  
+
+c.Function'a Get Method ile Template'i Ilistirme:
+> appfunction200030 > Functions > demofunction > Code + Test
+    - HTTP trigger icin basic template cikar.
+  > Test/Run
+    > Input
+      > HTTP method: GET  |  Key: master   
+        - HTTP request ile tetiklenir.
+      > Query 
+        > Name:  name | Value: Umit 
+          - name, Azure verilerini alttaki Body'den aldik.
+    > Run
+       - "Hello, Umit. This HTTP triggered function executed succesfully." seklinde sonuc verir code.
+
+
+
+d.Function'a Post Method ile Template'i Ilistirme:
+> appfunction200030 > Functions > demofunction > Code + Test
+    - HTTP trigger icin basic template cikar.
+  > Test/Run
+    > Input
+      > HTTP method: POST  |  Key: master   
+        - HTTP request ile tetiklenir.
+      > Body:
+----------------------------------------------------------------------------------
+{
+   "name": "Azure"
+}
+----------------------------------------------------------------------------------
+    > Run
+       - "Hello, Azure. This HTTP triggered function executed succesfully." seklinde sonuc verir code.
+
+
+e.Browser'dan Calistirma:
+> appfunction200030 > Functions > demofunction > Get function URL
+  > URL: https://appfunction200030.azurewebsites.net.... - copy
+
+Browser:
+https://appfunction200030.azurewebsites.net/api/demofunction?code...==&name=Umit
+  - "Hello, Umit. This HTTP triggered function executed succesfully." seklinde sonuc verir.
+  - sonuna "&name=Umit"i ekledik.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
