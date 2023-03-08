@@ -1,0 +1,130 @@
+1.Artifact repo icin pipeline icinden cekilebilirken S3, Rancher'da depolama icin kullanilabilir.
+
+2.Hands-on:
+- Pipeline.
+- Github reposu, Jenkins CI, Rancher artifact reposu ve Deployment icin Chef kullanilacak.
+
+
+3.CI Integration:
+a. Start with a clean environment. 
+  - Each build should be a blank slate.
+  - CI systems generally put protections in place using the idea of workspaces or containers to maintain the segregation between builds.
+b. Build to pass the coffee test.
+c. CI Culture:
+  - Run tests locally before committing.
+  - Don't commit new code to broken builds.
+  - Never leave the build broken.
+  - Don't remove tests that fails.
+  
+
+4.Jenkins:
+- vim Dockerfile
+--------------------------------------------------------------------
+FROM jenkins/jenkins:lts-jdk11
+MAINTAINER Ernest Mueller <ernestmueller@theagileadmin.com> 
+USER root
+RUN \
+    apt-get update && \
+    apt-get install -y build-essential && \
+    apt-get install -y ansible && \
+    apt-get install -y sshpass && \
+    apt-get clean \
+    rm -rf /var/lib/apt/lists/*
+USER jenkins
+ENTRYPOINT ["/sbin/tini", "--" "/usr/local/bin/jenkins.sh"]
+---------------------------------------------------------------------
+vim docker-compose.yml
+---------------------------------------------------------------------
+version: "3.9"
+services:
+  jenkins:
+    build: ./cd_jenkins
+    image: cd_jenkins:latest
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    links:
+      - nexus
+      - test_fixture
+    volumes:
+      - ./jenkins_home:/var/jenkins_home
+    stop_grace_period: 120s
+  nexus:
+    image: sonatype/nexus3:latest
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./nexus-data:/nexus-data
+    stop_grace_period: 120s
+  test_fixture:
+    build: ./test_fixture
+    image: test_fixture:latest
+    ports:
+      - "8888:8888"
+      - "22:22"
+---------------------------------------------------------------------
+  - Icinde Jenkins containeri, Nexus artifact reository'si ve Test_fuxture containerleri var.
+docker-compose up --build -d
+docker-compose ps
+  - jenkins, nexus ve test_fixture containerlerini gosterir.
+
+Browser:
+localhost:8080
+> admin ... kurulumu yap.
+> Manage Jenkins > Manage plugins > Installed: Nexus, Ansible ... yuklu gelmis.
+> Manage Jenkins > Global Tool Configurations > Go > Go installations ... yuklu gelmis
+
+> new item > name: word-cloud-generator-build > ok
+  > Discard old builds / Log rotation / Max:3 > Github project: https://github.com/wickett/word-cloud-generator/ 
+  > Source Code Management > Git > Repo URL: https://github.com/wickett/word-cloud-generator > Branch: */master
+  > Build Triggers > Poll SCM: H/15 * * * *
+  > Build Environment > Abort the build if it's stuck / Time out strategy: Absolute / Timeout minutes: 10 > Add timestamps > Set up Go programming language tools / Go version: Go 1.16.6
+  > Build > Execute shell
+---------------------------------------------------------------------
+cd src/github.com/wickett/word-cloud-generator
+export GOPATH=${WORKSPACE}
+sed -i "s/1.DEVELOPMENT/1.$BUILD_NUMBER/g" ./static/version
+make clean
+make lint
+make test
+make build
+md5sum artifacts/*/word-cloud-generator
+cd artifacts/linux
+gzip word-cloud-generator
+md5sum word-cloud-generator.gz
+...
+---------------------------------------------------------------------
+  > Build > Nexus artifact uploader > Nexus version: NEXUS3 / Protocol: HTTP / URL: nexus: 8081 / Credentials: admin/123 (Nexus upload credentials) / GroupId: cd_class (Component ismi) / Version: 1.$BUILD_NUMBER / Repository: word-cloud-generator 
+
+
+5.Artifacts:
+
+
+6.Nexus Artifact Repository:
+Artifact Repository cesitleri:
+- Nexus Repository Manager 3 (free/paid)
+- JFrog Artifactory (paid)
+- Apache Archiva (free)
+- Many specific ones for Docker containers, npm, .NET packages and so on.
+
+VSC:
+- Yukarki docker-compose.yml file calistirilir.
+docker-compose up --build -d
+docker-compose logs
+  - son duruma bakilir, sistem ayaga kalkmis mi.
+
+Browser:
+localhost:8081 
+Nexus
+> Sign in > username: admin / password: 123 > sign in 
+  > Server administration and configuration > Repositories > Create Repository > ilgili maven ... sinifi secilir.
+  > Browse > cd_class (asset sectik-onceden olusmus)  
+
+Jenkins:
+> Manage Jenkins > Manage Plugins > Available > Nexus Artifact Uploader > install
+> word-cloud-generator-build 
+  > Build now 
+
+VSC:
+ssh root@localhost
+md5sum word-cloud-generator-1.1.gz

@@ -1,0 +1,99 @@
+Genel:
+- K8s olusturmak icin Azure CLI veya PowerShell kullanilabilir.
+- Olusturmak icin Storage account'a ihtiyac duyar.
+
+
+
+
+1.Cloud Shell ile Olusturma:
+a.Storage Account Olusturma:
+> Cloud Shell > Show advanced settings
+  > RG | Storage account | File share
+  > Create storage
+
+
+b.Cluster Olusturma:
+> Cloud Shell
+az group create --name k8s-rg --location northeurope
+az aks create --resource-group k8s-rg --name appcluster --node-count 1 --enable-addons monitoring --generate-ssh-keys
+  - Cluster olusturduk.
+
+
+c.Local'e Kubectl'i Yukleme:
+az aks install-cli
+
+
+d.Credentials'lari Indiririz ve Kubectl ile Podlari Olustururuz:
+> Cloud Shell
+az aks get-credentials --resource-group k8s-rg --name appcluster
+  - Indirir ve otomatik konfigure eder.
+kubectl get nodes
+  - Credentials indirildigi icin kubectl ile calisabiliyoruz.
+> Upload/Download files 
+  > Upload
+    > deployment.yaml
+-----------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+       —name: nginx
+          image: nginx
+          ports:
+           —containerPort: 80
+-----------------------------------------------------------
+  > Upload
+    > service.yaml
+-----------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginxservice
+spec:
+  selector:
+    app: nginx
+  ports:
+    — protocol: TCP
+      port: 80
+      targetPort: 80
+  type: loadbalancer
+-----------------------------------------------------------
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+
+
+
+e.Podlari Inceleme:
+> appcluster
+  > Workloads 
+    > nginx-deployment
+  > Services and ingress
+    > nginxservice
+      > External IP address
+        - Buradan browser ile ulsabiliriz.
+
+
+
+f.Resource Group'u Silme:
+az group delete --name k8s-rg
+
+
+
+
+
+

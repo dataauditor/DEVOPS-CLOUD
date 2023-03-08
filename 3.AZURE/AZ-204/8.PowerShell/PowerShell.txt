@@ -1,0 +1,53 @@
+Genel:
+- Windows, Linux ve MacOS'ta kullanilabilir.
+
+
+
+1.PowerShell Installation:
+https://learn.microsoft.com/en-us/powershell/azure/install-az-ps?view=azps-9.4.0
+- ".msi" file download edilerek yuklenebilir.
+$PSVersionTable
+  - Versiyon
+
+
+2.Module Installation:
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+Install-Module -Name Az -Scope CurrentUser -Repository PSGallery -Force -AllowClobber
+
+
+
+3.Azure Acount'a PowerShell ile Baglanma:
+Connect-AzAccount
+
+
+
+4.VSC'a PowerShell Extension Yukleme:
+> VSC > Extensions 
+  > PowerShell (Microsoft) > Install
+  > Azure PowerShell Tools > Install
+
+
+
+5.VSC'de PowerShell ile Script Yazma:
+> VSC > File > New Text File 
+  > Select a Language: PowerShell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

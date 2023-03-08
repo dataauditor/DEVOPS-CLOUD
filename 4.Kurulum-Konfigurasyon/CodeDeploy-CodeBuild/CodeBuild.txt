@@ -1,0 +1,32 @@
+1.CodeCommit Configurasyonu:
+- serverless olarak testi yapip kapanir.
+CodeBuild:
+> Getting started > create project 
+  > Project name: MyWebAppCodeBuild
+  > Source provider: AWS CodeCommit > Repository: my-webpage 
+  > Reference type: Branch > Branch: master
+    - CommitID (versiyon secmeyi saglar.)
+    - Branch ile istenen branch sadece test edilir.
+  > Environment image: Managed image (build icin cok iyidir)
+    - Custom image: istenilen image secilir.
+  > Operating system: Amazon Linux 2
+  > Runtime: Standard
+  > Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
+  > New Service Role > Role name: codebuild-MyWebAppCodeBuild-service-role
+  > Additional configuration 
+  > Timeout > Hours: 1
+  > Queued timeout > Hours: 8
+  > VPC: resourcelari VPC'de kullanmayacagimiz icin secmedik.
+  > Compute: 3GB, 2vCPUs
+  > Environment Variables: tanimlanabilir.
+  > Buildspec: Use a buildspec file: buildspec.yml (pipeline gibidir ve source kod dosyasinda bulunur.)
+  > Artifact: No artifact (deploy icin saklanabilir)
+  > CloudWatch (sec) > 
+  > Create
+
+
+2.Build Islemi:
+CodeBuild:
+> Build > Build projects > MyWebAppCodeBuild > Start build
+  > View entire log (CloudWatch kayitlarina ulasilir.)
+

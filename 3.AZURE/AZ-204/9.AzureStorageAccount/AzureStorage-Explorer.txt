@@ -1,0 +1,129 @@
+Genel:
+- SAS ile Access KEy ile veya Azure AD ile baglanilabilir.
+- Obje'lerin URL'leri ile eger Access Level public ise objelere baglanilabilir.
+- Objeler private ise account/container/blob access key/SAS/Azure AD ile Azure Storage Explorer'a tanitilarak  Storage Explorer uzerinden girilebilir.
+- Objeler private ise SAS olusturup Blob SAS URL ile dogrudan browser'dan objelere ulasilabilir.
+
+
+
+
+A.Access Key ile Azure Storage Explorer ile Container'a Baglanma:
+1.Azure Storage Explorer Download/Install:
+> https://azure.microsoft.com/en-gb/products/storage/storage-explorer/#overview
+  > Operating system: Windows
+
+> C:/Downloads/StorageExplorer.exe
+  > Finish
+
+
+
+2.Azure Storage Explorer Configuration:
+> Azure Storage Explorer 
+  > Account management 
+    - Browserden Azure hesabina username/password ile baglaniyor.
+  > Azure Subscription (byildiz2019@gmail.com) 
+      - Azure Tenant/Subscription secilir.
+    > Open explorer
+  > Azure Subscription (byildiz2019@gmail.com) > Storage Accounts
+    > appstorage40
+    > Blob Containers: data-container
+      > deneme.pdf, az-104.jpg
+        - objectler sag pencerede gorulur.
+
+
+
+
+3.Portal'dan Azure Storage Account Access key'leri Azure Storage Explorer'a Tanitilir.
+a.Azure Storage Account'tan Access Key Alinir:
+> appstorage40 > Access keys
+  > Storage account name: appstorage40  - copy
+  > key1: Key: cD3DR443+4321ew3r223r43443ffdwfRETTG  - copy
+
+
+b.Azure Storage Explorer'da Yeni Bir Account Olusturulur:
+> Azure Storage Explorer > Connect to Azure Storage (fis seklinde)
+  > Storage account or service
+  > Account name and key 
+    > Display name: Serbest | Account name: appstorage40 | Account key: cD3DR443+4321ew3r223r43443ffdwfRETTG  - past
+    > Storage domain: Azure (core.windows.net)
+    > Connect
+
+
+
+
+4.Yeni Container Olusturma:
+> Azure Storage Explorer 
+  > Explorer 
+    > Azure Subscription (byildiz2019@gmail.com) > Storage Accounts
+      > appstorage40
+      > Blob Containers | RC | Create Blob Container
+        > deneme2
+        > Create
+
+
+
+
+
+
+
+
+
+B.SAS ile Private Objeye Ulasma:
+1.Blob icin Access Level'i Private Yapma:
+> appstorage40 > data-container > Change access level: Private
+  > image1.jpg > Generate SAS
+    > Signing key: Key 1
+    > Permissions: Read
+    > Start: 12.03.2023  |  Expiry: 12.04.2023
+    > Allowed IP addresses: <Bos biraktik>
+      - SAS key'in gecerli olacagi IP address'lerini yazabiliriz.
+      - Bunu yazarsak kendi IP addresimizi tanimlamaliyiz.
+    > Generate SAS token and URL  
+    > Blob SAS URL: https://appstore40.blob.core.windows.net/data-container/image.jpg?sp=joipw84hkhf9392kehu843jkf  - copy
+
+
+Browser:
+https://appstore40.blob.core.windows.net/data-container/image.jpg?sp=joipw84hkhf9392kehu843jkf  - past
+  
+
+
+
+
+
+
+C.SAS ile Azure Storage Account'a Ulasma/Baglanma:
+- Yukardakinin Storage Account level'i.
+- Sadece Blob'lara ulasabilecek SAS olusturuyoruz.
+1.Azure Storage Account'a SAS Olusturulur:
+> appstorage40 > Shared access signature
+  > Allowed services: Blob - check
+  > Allowed resource type: Service - check | Container - check | Object - check
+  > Allowed permissions: Read, List
+  > Start and expiry date/time: Start: 12.03.2023 | End: 12.05.2023
+  > Allowed IP addresses: <Bos biraktik>
+  > Allowed protocols: HTTPS only
+  > Preferred routing tier: basic
+  > Signing key: key1
+  > Generate SAS and connection string
+  > Blob service SAS URL: https://appstore40.blob.core.windows.net/?sp=joipw84hkhf9392kehu843jkffew4FBR5gTR  - copy
+    - Bu URL ile browserdan baglanilmaz. 
+    - Bu URL ile Storage Explorer ile baglanilir.
+
+
+
+2.Storage Account'un SAS'i Storage Explorer'a Tenitilir:
+a.Storage Explorer'daki Mevcut SAS ile Yapilmis Baglanti Koparilir: 
+> Storage Explorer > Explorer 
+  > Storage Accounts > appstorage40 | RC | Detach | Yes
+
+
+b.Storage Account SAS URL ile Storage Explorer'a Storage'i Baglama:
+> Storage Explorer > Fis isareti
+  > Storage account or service 
+  > Shared access signature URK (SAS)
+  > Display name: appstorage40 | Service URL: https://appstore40.blob.core.windows.net/?sp=joipw84hkhf9392kehu843jkffew4FBR5gTR - past
+  > Connect
+
+
+
+

@@ -1,0 +1,73 @@
+Azure App Config:
+- Birden fazla Web App'i ayni anda konfigure etmeye yarar.
+- Configuration settings'i tutar. Feature Flag'lari da Azure App Config Service'te configure edebiliriz.
+- Feature Flag: Enabled/Disabled da kullanilir ayrica.
+- Yeni feature'lar kullanmak icin enable ederek deneriz.
+
+
+1.Web App ile DB'in Baglantisini Konfigure Etmek:
+
+a.stagingdb'den Verisi Alinir:
+> stagingdb > Connection strings: Show database connection strings > ADO.NET
+  > Server=tcp:stagingserver...Password={your password}......;  - copy
+
+
+b.webapp11'i db'e Baglama: 
+> webapp11staging > Configuration > + New connection string
+  > Name: SQLConnection | Type: SQLAzure | Value: Server=tcp:stagingserver...Password=Azure123......;  -
+      - return new SqlConnection(_configuration.GetConnectionString("SQLConnection"));
+      - Source code'da yazan "SQLConnection" ifadesi name olarak tanimlanir. 
+      - Hem production hem de staging ayni ismi kullanir.
+      - stagingdb'den aldigimiz Value'deki password'e kendi password'umuzu gireriz.
+  > Deployment slot setting  - check
+  > OK | Save
+
+
+c.webapp11'i Publish Etme:
+> VS > appv2 | RC | Publish 
+  > Publish
+
+
+
+2.App Configuration Olusturma:
+a.App Config'i Olusturma:
+> App Configuration > Create
+  > Name: azureappconfig1000 
+  > Create
+
+
+b.webapp11 ile Db Baglantisini Goruyoruz:
+> webapp11 > URL - copy
+  > Configuration
+    > SQLConnection
+      - db baglantisi goruyoruz. source code ve burasi koordineli duzenlenir.
+
+Browser:
+URL
+  - SQL db'li web app'e baglandik.
+
+
+c.Azure App Configuration Konfigurasyonu:
+> azureappconfig1000 > Configuration explorer
+  > + Create > Key-Value
+    > Key: SQLConnection  |  Value: Server=tcp:stagingserver...Password=Azure123......;
+      - Key: Code'taki ifade alinir. 
+      - Value: db'den alinir ve password duzenlenir.
+    > Apply
+
+
+d.Nuget Package'nin VS'ya Yuklenmesi:
+> VS > Tools > NuGet Package Manager > Manage NuGet Packages for Solution > Microsoft.Extensions.Configuration.AzureAppConfiguration
+  > Versions: Project - check, sqlapp - check
+    - Ilgili projelerimizi sectik.
+  > Install
+
+
+
+Ayrica primarykey code'a eklenir...
+
+
+
+3.Feature Flags:
+
+

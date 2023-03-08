@@ -1,0 +1,42 @@
+Genel:
+- Giris Usulleri:
+  * Access keys
+  * Shared Access Signatures (SAS)
+  * Active Directory (AD)
+
+
+
+
+1.Access Level Degisikligi:
+> appstore4040 > data-container > Change access level
+  > Blob (anonymous read access for blobs only)
+    - Blob'taki tum objelere public'ten ulasilabilir.
+    - Container bazinda da verilebilir.
+  > OK
+
+
+
+2.Ilgili Objeye Ulasma:
+> appstore > data-container 
+  > deneme.pdf 
+    > URL: https://appstorage4040.blob.core.windows.net/data-container/deneme.pdf   - copy
+
+Browser:
+https://appstorage4040.blob.core.windows.net/data-container/deneme.pdf  - past
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

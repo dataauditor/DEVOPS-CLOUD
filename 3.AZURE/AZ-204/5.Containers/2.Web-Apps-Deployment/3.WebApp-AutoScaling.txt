@@ -1,0 +1,68 @@
+1.App Service Plans:
+Basic App Service Plan: 
+  - B1: Basic skill
+  - 3 VM'e kadar manual olarak VM eklenebilir.
+Standard App Service Plan: 
+  - Policy ve conditions'lar olusturarak otomatik olarak VM sayisini artiririz.
+  - CPU treshold conditionu ile scale in/out yapar otomatik olarak.
+
+
+2.Basic App Service Plan ile Scaling:
+> webapp1 > Scale out (App Service plan)
+  > Instance count: 3
+  > Save
+
+
+3.Standard App Service Plan ile AutoScaling:
+- Basic'teyken Scale up'tan production ve standard secilerek standard plana gecilir.
+- Daha sonra Scale out ile Auto Scaling icin Scale out/in 2 adet rule olusturulur.
+- S1: Standard
+- 10 vm'e kadar autoscaling yapabilir.
+a.Scale up'ta Standard 1 Secilir:
+> webapp1 > Scale up (App service plan)
+  > Production > S1
+  > Apply
+
+
+b.Scale out ile Manual veya Auto Scaling Konfigure Edilir:
+- Bir Scale out bir Scale in rule olusturduk.
+> webapp1 > Scale out
+  > Custom autoscale  - check
+      - Manual scale'de secilebilirdi.
+    > Scale mode: Scale based on a metric
+      > + Add a rule: 
+        > Operator: Greater than | Metric threshold: 70 
+        > Duration: 10
+        > Time grain statistic: Average 
+        > Operation: Increase count by | Cool down: 5
+        > Instance count: 1
+        > Add
+      > + Add a rule:
+        > Operator: Less than | Metric threshold: 25
+        > Duration: 10
+        > Time grain statistic: Average 
+        > Operation: Decrease count by | Cool down: 5
+        > Instance count: 1
+        > Add
+    > Minimum: 1 | Maximum: 3 | Default: 1
+    > Save
+
+
+c.VM Adedine Bakma:
+> webapp1 > Scale out
+  > Run history
+    - VM adedini verir.
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,124 @@
+Deployment Slots:
+- Application'un Yeni Versiyonlarinin Production Slot'a gonderilmeden once test edilmesi gerekir.
+- Yeni versiyon once baska bir webapp'e deploy edilrek test edilir daha sonra prod'a deploy edilir.
+- Deployment Slots'lari kullanabilmek icin App Service plan, Standard ve uzeri olmali.
+- Slotlar:
+  - Versiton 1: Production Slot (Web app)
+  - Versiyon 2: Staging Slot (Web app)
+  - Istenilen anda slot'lar degistirilerek Staging, Production olarak degistirilebilir.
+  - Hata olma durumunda roll back the changes by changing slots again.
+
+
+A.Web App'te Deployment Slots Konfigurasyonu:
+1.Deployment Slots Konfigure Etme:
+a.Staging Slot Olusturma:
+> companyapp10 > Deployment slots
+      - Halihazirda mevcut web app'i production olarak running goreceksin.
+  > + Add Slot 
+    > Name: Staging 
+    > Add | Close
+      - Suan iki adet slot gozukuyor. Ikisi de  runnung.
+
+
+b.Staging Slot'u Konfigure Etme:
+> companyapp10 > Deployment slots > companyapp10-staging
+  > URL - copy
+
+Browser:
+URL 
+  - Default Microsoft Azure web page gorulur. Icinde bir deployment yok.
+
+
+c.VS Publish to Staging Slot:
+- Yeni bir publish profile olusturulur.
+> VS > companyappv2 | RC | Publish
+    - Normal olarak production web app'i gorur. Yeni bir adres tanimlariz.
+  > New 
+    > Target: Azure | Specific target: Azure App Service | app-grp: companyapp10 | Deployment slots: staging
+    > Finish
+  > Publish
+
+
+
+
+2.Slot'lari Degistirerek Production'u Degistirme:
+> companyapp10 > Deployment slots > Swap 
+  > Source: companyapp10-staging  |  Target: companyapp10
+    - staging'i source, production'u target olarak sectik.
+  > Swap
+
+
+Browser:
+URL
+  - version2 gorulur.
+
+
+
+
+B.Web App ve Database ile Deployment Slots Konfigurasyonu:
+- Production Slot ve baglisi production db'yi staging slot ve baglisi staging db ile degistirebiliriz.
+- DB'ler gercekte degismez. Staging db'deki script'ler production db'ye aktarilir.
+- Islem oncesi production db'in backup'i alinir.
+- Sonra web app, production'dan staging'e gecirilir.
+- Warm up diye birsey var incelersin.
+
+1.Web App ile DB'in Baglantisini Konfigure Etmek:
+
+a.stagingdb'den Verisi Alinir:
+> stagingdb > Connection strings: Show database connection strings > ADO.NET
+  > Server=tcp:stagingserver...Password={your password}......;  - copy
+
+
+b.webapp11staging'i dbStaging'e Baglama: 
+> webapp11staging > Configuration > + New connection string
+  > Name: SQLConnection | Type: SQLAzure | Value: Server=tcp:stagingserver...Password=Azure123......;  -
+      - return new SqlConnection(_configuration.GetConnectionString("SQLConnection"));
+      - Source code'da yazan "SQLConnection" ifadesi name olarak tanimlanir. 
+      - Hem production hem de staging ayni ismi kullanir.
+      - stagingdb'den aldigimiz Value'deki password'e kendi password'umuzu gireriz.
+  > Deployment slot setting  - check
+  > OK | Save
+
+
+c.webapp11staging'i Publish Etme:
+> VS > appv2 | RC | Publish 
+  > + New | TArget: Azure | Specific target: Azure App Service 
+  > App Service Instances: app-grp: webapp11 > Deployment slots > staging
+  > Publish
+
+
+d.Staging'i Production'a Swap Etme:
+> webapp11staging > Swap
+  > Source: webapp11staging  |  Target: webapp11
+  > Swap
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

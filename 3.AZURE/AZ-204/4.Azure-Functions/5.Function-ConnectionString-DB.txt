@@ -1,0 +1,16 @@
+1.Function'da Database'e Connection String Olusturma:
+> appfunction > Configuration > + New Connection String 
+  > Name: SQLConnectionString | Value: "Server=tcp:appserver30.database.windows.net...Password=Azure@123;MultipleActiveResultSets=False;Encrypt=True;Connection Timeout=30;" | Type: SQLAzure
+    - Value: repo'da olusturulan connection string yapistirilir.
+  > OK | Save
+
+
+
+
+
+
+
+
+
+
+

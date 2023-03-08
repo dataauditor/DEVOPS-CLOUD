@@ -1,0 +1,56 @@
+https://learn.microsoft.com/en-us/cli/azure/appservice/plan?view=azure-cli-latest
+
+1.Install Azure CLI:
+> https://learn.microsoft.com/en-us/cli/azure/install-azure-cli 
+  > Install on Windows > Microsoft Installer (MSI) > Latest release of the Azure CLI
+    - Download eder.
+  > Install
+  > Finish
+
+
+
+2.Azure Connection:
+az login
+
+
+
+3.App Service Plan Linux Olusturma:
+az appservice plan create --name azcliplan11 --resource-group docker-rg --is-linux
+
+
+4.Icinde Container Olan Web App Olusturma:
+az webapp create --resource-group docker-rg --plan azcliplan11 --name dockerapp55 --deployment-container-image-name appregistry30.azurecr.io/webapp:latest
+  - ACR'den image cekerek containeri olusan webapp'te olusturur.
+
+
+
+5.Turn on Container Logging:
+az webapp log config --name dockerapp55 --resource-group docker-rg --docker-container-logging filesystem
+
+
+
+6.Enable The Log Stream:
+- command line da anlik loglari gosterir.
+az webapp log tail --name dockerapp55 --resource-group docker-rg
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

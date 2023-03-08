@@ -1,0 +1,82 @@
+
+{
+  "variables": {
+    "app_name": "",
+    "region":  "",
+    "vpc": "",
+    "subnet": "",
+    "ami": "",
+    "version": "",
+    "env": "",
+    "env_short": "",
+    "githash": "",
+    "base-githash": "",
+    "base-ami": "",
+    "provisioners_dir": "./provisioners/"
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "region": "{{user `region`}}",
+      "vpc_id": "{{user `vpc`}}",
+      "subnet_id": "{{user `subnet`}}",
+      "instance_type": "t3.xlarge",
+      "iam_instance_profile": "download-install-media",
+      "encrypt_boot": true,
+      "source_ami": "{{user `ami`}}",
+      "ami_name": "{{user `app_name`}}-{{isotime \"20060102150405\"}}",
+      "tags": {
+        "OS_Version": "Windows Server 2016",
+        "Name": "{{user `app_name`}}",
+        "Date": "{{isotime \"20060102150405\"}}",
+        "app:sourceami": "{{user `ami`}}",
+        "app:version": "{{user `version`}}",
+        "app:githash": "{{user `githash`}}",
+        "base:githash": "{{user `base-githash`}}",
+        "base:sourceami": "{{user `base-ami`}}"
+      },
+      "communicator": "winrm",
+      "winrm_username": "Administrator",
+      "user_data_file":"../../../sys_common/win/userdata.ps1",
+      "winrm_use_ssl": true,
+      "winrm_insecure": true,
+      "shutdown_behavior": "terminate",
+      "launch_block_device_mappings": [
+        {
+          "device_name": "/dev/sda1",
+          "volume_size": 100,
+          "volume_type": "gp2",
+          "delete_on_termination": false
+        }
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "powershell",
+        "script": "{{ user `provisioners_dir` }}install-chrome.ps1",
+        "environment_vars": [ "env={{user `env`}}",  "env_short={{user `env_short`}}" ]
+    }, 
+     {
+      "type": "powershell",
+        "script": "{{ user `provisioners_dir` }}download-dciq.ps1",
+        "environment_vars": [ "env={{user `env`}}",  "env_short={{user `env_short`}}" ]
+    },
+    {
+      "type": "powershell",
+      "inline": [
+        "C:\\ProgramData\\Amazon\\EC2-Windows\\Launch\\Scripts\\InitializeInstance.ps1 -Schedule",
+        "C:\\ProgramData\\Amazon\\EC2-Windows\\Launch\\Scripts\\SysprepInstance.ps1 -NoShutdown"
+      ]
+    }
+  ],
+"post-processors": [
+  [
+    {
+      "output": "manifest.json",
+      "strip_path": true,
+      "type": "manifest"
+    }
+  ]
+]
+}

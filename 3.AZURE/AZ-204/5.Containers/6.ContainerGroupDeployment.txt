@@ -1,0 +1,233 @@
+1.Deployment Group Olusturma:
+a.deployment.yaml File Olusturulur:
+deployment.yaml
+--------------------------------------------------------------
+apiVersion: '2021-10-01'
+location: northeurope
+name: SQLAppGroup
+properties: 
+  containers: 
+  - name: db 
+    properties:
+      image: appreistry30.azurecr.io/appsqlimage:latest 
+      ports: 
+      - port: 3306
+      resources: 
+        requests:
+          memoryInGB: 1.5
+          cpu: 1
+  - name: web
+    properties:
+      image: appreistry30.azurecr.io/sqlapp:latest 
+      ports: 
+      - port: 80
+      resources: 
+        requests:
+          memoryInGB: 1.5
+          cpu: 1
+  osType: Linux
+  ipAddress:
+    type: Public
+    ports:
+    - protocol: tcp
+      port: 80
+  imageRegistryCredentials:
+    - server: appregistry30.azurecr.io
+      username: appregistry30
+      password: uOK0FrDSt5BHJ
+type: Microsoft.ContainerInstance/containerGroups
+--------------------------------------------------------------
+  - Asagida genis versiyonu var.
+  - Container Instance olusturur. 
+  - Iki adet container bulunur container instance'da.
+
+
+
+b.Cloud Shell ile deployment.yaml File Calistirilir:
+> Cloud Shell 
+  > Show advanced settings
+    > Resource group: Use existing: docker-rg 
+    > Storage account: Create new: dockerstorage
+    > File share: Create new: data
+    > Create
+  > Upload
+    > deployment.yaml
+      - Localden deployment.yaml dosyasini yukledik.
+-----------------------------------------------------------------------
+ls
+  - deployment.yaml dosyasi burada.
+az container create --resource-group docker-rg --file deployment.yaml
+-----------------------------------------------------------------------
+
+
+
+c.Container Instance'a Baglanma:
+> SQLAppGroup 
+  > Containers
+    - db ve web container'lri mevcut.
+  > Overview
+    - IP Address: 20.234.5.32
+
+Browser:
+20.234.5.32
+
+
+
+
+
+2.SAM deployment.yaml:
+deployment.yml
+-----------------------------------------------------------
+name: string  # Name of the container group
+apiVersion: '2021-10-01'
+location: northeurope
+name: SQLAppGroup
+properties: 
+  containers: 
+  - name: db 
+    properties:
+      image: appreistry30.azurecr.io/appsqlimage:latest 
+      command:
+      - string
+      ports: 
+      - port: 3306
+      environmentVariables:
+      - name: string
+        value: string
+        secureValue: string
+      resources: 
+        requests:
+          memoryInGB: 1.5
+          cpu: 1
+          gpu:
+            count: integer
+            sku: string
+        limits:
+          memoryInGB: number
+          cpu: number
+          gpu:
+            count: integer
+            sku: string
+      volumeMounts: # Array of volume mounts for the instance
+      - name: string
+        mountPath: string
+        readOnly: boolean
+      livenessProbe:
+        exec:
+          command:
+          - string
+        httpGet:
+          httpHeaders:
+          - name: string
+            value: string
+          path: string
+          port: integer
+          scheme: string
+        initialDelaySeconds: integer
+        periodSeconds: integer
+        failureThreshold: integer
+        successThreshold: integer
+        timeoutSeconds: integer
+      readinessProbe:
+        exec:
+          command:
+          - string
+        httpGet:
+          httpHeaders:
+          - name: string
+            value: string
+          path: string
+          port: integer
+          scheme: string
+        initialDelaySeconds: integer
+        periodSeconds: integer
+        failureThreshold: integer
+        successThreshold: integer
+        timeoutSeconds: integer
+  imageRegistryCredentials: # Credentials to pull a private image
+  - server: string
+    username: string
+    password: string
+    identity: string
+    identityUrl: string
+  restartPolicy: string
+  ipAddress: # IP address configuration of container group
+    ports:
+    - protocol: string
+      port: integer
+    type: string
+    ip: string
+    dnsNameLabel: string
+    dnsNameLabelReusePolicy: string
+  osType: string
+  volumes: # Array of volumes available to the instances
+  - name: string
+    azureFile:
+      shareName: string
+      readOnly: boolean
+      storageAccountName: string
+      storageAccountKey: string
+    emptyDir: {}
+    secret: {}
+    gitRepo:
+      directory: string
+      repository: string
+      revision: string
+  diagnostics:
+    logAnalytics:
+      workspaceId: string
+      workspaceKey: string
+      workspaceResourceId: string
+      logType: string
+      metadata: {}
+  subnetIds: # Subnet to deploy the container group into
+    - id: string
+      name: string
+  dnsConfig: # DNS configuration for container group
+    nameServers:
+    - string
+    searchDomains: string
+    options: string
+  sku: string # SKU for the container group
+  encryptionProperties:
+    vaultBaseUrl: string
+    keyName: string
+    keyVersion: string
+  initContainers: # Array of init containers in the group
+  - name: string
+    properties:
+      image: string
+      command:
+      - string
+      environmentVariables:
+      - name: string
+        value: string
+        secureValue: string
+      volumeMounts:
+      - name: string
+        mountPath: string
+        readOnly: boolean
+-----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

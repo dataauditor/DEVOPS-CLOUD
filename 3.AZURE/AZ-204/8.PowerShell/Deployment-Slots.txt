@@ -1,0 +1,91 @@
+1.Deployment Slot Olusturma:
+--------------------------------------------------------------------
+#Degiskenler tanimlanir. Mevcut calisanlar tekrar olusturulmaz.
+$ResourceGroupName="powershell-grp"
+#$Location="North Europe"
+$AppServicePlanName="companyplan211"
+$WebAppName="companyapp909311"
+$SlotName="Staging"
+
+#Azure hesabina baglanilir. 
+Connect-AzAccount 
+
+#Change AppServicePlan to Standard:
+Set-AzAppServicePlan -Name $AppServicePlanName -ResourceGroupName $ResourceGroupName `
+-Tier Standard 
+
+#Staging Slot Olusturulur:
+New-AzWebAppSlot -Name $WebAppName -ResourceGroupName $ResourceGroupName `
+-Slot $SlotName
+
+#GitHub account'a manual baglanti kurulur.
+$Properties=@{
+    repoUrl="https://github.com/dataauditor/java-tomcat-sample";
+    branch="main";
+    isManualIntegration="true";
+} 
+
+#Deploy Github Repo to Existing Web App:
+Set-AzResource -ResourceGroupName $ResourceGroupName -Properties $Properties `
+-ResourceType Microsoft.Web/sites/slots/sourcecontrols `
+-ResourceName $WebAppName/$SlotName/web -ApiVersion 2015-08-01 -Force 
+--------------------------------------------------------------------
+    - Set-AzResource'de slots, $SlotName ilave olarak eklendi koda. 
+  > Run
+ 
+
+
+
+2.Portaldan Staging ve Production Slotlara Ulasma:
+> companyapp909311 > Deployment slots
+  > companyapp909311-Staging > URL: https://companyapp909311-staging.azurewebsites.net/
+
+Browser:
+https://companyapp909311-staging.azurewebsites.net
+  - Staging slot'a baglandik.
+
+
+
+3.Staging Slot'u Production Slot'a Baglama:
+---------------------------------------------------------------------------
+#Degiskenler tanimlanir. Mevcut calisanlar tekrar olusturulmaz.
+$ResourceGroupName="powershell-grp"
+#$Location="North Europe"
+$AppServicePlanName="companyplan211"
+$WebAppName="companyapp909311"
+$SlotName="Staging"
+$TargetSlot="production"
+
+
+#Azure hesabina baglanilir. 
+Connect-AzAccount 
+
+#Change AppServicePlan to Standard:
+Set-AzAppServicePlan -Name $AppServicePlanName -ResourceGroupName $ResourceGroupName `
+-Tier Standard 
+
+#Staging Slot Olusturulur:
+New-AzWebAppSlot -Name $WebAppName -ResourceGroupName $ResourceGroupName `
+-Slot $SlotName
+
+#GitHub account'a manual baglanti kurulur.
+$Properties=@{
+    repoUrl="https://github.com/dataauditor/java-tomcat-sample";
+    branch="main";
+    isManualIntegration="true";
+} 
+
+#Deploy Github Repo to Existing Web App:
+Set-AzResource -ResourceGroupName $ResourceGroupName -Properties $Properties `
+-ResourceType Microsoft.Web/sites/slots/sourcecontrols `
+-ResourceName $WebAppName/$SlotName/web -ApiVersion 2015-08-01 -Force 
+
+#Staging Slot'un Icerigini Production Slot'a Baglama:
+Switch-AzWebAppSlot -Name $WebAppName -ResourceGroupName $ResourceGroupName `
+-SourceSlotName $SlotName -DestinationSlotName $TargetSlot 
+---------------------------------------------------------------------------
+  - Production'un URL adresi, staging'i Staging'in URL adresi production'u gosterir.
+
+
+
+

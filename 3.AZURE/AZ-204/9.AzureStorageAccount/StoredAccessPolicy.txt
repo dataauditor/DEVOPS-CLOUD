@@ -1,0 +1,27 @@
+1.Storage Account'ta Stored Access Policy Olusturma:
+> appstore40 > Containers > data-container > Access policy
+  > Stored access policy: + Add policy
+    > Identifier: Readpolisim | Permissions: Read, List 
+    > Start time: 12.03.2023 | Expiry time: 12.05.2023
+    > OK
+    > Save
+
+
+
+2.Storage Explorer:
+> Explorer > Storage accounts: appstorage40 
+  > Blob containers: data-container | RC | Get Shared Access Signature
+    > Access policy: Readpolisim 
+  > Create
+  > URL: https://appstorage40.blob.core.windows.net/data-storage?sv=hno454TGR54GTR5GGBg5 - copy
+
+
+
+
+3.Ilgili URL ile Baglanti Olusturma:
+- Onceden baglanti yapilmissa storage account RC yapilarak detach edilir.
+> Fis sekli > Blob container > Shared access signature (SAS)
+  > Blob container SAS URL: https://appstorage40.blob.core.windows.net/data-storage?sv=hno454TGR54GTR5GGBg5 - past
+  > Connect
+
+

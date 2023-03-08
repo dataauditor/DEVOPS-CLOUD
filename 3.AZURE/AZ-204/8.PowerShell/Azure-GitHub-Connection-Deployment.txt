@@ -1,0 +1,80 @@
+A.Azure Account'a Baglanma ve GitHub Account'u Deploy Etme:
+
+1.VSC'de PowerShell ile Web App Olusturma:
+https://learn.microsoft.com/en-us/powershell/module/az.resources/new-azresourcegroup?view=azps-9.4.0
+- Once variables olusturulur.
+- Daha sonra Azure account'a baglanilir.
+- "`": Alt satirdan devam ediyor demektir.
+> VSC > New File > Script.ps1
+-------------------------------------------------------------------------------------
+#Degiskenler tanimlanir.
+$ResourceGroupName="powershell-grp"
+$Location="North Europe"
+$AppServicePlanName="companyplan211"
+$WebAppName="companyapp909311"
+
+#Azure hesabina baglanilir.
+Connect-AzAccount 
+
+#RG olusturulur.
+New-AzResourceGroup -Name $ResourceGroupName -Location $Location
+
+#AppServicePlan olusturulur.
+New-AzAppServicePlan -ResourceGroupName $ResourceGroupName `
+-Location $Location -Tier "B1" -NumberofWorkers 1 -Name $AppServicePlanName
+
+#Web App'i olusturma.
+New-AzWebApp -ResourceGroupName $ResourceGroupName -Name $WebAppName `
+-Location $Location -AppServicePlan $AppServicePlanName 
+-------------------------------------------------------------------------------------
+  > Run
+
+
+
+
+2.Azure PowerShell-Github Configuration and Deployment:
+a.Portaldan Konfigure Etme:
+- Ya buradan yapilir veya buradan hicbirsey yapmadan VSC ile Konfigure edilir.
+> companyapp909311 > Deploymwent Center > Settings
+  > Source: Manual Deployment (Push): External Git
+    - GitHub, Bitbucket vb de secilebilir.
+  
+
+b.VSC ile Github Repo'yu Web App'a Deploy Etme:
+-------------------------------------------------------------------------------------
+#Degiskenler tanimlanir. Mevcut calisanlar tekrar olusturulmaz.
+$ResourceGroupName="powershell-grp"
+#$Location="North Europe"
+#$AppServicePlanName="companyplan211"
+$WebAppName="companyapp909311"
+
+#Azure hesabina baglanilir. 
+Connect-AzAccount 
+
+#GitHub account'a manual baglanti kurulur.
+$Properties=@{
+    repoUrl="https://github.com/dataauditor/java-tomcat-sample";
+    branch="main";
+    isManualIntegration="true";
+} 
+
+#Deploy Github Repo to Existing Web App:
+Set-AzResource -ResourceGroupName $ResourceGroupName -Properties $Properties `
+-ResourceType Microsoft.Web/sites/sourcecontrols `
+-ResourceName $WebAppName/web -ApiVersion 2015-08-01 -Force 
+-------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

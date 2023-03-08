@@ -1,0 +1,192 @@
+1.Fargate ile Tek Taskli ECS Cluster Fargate ile:
+- website dosyasi Dockerfile ve source code'u ihtiva ediyor.
+- Bunlardan image olusturacagiz.
+- ECR'a gonderecegiz.
+- ECS cluster olusturacagiz.
+- Fargate kullaniliyor.
+- Task'i yukleyecegiz.
+
+IAM:
+> User > create user > name: coursera > policy > AmazonEC2ContainerRegistryFullAccess
+
+VSC:
+aws configure
+cd website
+  - ilgili website dosasinin icine girilir.
+  - Dockerfile ve sourcecode burada
+sudo docker build . -t website:latest
+sudo  docker images
+
+ECR:
+> Repositories > create repository > Private / Repository name: website
+  > create repository
+> view push commands:
+  - asagidaki komutlari buradan aliyoruz.
+
+VSC:
+aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin 145012395309.dkr.ecr.us-east-1.amazonaws.com
+  - ecr repoya login olup sonra da docker'a login oluor.
+sudo docker tag website:latest 145012395309.dkr.ecr.us-east-1.amazonaws.com/website:latest
+  - tagini degistirerek ikinci bir image olusturduk.
+sudo docker images
+  - ayni image iki isimlede duruyor.
+sudo docker push 145012395309.dkr.ecr.us-east-1.amazonaws.com/website:latest
+
+ECS with Fargate:
+> Clusters > Get started > container definition > custom > configure 
+  > Container definition:
+    > container name: website
+    > image: 145012395309.dkr.ecr.us-east-1.amazonaws.com/website:latest
+    > Port mappings: 80
+    > Update
+  > Task definition:
+    > Edit 
+    > Task definition name*: task-for-website
+    > Task memory*: 2GB
+    > Task CPU*: 1 vCPU
+    > save > next
+  > Define your service:
+    > Load balancer type: None (1 tane container olacak)
+    > save
+> Configure your cluster:
+    > Cluster name: website-cluster
+    > next > create
+
+ECS:
+> Clusters > website-cluster > Tasks > Ilgili task > Public IP (kopala)
+
+Browser:
+- Public IP:80
+
+
+
+2.Multi Task ECS Cluster with Load Balancer:
+- Birden fazla Task'li fargate baglantili.
+- Load balancerli.
+
+ECS:
+> Clusters > Get Started > 
+ECS:
+> Clusters > Get started > container definition > custom > configure 
+  > Container definition:
+    > container name: website2
+    > image: 145012395309.dkr.ecr.us-east-1.amazonaws.com/website:latest
+    > Port mmappings: 80
+    > Update
+  > Task definition:
+    > Edit 
+    > Task definition name*: task-for-load-balancer
+    > Task memory*: 2GB
+    > Task CPU*: 1 vCPU
+    > save > next
+  > Define your service:
+    > Edit
+    > Service name*: website2-service2
+    > Number of desired tasks*: 3
+    > Load balancer type: Application Load Balancer
+    > save
+  > Configure your cluster:
+    > Cluster name: cluster-load-balancer
+    > next > create
+
+ECS:
+> Clusters > cluster-load-balancer > website2-service2 > Details 
+
+EC2:
+> Load Blancers > Ilgili LB sec > DNS name (kopala
+
+Browser:
+- DNS name
+
+
+
+3.EC2 ile Multi Service'li ECS Cluster with Load Balancer:
+- Cluster olusturulur EC2 ile. 
+- 2 adet Task (pode) olusturulur.
+- Mevcut 2 adet task ile icinde birden fazla pode (task) olan 2 service olustururuz.
+- Tek ALB'i birden cok (2 adet) service'a farkli path'lerden baglayarak kullaniriz.
+- ECR veya docker-hub'tan image cekeriz.
+
+VPC:
+aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin 145012395309.dkr.ecr.us-east-1.amazonaws.com
+  - ecr repoya login olup sonra da docker'a login oluor.
+sudo docker tag website:latest 145012395309.dkr.ecr.us-east-1.amazonaws.com/website:latest
+  - tagini degistirerek ikinci bir image olusturduk.
+sudo docker tag website:latest 145012395309.dkr.ecr.us-east-1.amazonaws.com/mysql:latest
+sudo docker images
+  - ayni image iki isimlede duruyor.
+sudo docker push 145012395309.dkr.ecr.us-east-1.amazonaws.com/website:latest 
+sudo docker push 145012395309.dkr.ecr.us-east-1.amazonaws.com/mysql:latest 
+
+EC2:
+- Load Balancer, Target Group ve Securit Group olusturma.
+> Load Balancer > Application Load Balancer > name: microservice-lb > internet-facing > IP address type: ipv4
+  > HTTP, HTTPS > VPC: Cluster ile ayni VPC ve public Subnetleri sec > next
+  > Assign securit group: Create a new sec gr > Securit group name: microservices-lb-sg > 80, 443 (0.0.0.0)
+  > Target group: New target group > name: microservice-default-tg > Target tpe: Instance > create
+  
+ECS:
+- ECS Cluster olusturma.
+> Create cluster > EC2 Linux + Networking > next
+  > Cluster name: Microservice-cluster > EC2 instance tpe: t3.small > Number of instances: 2
+  > EC2 Ami id: Amazon Linux 2 > Securit group inbound rules: Port range: All ports (microservices-lb-sg)
+  > Container instance IAM Role: ecsinstanceRole > Create
+
+ECS:
+- 2 adet Task olusturuyoruz.
+> Task Definition > Create new Task Definition > EC2 > next
+  > Task Definition name: service-1-td (gerisi default birakti)
+  > Add container 
+    > Container name: service-1-container
+    > image: 145012395309.dkr.ecr.us-east-1.amazonaws.com/website:latest 
+    > Memory Limits: Soft limit / 500
+    > Port mappings: Host port: 80 / Container port: 5000 (Dockerfile'dan al)
+    > CPU units: 250
+    > create
+
+> Task Definition > Create new Task Definition > EC2 > next
+  > Task Definition name: service-2-td (gerisi default birakti)
+  > Add container 
+    > Container name: service-2-container
+    > image: 145012395309.dkr.ecr.us-east-1.amazonaws.com/mysql:latest
+    > Memory Limits: Soft limit / 500
+    > Port mappings: Host port: 4603 (Container port: 5000 (Dockerfile'dan al)
+    > CPU units: 250
+    > create
+ 
+
+ECS:
+- Cluster'da Task Definitionlari cekerek 2 adet Service olusturma.
+> Clusters > Microservice-cluster > Services > Create > 
+  > Launch tpe: EC2 > Task Definition: service-1-td > Cluster: Microservice-cluster
+  > Service name: service-1 > Number of tasks: 2 > Deployment type: Rolling update > 
+  > Placement Templates: BinPack > next > Load balancer: Application Load Balancer 
+  > Service IAM Role: ecsServiceRole > Load Balancer name: microservice-lb > 
+  > Production listener port: 80 > Target Group name: microservice-default-tg 
+  > Path pattern: / (/service-1* seklinde yaptik. Ilgili source koda bakilir, sistem otomatik bu sekilde doldurmus zaten) > Evaluation order: 1
+  > Health check path: /service-1 (otomatik yazmis)
+  > Service Discover information (kapattik)
+  > Service Auto Scaling: Do not adjust the services desired count
+  > create
+
+> Clusters > Microservice-cluster > Services > Create > 
+  > Launch tpe: EC2 > Task Definition: service-2-td > Cluster: Microservice-cluster
+  > Service name: service-2 > Number of tasks: 1 > Deployment type: Rolling update > 
+  > Placement Templates: BinPack > next > Load balancer: Application Load Balancer 
+  > Service IAM Role: ecsServiceRole > Load Balancer name: microservice-lb > 
+  > Container name: port service-2-container:0:8082 (otomatik olarak sistem farkli bir container portu tanimladi) > Add to load balancer 
+  > Production listener port: 80 > Target Group name: microservice-2-tg 
+  > Path pattern: / (/service-2* seklinde yaptik. Ilgili source koda bakilir, sistem otomatik bu sekilde doldurmus zaten) > Evaluation order: 2
+  > Health check path: /service-2 (otomatik yazmis)
+  > Service Discover information (kapattik)
+  > Service Auto Scaling: Do not adjust the services desired count
+  > create
+
+EC2:
+> Load balancer > microservice-lb > DNS name (kopyala)
+
+Browser:
+> DNS name yapistir > yanina da ilgili path'i "/service-1" ekle. Daha sonra "/service-2"
+
+EC2:
+> Load balancer > microservice-lb > Listeners > Rules: View/edit rules > ilgili forwardlari tg bazinda gosterir.

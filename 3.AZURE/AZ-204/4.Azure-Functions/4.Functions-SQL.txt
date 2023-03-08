@@ -1,0 +1,5 @@
+1.Database'den Veri Ceken Function Olusturma:
+a.HTTP trigger Function Olusturulur:
+
+
+b.

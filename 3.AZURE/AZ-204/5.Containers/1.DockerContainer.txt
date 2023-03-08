@@ -7,7 +7,39 @@ docker ps -a
 
 
 
-1..NET Applikasyonunu Visual Studio'dan Dockerize Etme:
+1.Container Olusturma:
+a.VM Olusturma:
+> Ubuntu Server > Create
+  > Name: linuxvm | Image: Ubuntu Server 20.04
+  > Authentication type: Password
+    > Username: linuxusr | Password: 123
+  > Create
+
+
+b.VM'e PuTTY Uzerinden Baglanarak Docker Install:
+> Host name: 20.2.34.123 | Port: 22 | Connection type: SSH 
+  > Open
+---------------------------------------------------------
+login as: linuxusr
+password: 123
+sudo apt-get update
+sudo apt-get install \
+  ca-certificates \
+  curl \
+  gnipg \
+  lsb-release
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyrings.gpg
+sudo apt-get update
+...
+...
+docker version
+---------------------------------------------------------
+  - Ubuntu'ta Docker yuklenir, Docker'in sayfasinda kodlari var.
+
+
+
+
+2.NET Applikasyonunu Visual Studio'dan Dockerize Etme:
 a.VS'de sqlapp'de Dockerfile Olusturulur:
 > VS > sqlapp/Dockerfile
 ----------------------------------------------------------

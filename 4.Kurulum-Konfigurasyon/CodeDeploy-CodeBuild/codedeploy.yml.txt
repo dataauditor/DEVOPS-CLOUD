@@ -1,0 +1,34 @@
+image: maven:3.6.5
+
+options:
+  max-time: 3
+
+pipelines:
+  staging:
+      - step:
+          name: Build and Test
+          caches:
+            - maven
+          script:
+#            - mvn -B verify --file pom.xml
+            - mvn clean compile package
+            - echo $BITBUCKET_CLONE_DIR # Debug: Print the Git clone directory
+            - pwd # Debug: Print the current working directory
+            - find "$(pwd -P)" -name todoey.war # Debug: Show the full file path of todoey.war, from the current working directory
+            - echo "$BITBUCKET_CLONE_DIR/build/todoey-be/target/todoey.war" # Debug: Print the resolved path of todoey.war
+
+           artifacts:
+             - "$BITBUCKET_CLONE_DIR/build/todoey-be/target/todoey.war"
+#          artifacts:
+#            - ./target/*.jar
+#            - /opt/atlassian/pipelines/agent/build/todoey-be/target/*.war
+
+      - step:
+           name: Deployment to Staging
+           deployment: staging
+           script:
+             - pipe: atlassian/bitbucket-upload-file:0.3.2
+               variables:
+                  BITBUCKET_USERNAME: $BITBUCKET_USERNAME
+                  BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
+                  FILENAME: "/opt/atlassian/pipelines/agent/build/todoey-be/target/*.war"

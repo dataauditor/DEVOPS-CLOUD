@@ -1,0 +1,63 @@
+1.Cluster Olusturma:
+> Kubernetes > Create 
+  > Name: appcluster
+  > Create
+
+
+2.Cluster'a Deployment.yaml File'in Local'den Yuklenmesi:
+> appcluster > Workloads
+  > + Create > Create with YAML
+  > YAML
+------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+------------------------------------------------------
+    - NGINX container'i olusturuyoruz.
+  > Add
+    - deployment olusur.
+
+
+3.Cluster'a service.yaml File'in Deploy Edilmesi:
+> appcluster > Services and ingresses
+  > + Create > Create with YAML
+  > YAML
+------------------------------------------------
+kind: Service 
+apiVersion: v1 
+metadata:
+  name: nginxservice 
+spec:
+  selector:
+    app: nginx
+
+  ports:
+    - protocol: TCP
+      port: 80 
+      targetPort: 80
+  type: LoadBalancer    
+------------------------------------------------
+  > Add
+ 
+
+4.IP Adresinin Alinmasi:
+> appcluster > Services and ingresses
+  > LoadBalancer: External IP: 20.2.34.2

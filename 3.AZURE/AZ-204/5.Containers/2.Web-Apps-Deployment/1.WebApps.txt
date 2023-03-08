@@ -1,0 +1,41 @@
+Genel:
+- IaaS degildir. 
+- PaaS (Platform as a Service)'tir.
+- Auto scaling, Devops, Security, Load balancing ozellikleri bulunur.
+- Bircok runtime'i destekler. Desteklemedigi durumlarda IaaS kullanilir.
+
+
+
+1.Web App Olusturma:
+a.Web App'i Olusturma:
+> Web App
+  > Name: webapp3000.azurewebsites.net | Publish: Code | Runtime stack: .NET6 | Operating system: Windows | Region: North Europe
+  > App Service Plan
+    > Windows Plan (North Europe) Sku and size: 
+  > Create
+
+
+b.Browser'da Web App'a Ulasma:
+- Portal URL'i aliriz.
+webapp3000.azurewebsites.net
+
+
+
+2.Publish Binaries to webapp3000:
+> VS > webapp | RC | + New (New publish profile)
+  > Target: Azure | Specific target: Azure App Service (Windows)
+  > App Service instances: webapp3000
+  > Finish
+  > Publish (Ustteki)
+
+Browser: 
+webapp3000.azurewebsites.net
+
+
+
+
+
+
+
+
+

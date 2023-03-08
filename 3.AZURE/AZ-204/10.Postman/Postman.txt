@@ -1,0 +1,36 @@
+POST, GET methodlari ile API'lerle konusmak icin kullanilir.
+
+1.Azure Function'dan URL Alma:
+> appfunction > Functions > GetProduct 
+  > Get Function URL: https://appfunction.azurewebsites.net/api/GetProduct...  - copy
+   
+
+2.Postman ile Azure Function'da GET Method:
+> + > GET > Enter request URL: https://appfunction.azurewebsites.net/api/GetProduct...  - past
+  > Send
+    - Product tablosunu getirdi.
+
+
+3.Postman ile Azure Function'da POST Method:
+> + > POST > Enter request URL: https://appfunction.azurewebsites.net/api/GetProduct...  - past
+  > Body > raw > Text: JSON
+-------------------------------------------------------
+{
+  "ProductID":4,
+  "ProductName":"Desktop",
+  "Quality":400
+}
+-------------------------------------------------------
+  > Send
+    - Status 200: Calisti.
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,126 @@
+#---
+#
+# DCIQ app windows
+#
+parent_file: generic.yml
+
+admin_principals:
+  - LG_(dciq)_(administrators)
+
+standard_principals:
+  - LG_(dciq)_(Remote Desktop Users)
+
+enis_priv_subnet: private
+
+fixed_ips:
+  dev:
+   ip: 10.181.1.101
+
+  mgmt:
+   ip: 10.160.1.10
+   
+securitygroups:
+  - name: dciqaccess
+    description: dciq access from NBIM offices 
+    ingress: 
+       - port: 80
+         cidrs: 
+           - 10.208.0.0/13
+         description: Allow HTTP from NBIM Office
+       - port: 443
+         cidrs: 
+           - 10.208.0.0/13
+         description: Allow HTTPS from NBIM Office
+       - port: 8443
+         cidrs: 
+           - 10.208.0.0/13
+         description: Allow HTTP from NBIM Office
+       - port: 1443
+         sgs: 
+           - dciqaccess
+         description: Allow inter instance
+        
+s3buckets:
+  - name: dciq
+    no_glacier_transition: true
+    no_standard_transition: true
+    custom_lifecycle_rules:
+      - Prefix: backups/
+        Transitions:
+          - TransitionInDays: 30
+            StorageClass: Glacier
+    exclusive_roles:
+      - role_name: dicq 
+      
+iam:
+  policies:
+    dicq-access:
+      policy_file: pol-generic-app-access.yml
+
+  profiles:
+    dicq:
+      account_policies:
+        - kms-usage
+        - common-app-access
+      custom_policies:
+        - dicq-access
+
+enis: 
+  - name: dciq
+    sgs:
+      - dciqaccess
+    dns: dciq
+    subnet: "{{ dest_subnet }}"
+    sourcedest: true                
+    az: a                            
+    tags:                            
+      eni-tagid: dciq
+    
+#vms:
+#  - app_name_short: dciq
+#    amount: 1
+#    profile: dicq
+#    sgs:
+#      - dciqaccess
+#    amis:
+#      eu-west-1: dciq-appserver
+#    instance_type: t3.xlarge
+#    vm_type: windows
+#    az: a
+
+vms:    
+  - app_name_short: dciqdb
+    amount: 1
+    profile: dicq
+    sgs:
+      - dciqaccess
+    amis:
+      eu-west-1: ws2016
+    instance_type: m4.large
+    vm_type: windows
+    az: a
+
+asg:
+  - app_name_short: dciq
+    name: dciq
+    sgs:
+      - dciqaccess
+    amis:
+      eu-west-1: dciq-appserver
+    az: a
+    instance_type: t3.xlarge
+    profile: dicq
+    vm_type: windows
+    min: 1
+    max: 1
+    desired: 1
+    update_policy: |
+      MinInstancesInService: 1
+    lifecyclehook: 
+      launching:      
+        timeout: 60
+      terminating:
+        timeout: 60   
+    tags:
+      hostname: dciq
+

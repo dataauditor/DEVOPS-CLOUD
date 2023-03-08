@@ -1,0 +1,33 @@
+---
+#
+#RDS DCIQ
+#Create DB Master password in Para Store First
+
+parent_file: generic.yml
+
+rds:
+ - name: "{{ app_name }}"
+   cname: "{{ app_name }}-rds"
+   allocatedstorage: 100
+   dbinstanceclass: db.m4.large
+   engine: sqlserver-se
+   engineversion: "13.00"
+   backupretentionperiod: 1
+   dbparametergroupname: sqlserver-std-2016
+   optiongroupname: sqlserver-std-2016-dciq
+   preferredbackupwindow: 04:51-05:51
+   preferredmaintenancewindow: sun:22:31-sun:23:30
+   storagetype: gp2
+   autominorversionupgrade: true
+   multiaz: false
+   port: 1433
+   licensemodel: license-included
+   deletionpolicy: Delete
+   tags:
+    app: dciq
+
+optiongroups:
+  sqlserver-std-2016-dciq:
+    config:
+      SQLSERVER_BACKUP_RESTORE:
+        backup_role: rds-s3-access-migfiles
