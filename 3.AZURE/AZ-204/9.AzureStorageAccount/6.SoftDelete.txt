@@ -1,0 +1,21 @@
+1.Soft Delete Konfigure Etme:
+- Retantion suresi verir. Boylece silinse de restore edilebilir.
+- Default olarak enable'dir.
+> appstorage40 > Data protection
+  > Enable soft delete for blobs - check
+  > Keep deleted blobs for (in days): 7
+  > Save
+
+
+
+2.Silinen Objeyi Geri Getirme:
+a.Obje Silme:
+> appstorage40 > Containers > data-container
+  > script.sql
+  > Delete
+
+
+b.Objeyi Recover Etme:
+> appstorage40 > Containers > data-container
+  > Show deleted objects - check
+  > script.sql - check  |  3 nokta | Undelete

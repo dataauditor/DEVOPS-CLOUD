@@ -1,6 +1,7 @@
 1.AzCopy:
+- Az-204'teki videolarda Container olusturma vb de anlatiliyor.
 - Azure hesabina cli olarak ulasan ayri bir uygulama. Browserdan indirilir..
-- access key kullanilmaz. Azure AD veya SAS kullanilir. File srorage da ise yalniz SAS kullanilir.
+- access key kullanilmaz. Azure AD veya SAS kullanilir authorization icin. File srorage da ise yalniz SAS kullanilir.
 - documentationu kullanarak kod yazilir.
 - Farkli ownerlar arasi dosya transferi yapilabilir. 
 > azcopy.exe (file) > copy (from zip file) > paste to outside
@@ -65,3 +66,25 @@ Available Commands:
 .\azcopy copy 'https://umitstorage.blob.core.windows.net/default-container?sp=r&st=2022-04-26T09:13:31Z&se=2022-04-26T17:13:31Z&spr=https&sv=2020-08-04&sr=c&sig=EfnoBow%2Fp4%2BVRrFTDlCVNMEMQT4tZxAad7MBXgFFT70%3D'  'https://umitstorage.blob.core.windows.net/new?sp=racwdli&st=2022-04-26T09:19:57Z&se=2022-04-26T17:19:57Z&spr=https&sv=2020-08-04&sr=c&sig=Eb7iTToCrOGiWndoaBrcqNlm%2Fpr%2BoSP4rWMDrvLMmsg%3D'
 
 
+
+
+B.Bash ile Kullanma:
+1.SAS Olusturma:
+> appstorage40 > Shared access signature 
+  > Generate SAS and connection string
+  > SAS token: ?sv=2020-89jmju8nnetgrg5grereFDt54Gtgert5  - copy
+
+
+
+2.Localden AzCopy ile Container Olusturup File Kopyalama:
+azcopy make "https://appstorage.blob.core.windows.net/deneme?sv=2020-89jmju8nnetgrg5grereFDt54Gtgert5"
+  - tmp isimli Container olusturur.
+azcopy copy script.sql "https://appstorage.blob.core.windows.net/deneme/script.sql?sv=2020-89jmju8nnetgrg5grereFDt54Gtgert5"
+  - Localden blob'a kopyalar.
+azcopy copy "https://appstorage.blob.core.windows.net/deneme/script.sql?sv=2020-89jmju8nnetgrg5grereFDt54Gtgert5" "script.sq"
+  - Blob'tan local'e kopyalar.
+azcopy copy "https://appstore40404.blob.core.windows.net/data?sv=2020-08-04&ss=b&srt=sco&sp=rl&se=2022-04-26T18:51:53Z&st=2022-04-26T10:51:53Z&spr=https&sig=85v11pHl5eijn5PuMCZMb%2FcBJbwh9n8aw%2BnvN3PJ08o%3D" "https://appstore50505.blob.core.windows.net/data?sv=2020-08-04&ss=b&srt=sco&sp=rwlac&se=2022-04-26T18:53:15Z&st=2022-04-26T10:53:15Z&spr=https&sig=NCV3gk3%2FNPzImNQtfJFYboGxFlXLQQncGx%2Bun3m045Y%3D" --recursive
+  - Bir Storage Account'tan baska Storage account'a veri transferi.
+
+
+  

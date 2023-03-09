@@ -1,0 +1,29 @@
+Genel:
+- $blobchangefeed isminde loglarin tutuldugu bir blob olusturur.
+
+
+
+1.Log'lari Saklama:
+> appstorage40 > Data protection > Enable blob change feed
+  > Delete change feed logs after (in days): 7
+  > Save
+    - $blobchangefeed isminde loglarin tutuldugu bir blob olustu.
+
+
+2.script.sql File'inda Degisiklik Yapilir:
+> appstorage40 > Containers > data-container
+  > script.sql
+  > Edit
+---------------------------------------------------------
+---
+    ProductName Varchar(300)
+---
+---------------------------------------------------------
+    - Degisiklik yapildi.
+  > Save
+
+
+3.Storage Account'taki data-container'de Yapilan Degisikligin Log'u:
+> appstorage40 > Containers > $blobchangefeed
+  > log > 00 > 2023 > 03 > 13 > 1100 > 0000.avro
+  > Download

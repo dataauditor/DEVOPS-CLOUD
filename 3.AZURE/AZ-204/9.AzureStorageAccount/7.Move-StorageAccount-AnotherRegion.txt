@@ -1,0 +1,41 @@
+Genel:
+- Storage account'i baska Region'a tasimak icin dest region'da storage account olusturulur.
+- Daha sonra Source account'tan copy alinarak Destination storage account'a aktarilir.
+- Data'nin source ve destination storage account'lar arasinda transferi icin AzCopy veya Data Factory kullanilabilir.
+- Destination'da ayni sekilde (access' policies, file shares, blobs vb) storage account olusturmak icin source storage account'in template'i kullanilir.
+
+
+
+1.Source Storage Account'in Templatini Cekme:
+> appstorage40 > Export template > Download 
+
+
+
+2.ARM Template ile Baska Region'da Destination Storage Account Olusturma:
+> Template deployment > Create > Build your own template 
+  > Load file
+---------------------------------------------------------------------
+---
+  "storageAccounts_appstore40_name":{
+      "defaultValue": "appstorage50",
+      "type": "String"
+  }
+---
+    "location": "uksouthe"
+---
+---------------------------------------------------------------------
+    - Storage account'in ismi, defaultValue uzerinden degistirilir ve region'u degistirilir.
+    - "storageAccounts_appstore50_name": seklinde degistirilirse bircok yerde refere edildigi icin gereksiz.
+  > Create
+
+
+
+
+
+
+
+
+
+
+
+

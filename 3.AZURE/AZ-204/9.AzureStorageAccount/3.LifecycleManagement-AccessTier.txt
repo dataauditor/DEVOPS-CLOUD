@@ -1,0 +1,25 @@
+1.Access Tier Degistirme/Rehydrate Etme:
+> appstorage40 > data-container > az-104.jpg
+  > Change tier: Archive/Cold/Hot
+  > Rehydrate priority: Standard
+  > Save
+
+
+
+
+2.Lifecycle Management ile Rule Olusturma:
+> appstorage40 > Lifecycle management > + Add a rule
+  > Rule name: RuleA | Rule scope: Apply rule to all blobs | Blob type: Block blobs 
+  > Base blobs were: Last modified: More than (days ago): 30 | Then: Move to cool storage
+  > Add
+
+
+
+
+
+
+
+
+
+
+ 

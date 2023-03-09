@@ -1,0 +1,47 @@
+
+1.Azure AD ile Storage Explorer'i Storage Account'a Baglama:
+a.User Olusturma:
+> Azure Active Directory > Users > + New User 
+  > Create user
+  > User name: storageusr@tech.onmicrosoft.com | Password: 123
+  > Create
+
+
+
+b.User'a Storage Account'a Giris Izni Verilir:
+> appstorage40 > Access Control (IAM) > + Add > Add role assignment
+  > Storage account contributor 
+  > + Select members
+    > Select: storageusr@tech.onmicrosoft.com
+    > Select
+  > Review + Assign
+
+
+
+
+c.User'i Storage Explorer Uzerinden Storage Account'a Baglama:
+> Storage Explorer > fis sekli 
+  > Subscription > Azure  
+Sign in: storageusr@tech.onmicrosoft.com  | Enter password: 123
+  > Open Explorer
+    - Azure Subsciption'un altinda Storage account ve appstorage40'i ve blob vb goruruz.
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 

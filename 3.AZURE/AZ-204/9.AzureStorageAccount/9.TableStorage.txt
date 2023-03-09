@@ -1,0 +1,67 @@
+Genel:
+- Non-relational structured (NoSQL) datayi depolamak icin kullanilir.
+- Here you follow a key/attribute store with a schemaless design.
+- Strict bir Schema kullanilmaz.
+- Complex baglantilar gerekmez.
+- Dataya hizli giris saglar. Partition bazinda arama yaptigi icin hizlidir. 
+
+
+
+Partition Key:
+a.Dort Tane Entity Ekliyoruz.
+Order ID - 01, Category - Mobile, Quantity - 100
+Order ID - 02, Category - Laptop, Quantity - 200
+Order ID - 03, Category - Desktop, Quantity - 50
+Order ID - 04, Category - Laptop, Quantity - 25
+Order ID - 05, Category - Desktop, Quantity - 100
+
+
+
+b.Category'i Partition Key Olarak Tanimliyoruz/Seciyoruz:
+Partition 1: 
+  - Order ID - 01, Category - Mobile, Quantity - 100
+Partition 2:
+  - Order ID - 02, Category - Laptop, Quantity - 200
+  - Order ID - 04, Category - Laptop, Quantity - 25
+Partition 3:
+  - Order ID - 03, Category - Desktop, Quantity - 50, Customerid - C1
+  - Order ID - 05, Category - Desktop, Quantity - 100
+
+
+
+1.Table Olusturma:
+> appstorage40 > Tables > + Table
+  > Table name: Orders
+  > OK
+
+
+
+2.Table'a Entity Ekleme:
+> appstorage40 > Storage Browser > Tables > Orders 
+  > + Add entity
+    > PartitionKey | Type: String | Value: Laptop
+    > RowKey       | Type: String | Value: 02       > Add property
+    > Quantity     | Type: Int32  | Value: 200
+    > Insert  
+  > + Add entity
+    > PartitionKey | Type: String | Value: Mobile
+    > RowKey       | Type: String | Value: 01       > Add property
+    > Quantity     | Type: Int32  | Value: 100      
+    > Insert 
+  > + Add entity
+    > PartitionKey | Type: String | Value: Desktop
+    > RowKey       | Type: String | Value: 03       > Add property
+    > Quantity     | Type: Int32  | Value: 50       > Add property
+    > customerid   | Type: String | Value: C1
+    > Insert
+  > + Add entity
+    > PartitionKey | Type: String | Value: Laptop
+    > RowKey       | Type: String | Value: 04       > Add property
+    > Quantity     | Type: Int32  | Value: 25       > Add property
+    > customerid   | Type: String | Value: D5
+    > Insert
+  > + Add entity
+    > PartitionKey | Type: String | Value: Desktop
+    > RowKey       | Type: String | Value: 05       > Add property
+    > Quantity     | Type: Int32  | Value: 100
+    > Insert

@@ -1,0 +1,24 @@
+1.Versioning'i Enable Etme:
+> appstorage40 > Data protection
+  > Enable versioning for blobs - check
+  > Save
+
+
+
+2.Yeni Versiyonlar Olusturma:
+> appstorage40 > Containers > data-container
+  > script.sql
+    > Edit
+-------------------------------------------------
+---
+  ProductName varchar(1000)
+---
+-------------------------------------------------
+    - 1000'i 500 olarak degistiriyoruz.
+  > Versions
+    > 2022-04-20T05:34:27
+    > Download version | Make current version | Delete version
+      - Istedigimiz versiyonu mevcut versiyon yapabiliriz.
+
+
+

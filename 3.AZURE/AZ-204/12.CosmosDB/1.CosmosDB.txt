@@ -1,0 +1,262 @@
+Genel:
+- Fully managed NoSQL database
+- Cok hizli response verir.
+- Scales automatically based on demand.
+- Kullandigin API'ye bagli olarak sorgulama yapabilirsin.
+- SQL API'si ile baglanirsan json formatindaki verileri sorgulayabiliriz.
+- API'ler:
+  * SQL API
+  * MongoDB API: MongoDB ile calisiyorsak secilir.
+  * Gremlin API: Graph based db istiyorsak seceriz.
+  * Cassandra API
+  * Table: Simple table ile calisacaksak secilir.
+
+
+Surec:
+> Ilk once Database account olusturulur. API de bu esnada secilir.
+  > Database account'ta Database olusturulur.
+  > Database'de Container olusturulur.
+  > Container'de Items olusturulur.
+
+
+Partitions:
+- Logical partitions: Items in a container are divided into subsets called logical partitions.
+- Partition Key: The partition for the item is decided by the partition key that is associated with the item in the container. Partition key sonradan degistitilemez.
+- Item id: Each item also has an item id. This helps to uniquely identift an item in the partition.
+- Identification: The combination of the partition key and the item id helps to uniquely identify the item within the container.
+- Size: Each logical partition can grow up to 20GB.
+- Limit: There is no limit when it comes to the number of logical partitions within a container.
+- Her item partition'u ile iliskili unik bir id alir.
+- Cosmos DB'de arama yapinca PArtition'a bakip ilgili partition'da arama yapar.
+
+
+Costing:
+- Request unit ile fiyatlanir. CPU, IOPS ve memory'nin toplami ile ucretlendirilir.
+
+
+
+1.Cosmos DB Olusturma:
+> Azure Cosmos DB > Core (SQL) | Create
+  > Account name: appaccount20 
+  > Capacity mode: Provisioned throughput
+  > Create
+
+
+
+2.JSON Based Items Ekleme:
+a.VSC'de JSON Dosyasi Olusturulur:
+> VSC > Orders.json
+-------------------------------------------------------------
+{
+  "orderId":"01",
+  "category":"Laptop",
+  "quantity":100
+}
+
+{
+  "orderId":"02",
+  "category":"Mobiles",
+  "quantity":200
+}
+
+{
+  "orderId":"03",
+  "category":"Desktop",
+  "quantity":75
+}
+
+{
+  "orderId":"04",
+  "category":"Laptop",
+  "quantity":25
+}
+-------------------------------------------------------------
+
+
+b.SQL API'le Cosmos DB'ye JSON Based Items Eklenir:
+- Once db olusturulur. Sonra altinda Container olusturulur.
+- Items da Container icinde olusturulur.
+- Partition key ise Container icinde itemleri bolmeye yarar.
+> appaccount20 > Data Explorer
+  > Open Full Screen | Read and Write: Open
+    > New Container | New Database
+      > Database id: appdb
+      > Provision throughput - check  | Database throughput: Manual
+      > Estimate: 400
+      > OK
+    > New Container | New Container
+      > Database id: Use existing: appdb
+      > Container id: Orders
+      > Partition key: /category
+        - "category"i partition key olarak tanimladik.
+      > OK
+    > + New Item
+-----------------------------------------------
+{
+  "orderId":"01",
+  "category":"Laptop",
+  "quantity":100
+}
+-----------------------------------------------      
+      > Save
+        - Sistem based properties de Item'a eklenir.
+        - id de eklenir sistem tarafindan.
+    > + New Item
+-----------------------------------------------
+{
+  "orderId":"02",
+  "category":"Mobiles",
+  "quantity":200
+}
+-----------------------------------------------      
+      > Save
+    > + New Item
+-----------------------------------------------
+{
+  "orderId":"03",
+  "category":"Desktop",
+  "quantity":75
+}
+-----------------------------------------------      
+      > Save
+    > + New Item
+-----------------------------------------------
+{
+  "orderId":"04",
+  "category":"Laptop",
+  "quantity":25
+}
+-----------------------------------------------      
+      > Save
+    > appdb | Orders | Items
+      - Item bazinda id'lerini ve Category'lerini gorebiliriz Item'larin.
+
+
+
+3.Cosmos DB'de Query/Sorgulama:
+> appaccount20 > Data Explorer
+  > Open Full Screen | Read and Write: Open
+    > New SQL Query
+-----------------------------------------------------
+SELECT * FROM c
+  - Tum item'lari getirir.
+
+SELECT * FROM Orders
+  - Tum item'lari getirir. Orders Container'indeki item'lari verir.
+
+SELECT * FROM Orders o
+WHERE o.CATEGORY="Laptop"
+  
+SELECT o.orderId,o.category,o.quantity FROM Orders o
+WHERE o.CATEGORY="Laptop"
+  - Yalniz istenen verileri verir. Sistem verilerinden kurtulduk.
+
+SELECT o.category,SUM(o.quantity) AS TotalQuantity
+FROM Orders o
+GROUP BY o.category
+  - Uc category'nin toplam miktarlarini verir. Ornegin laptop:
+    "category": "Laptop"
+    ""TotalQuantity": 125
+-----------------------------------------------------
+  - "o": Alias olarak tanimladik.
+
+
+
+
+4.Object Icinde Object Tanimlama:
+a.Item Icinde Item Olusturulur:
+> appaccount20 > Data Explorer
+  > Open Full Screen | Read and Write: Open
+    > + New Item
+-----------------------------------------------
+{
+  "orderId":"01",
+  "category":"Laptop",
+  "quantity":100,
+  "customer":
+  {
+    "customerId":"C1",
+    "customerName":"CustomerA"
+  }
+}
+-----------------------------------------------      
+      > Save
+        - Sistem based properties de Item'a eklenir.
+        - id de eklenir sistem tarafindan.
+    > + New Item
+-----------------------------------------------
+{
+  "orderId":"02",
+  "category":"Mobiles",
+  "quantity":200,
+  "customer":
+  {
+    "customerId":"C2",
+    "customerName":"CustomerB"
+  }
+}
+-----------------------------------------------      
+      > Save
+    > + New Item
+-----------------------------------------------
+{
+  "orderId":"03",
+  "category":"Desktop",
+  "quantity":75,
+  "customer":
+  {
+    "customerId":"C3",
+    "customerName":"CustomerC"
+  }
+}
+-----------------------------------------------      
+      > Save
+    > + New Item
+-----------------------------------------------
+{
+  "orderId":"04",
+  "category":"Laptop",
+  "quantity":25,
+  "customer":
+  {
+    "customerId":"C4",
+    "customerName":"CustomerD"
+  }
+}
+-----------------------------------------------      
+      > Save
+
+
+
+b.Ic Ice Itemleri Sorgulama:
+> appaccount20 > Data Explorer
+  > Open Full Screen | Read and Write: Open
+    > New SQL Query
+-----------------------------------------------------
+SELECT o.orderId,o.category,o.quantity,o.customer 
+FROM Orders o
+WHERE o.CATEGORY="Laptop"
+  - orderId, category, quantity ile customerId ve customerName'i de verir.
+
+SELECT o.orderId,o.category,o.quantity,o.customer.customerName
+FROM Orders o
+WHERE o.CATEGORY="Laptop"
+  - orderId, category, quantity ile customerName'i de verir.
+
+SELECT o.category,SUM(o.quantity) AS TotalQuantity
+FROM Orders o
+GROUP BY o.category
+-----------------------------------------------------
+
+
+
+
+5.Item/Object'leri Delete:
+> appaccount20 > Data Explorer
+  > Open Full Screen | Read and Write: Open
+    > id: <bir item sec> | Delete
+       
+
+
+
+

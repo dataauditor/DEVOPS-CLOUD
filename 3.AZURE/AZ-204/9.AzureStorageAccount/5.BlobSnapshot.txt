@@ -1,0 +1,21 @@
+1.Snapshot Olusturma:
+> appstorage40 > Containers > data-container
+  > script.sql > Snapshots
+  > Create snapshot
+    - Delete, Promote yapabiliriz.
+
+
+
+2.Snapshot'i Promote Etme:
+> appstorage40 > Containers > data-container
+  > script.sql > Edit
+--------------------------------------------------
+varchar(200)
+--------------------------------------------------
+  > Snapshots script.sql (4/20/2023) > Promote snapshot
+    - Edit edilmemis hali ile script.sql dosyasi geri geldi.
+
+
+
+
+  

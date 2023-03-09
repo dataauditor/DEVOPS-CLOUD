@@ -1,0 +1,9 @@
+Genel: 
+- StorageAccount ve Blob level'da SAS olusturulabilir.
+- StorageAccount levelde SAS olustururken hangi service'lere ve ne tur izinler verecegimizi secebiliriz.
+- User delegation share de olusturulabilir.
+  * A SAS secured with Azure AD credentials.
+
+
+
+1.Create a User Delegation SAS:
