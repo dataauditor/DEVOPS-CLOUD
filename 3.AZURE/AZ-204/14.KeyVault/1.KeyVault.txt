@@ -1,0 +1,16 @@
+Genel:
+- Saklanan Veriler:
+  * Encryption keys, 
+  * Certificates,
+  * Secrets
+- App, encryption key, certificate ve secret'lari buradan ceker.
+
+
+
+
+1.Key Vault Olusturma:
+- Access permissions olusturan'a verir.
+- Diger User'lara permission'lar ya vault'u olustururken ya da sonradan verilebilir. 
+> Key Vault > Create
+  > Name: appvault20 | Region: North Europe | Days to retain deleted values: 7
+  > Create

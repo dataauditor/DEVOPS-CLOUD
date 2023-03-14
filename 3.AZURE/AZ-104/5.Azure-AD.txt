@@ -259,7 +259,7 @@ User uzerinden role atama:
 > Azure Active Directory > User > ugur > Assigned roles > + Add assignment 
   > Billing administrator > Add
 
-Device'i Secerek User'a Access Role Tanimlama:
+Resource/Device'i Secerek User'a Access Role Tanimlama:
 > Resource groups > umit-rg > umitVnet > Access control (IAM) > ugur > + Add > Add a role assignment 
   > contributor > select members > ugur > select > assign
 
@@ -275,7 +275,54 @@ Global administrator:
   
 
 
-13.Custom Role Tanimlama:
+13.Application Object ile Kendi Application'umuza RBAC Tanimlayarak Ilgili Resource'lara Baglanti Kurma:
+- Azure AD'de application object tanimlanarak bizim applicationumuzun ilgili resource (Storage account) ile baglantisi saglanir.
+- User'lar icin kullandigimiz RBAC burada da kullanilir.
+- Credentials'larla da saglanabilir ama tavsiye edilmez.
+a.Azure AD'de Application Object Olusturulur:
+- Olusturacagizi object ile kendi applikasyonumuzu associate edecegiz.
+> Azure AD > App registrations > + New registration 
+  > Name: BlobApp
+    - Kendimiz belirledik. Gerisi default.
+    - "BlobApp": applikasyon objesinin ismi olarak belirlendi.
+  > Register
+
+
+b.Baglanti Kurulmak Istenen Storage Account'ta RBAC ile BlobApp Application Objesini Yetkilendirme:  
+> appstore50 > Access Control (IAM) 
+  > + Add > Add role assignment
+    > Role: Reader 
+    > Assign access to: User, group or service principal
+    > + Select members: BlobApp
+    > Select
+    > Assign
+  > + Add > Add role assignment
+    > Role: Storage Blob Data Reader 
+      - Container'deki datayi okur.
+    > Assign access to: User, group or service principal
+    > + Select members: BlobApp
+    > Select
+    > Assign
+
+
+c.BlobApp'in Local'deki Applikasyonla Baglantisi:
+> Localdeki programa ulasilmak istenen blob'taki file'i adresi eklenir.
+> Azure AD > BlobApp 
+  > Overview
+    > Application (client) ID
+        - Localdeki programa BlobApp'in Application (client) ID'si eklenir.
+    > Directory (tenant) ID
+        - Localdeki programa Directory (tenant) ID eklenir.
+  > Certificates & secrets
+    > Client secrets > + New client secret
+      > Description: secret | Expires: Six months
+      > Add
+      > Value: IJEW34rf4FE5F6  - copy
+        - Localdeki programa BlobApp'in Application (client secret)'i eklenir.
+
+
+
+14.Custom Role Tanimlama:
 - Iki turlu custom tanimlanir. User'a ve resource'a.
 > Azure Active Directory > 
 
@@ -286,21 +333,21 @@ Resource'a Access Role Tanimlama:
 
 
 
-14.Subscriptions:
+15.Subscriptions:
 - Bir baskasini kendi subscriptionunuzda yetkilendirmek.
 > Subscriptions > umit.ceylan@bspoke.no > Access control > Add a role assignment 
   > Role: Contributor / Select: ugur > save
 
 
 
-15.Licences:
+16.Licences:
 - Elimizdeki lisanslari user'lara atarak kullaniriz.
 > AAD > Licenses > All products 
   - Ilgili user'lara atariz.
 
 
 
-16.Azure AD Connect:
+17.Azure AD Connect:
 - Local AD ile Azure AD'nin senkronizasyonu icin kullanilir. 
 > Local Makineye 'Azure AD Connect' kurulur.
 - Daha sonra Azure Portaldan:
@@ -309,7 +356,7 @@ Resource'a Access Role Tanimlama:
 
 
 
-17.Azure AD Join:
+18.Azure AD Join:
 - Client olarak AAD ile on-premise kaynaklarini ve SaaS kaynaklarina erisimi saglar.
 - Azure tarafindan yonetilen SaaS uygulamalariniz ve hizmetleriniz icin Coklu Oturum Acma hizmeti.
 - User'larin birden fazla cihazi (telefon, laptop, tablet) olabilir. Bunlari Azure AD Join kullanarak AAD ile entegre edebiliriz. 
@@ -325,7 +372,7 @@ Resource'a Access Role Tanimlama:
 
 
 
-18.Azure AD Connect:
+19.Azure AD Connect:
 - Localdeki AD yapisi ile AAD'yi entegre etmek icin kullanilir.
 - Localde bulunan domaine dahil herhangi bir makine veya domain controller uzerine yapilandirarak olusturulur.
 - Localdeki username ve password'lar AAD ile entegre oluyor.
@@ -359,7 +406,7 @@ AAD:
 
 
 
-19.Azure AD Connect with PowerShell:
+20.Azure AD Connect with PowerShell:
 - Localdeki domaine dahil local bilgisayarda PowerShell acilir.
 
 Start-ADSyncSyncCycle -PolicyType Initial
@@ -369,7 +416,7 @@ Start-ADSyncSyncCycle -PolicyType Delta
 
 
 
-20.Azure AD ile Karma Kimlik:
+21.Azure AD ile Karma Kimlik:
 - Single sign-on ozelligi saglar. Iki yolu var: PHS ve PTA. Ikisi de kullanilabilir.
 - Azure AD Connect ile Local AD ve AAD entegrasyonunu gerceklestirdikten sonra yapilir.
 Password Hash Synchronization (PHS): 
@@ -384,7 +431,7 @@ AD FS:
 
 
 
-21.Single Sign-On:
+22.Single Sign-On:
 - Farkli internet sitelerine (Facebook, gittigidiyor.com  vb.) AAD kimligi ile giris imkani veren hizmet.
 - Tek bir oturum acma yontemi secmek, uygulamnin kimlik dogrulama icin nasil yapilandirildigina baglidir.
 - Bulut uygulamalari, coklu oturum acma icin OpenID Connect, OAuth, SAML, parola tabanli, baglantili veya devre disi birakilmis yontemleri kullanabilir.
@@ -392,7 +439,7 @@ AD FS:
 
 
 
-22.Self Servis PArola Sifirlama (SSPR):
+23.Self Servis PArola Sifirlama (SSPR):
 - Parolalarin unutuldugu veya sureli olmasi arzu edildigi durumlarda parola degisim islemlerini otomatiklestirir.
 - Self Servis Parola Sifirlamayi kimlerin kullanabilecegini belirleyin.
 - Gerekli kimlik dogrulama yontemlerinin sayisini ve mevcut yontemleri secin (e-posta, telefon, sorular).
@@ -400,7 +447,7 @@ AD FS:
 
 
 
-23.Password Writeback:
+24.Password Writeback:
 - AAD'de yapilan parola degisikligi Local AD'ye de yansir, senkronizasyon sorunlarini bitirir.
 - AAD'yi Local AD'ye parola yazacak sekilde yapilandirmak icin kullanilir.
 - Azure AD Connect'in bilesenidir.
@@ -409,7 +456,7 @@ AD FS:
 
 
 
-24.AAD Connect Health:
+25.AAD Connect Health:
 - Cok fazla kullanici varsa kullanilir.
 - Sirket ici kimlik altyapisinin izlenmesine yardimci olarak ortamin guvenirliligini saglar.
 - Artirilmis guvenlik 
@@ -426,13 +473,13 @@ AAD:
 
 
 
-25.Azure AD B2B (Business to Business):
+26.Azure AD B2B (Business to Business):
 - Disardaki kullanicilarin sizin AAD ile entegre ettiginiz uygulamaya ulasmasi icin kullanilir.
 - Tek tek bu kullanicilara hesap acmak yerine guest hesap olarak davet etme imkani verir.
 
 
 
-26.Azure AD B2C (Business To Customer):
+27.Azure AD B2C (Business To Customer):
 - Isletmeden kullaniciya kimlik sagliyor. Kullanicilarin kaydolma, oturum acma ve profillerini degistirme sayfalarini ozellestirebiliyoruz. Customize edilmis sayfalar, user flowlar olusturabiliyoruz. (Kullanici once sunu sonra parola vb getirsin, MFA girsin, oturum acsin vb seklinde.)
 - Bunun icin Tenant type: Azure Active Directory (B2C) secerek tenant olusturmak gerekiyor.
 

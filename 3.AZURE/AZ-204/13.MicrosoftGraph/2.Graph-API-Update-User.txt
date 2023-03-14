@@ -1,0 +1,122 @@
+1.Application Object ile Kendi Application'umuza RBAC Tanimlayarak Ilgili Resource'lara Baglanti Kurma:
+a.Azure AD'de Application Object Olusturulur:
+> Azure AD > App registrations > + New registration 
+  > Name: Postman
+  > Register
+
+
+b.Postman Tool'unun Azure AD'den User Information'unu Okuyabilmesi icin Yetkilendirme:  
+> Azure AD > App registrations > Owned
+  > Postman
+    > API permissions
+      > + Add a permission
+      > Microsoft APIs 
+        > Microsoft Graph
+          > Application permissions
+          > Permission: 
+            > User
+              > User.Read.All
+            > Calender
+              > Calenders.Read
+        > Add permissions
+  > Grant admin consent for Default Directory  - check
+
+
+
+
+c.Postman Object'inin Verilerini Aliyoruz Postman Tool'una Kopyalamak Icin: 
+> Azure AD > App registrations > Owned > Postman 
+  > Overview 
+    > Application (client) ID: c3dfe-dew4r-dew3e42-dew32d-dewd43rfewr3r  - copy
+    > Endpoints
+      > OAuth 2.0 token endpoint (v2): https://login.microsoftonline.com/8099d32d-3262-3232...  - copy
+  > Certificates & secrets
+    > + New client secret 
+      > Description: secret | Expires: 6 months
+      > Add
+    > secret: Value: eze8Q-ed23e23sewds  - copy
+
+
+
+d.Postman ile Azure AD'den Access Token Cekme:
+- Alinacak token ile API'ye baglanacagiz.
+> Postman > + 
+  > Post | URL: https://login.microsoftonline.com/8099d32d-3262-3232...  - past
+      - Access token'i cekmek icin "Post" methodu secilir.
+  > Body   
+    > x-www-form-urlencoded
+      > Key: grant_type    | Value: client_credentials
+      > Key: client_id     | Value: c3dfe-dew4r-dew3e42-dew32d-dewd43rfewr3r  - past
+      > Key: client_secret | Value: eze8Q-ed23e23sewds  - past
+      > Key: scope         | Value: https://graph.microsoft.com/.default
+  > Send
+    - "access_token": jklokokløjikløm...  - copy
+    - "token_type": Bearer
+
+
+
+e.Postman ile All User'in Verileri API ile Cekme:
+> Postman > + 
+  > Get | URL: https://graph.microsoft.com/v1.0/users
+  > Headers
+    > Key: Authorization   | Value: Bearer jklokokløjikløm...  - past
+  > Send
+    - Tum User'larin verileri gelir.
+    - "id": "32edew4-dew43-r43r4-r43-r32r2"  - copy
+    - "givenName": null
+
+
+2.Postman ile Graph API'ye Kurulan Baglanti ile User Verilerini Update Etme:
+a.Postman Tool'unun Azure AD'den User Information'unu Yazabilmesi icin Yetkilendirme:  
+> Azure AD > App registrations > Owned
+  > Postman
+    > API permissions
+      > + Add a permission
+      > Microsoft APIs 
+        > Microsoft Graph
+          > Application permissions
+          > Permission: 
+            > User
+              > User.Read.All      - check
+              > User.ReadWrite.All - check
+        > Add permissions
+  > Grant admin consent for Default Directory  - check
+
+
+
+b.Postman ile Azure AD'den Access Token Cekme:
+- Yapilan Write permission'unu kullanabilmek icin guncel permissionlari iceren yeni token'i cekmeliyiz.
+> Postman > Post | URL: https://login.microsoftonline.com/8099d32d-3262-3232... 
+  > Send
+    - "access_token": week0fnj7nkjewEWFfdewEFDS7cds...  - copy
+    - "token_type": Bearer
+
+
+
+c.Postman ile User Datasinda Degisiklik Yapma:
+> Postman > + 
+  > PATCH | URL: https://graph.microsoft.com/v1.0/users
+  > Headers
+    > Key: Authorization   | Value: Bearer week0fnj7nkjewEWFfdewEFDS7cds...  - past
+  > Body > raw | Text: JSON
+-----------------------------------------------------
+{
+  "givenName": "umit"
+}
+-----------------------------------------------------
+  > Send
+
+
+
+d.Azure AD'de Degisikligi Gorme:
+> Azure AD > Default Directory > Users > UserA
+  > First Name: umit
+
+
+
+
+
+
+
+
+

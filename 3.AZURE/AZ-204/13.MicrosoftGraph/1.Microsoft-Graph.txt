@@ -1,0 +1,114 @@
+Genel:
+- User, Groups vb bilgileri verir.
+- API call'u ile calisir.
+- Grant API vasitasiyla baglanip Azure'dan veriler cekebiliriz.
+- Once kendimizi Azure AD'ye authorize ederiz.
+- Application Object olustururuz oncesinde.
+- Iki turlu permissions var:
+  * Delegated permission: User kullanir.
+  * Application permission: Application kullanir.
+
+
+
+
+
+1.Application Object ile Kendi Application'umuza RBAC Tanimlayarak Ilgili Resource'lara Baglanti Kurma:
+- Azure AD'de application object tanimlanarak bizim applicationumuzun ilgili resource (Storage account) ile baglantisi saglanir.
+- User'lar icin kullandigimiz RBAC burada da kullanilir.
+- Credentials'larla da saglanabilir ama tavsiye edilmez.
+a.Azure AD'de Application Object Olusturulur:
+- Olusturacagizi object ile kendi applikasyonumuzu associate edecegiz.
+> Azure AD > App registrations > + New registration 
+  > Name: Postman
+    - Kendimiz belirledik. Gerisi default.
+    - "BlobApp": applikasyon objesinin ismi olarak belirlendi.
+  > Register
+
+
+b.Postman Tool'unun Azure AD'den User Information'unu Okuyabilmesi icin Yetkilendirme:  
+- Azure AD'de diger resource'lar gibi RBAC tanimak icin Access control menusu yok.
+- Burada ulasilmak istenen resource Azure AD.
+- Ilgili permissions'lar verilir ve Grant edilir.
+- Yetkilendirme verilmezse token alinir ama daya sonra o token ile verilere ulasilamaz.
+- Yetkilendirmeye token almadan once yapmaliyiz.
+> Azure AD > App registrations > Owned
+  > Postman
+    > API permissions
+      > User.Read | Delegated | ... (3 nokta) - tikla | Remove this permission
+      > Add a permission
+      > Microsoft APIs 
+          - Diger service'lere olan permission'lar.
+        > Microsoft Graph
+          > Application permissions
+            - Postman bir application oldugu icin sectik.
+          > Permission: 
+            > User
+              > User.Read.All
+                - Tum User profile'lerini okur.
+            > Calender
+              > Calenders.Read
+        > Add permissions
+          - Permissions'lar verilse bile granted edilmedi.
+  > Grant admin consent for Default Directory  - check
+
+
+
+c.Get an Access Token:
+> Azure AD > App registrations > Owned
+  > Postman
+    > API permissions
+      > Grant 
+
+
+
+d.Postman Object'inin Verilerini Aliyoruz Postman Tool'una Kopyalamak Icin: 
+> Azure AD > App registrations > Owned > Postman 
+  > Overview 
+    > Application (client) ID: c3dfe-dew4r-dew3e42-dew32d-dewd43rfewr3r  - copy
+    > Endpoints
+      > OAuth 2.0 token endpoint (v2): https://login.microsoftonline.com/8099d32d-3262-3232...  - copy
+  > Certificates & secrets
+    > + New client secret 
+      > Description: secret | Expires: 6 months
+      > Add
+    > secret: Value: eze8Q-ed23e23sewds  - copy
+
+
+
+e.Postman ile Azure AD'den Access Token Cekme:
+- Alinacak token ile API'ye baglanacagiz.
+> Postman > + 
+  > Post | URL: https://login.microsoftonline.com/8099d32d-3262-3232...  - past
+      - Access token'i cekmek icin "Post" methodu secilir.
+  > Body   
+    > x-www-form-urlencoded
+      > Key: grant_type    | Value: client_credentials
+      > Key: client_id     | Value: c3dfe-dew4r-dew3e42-dew32d-dewd43rfewr3r  - past
+      > Key: client_secret | Value: eze8Q-ed23e23sewds  - past
+      > Key: scope         | Value: https://graph.microsoft.com/.default
+  > Send
+    - "access_token": jklokokløjikløm...  - copy
+    - "token_type": Bearer
+
+
+
+f.Postman ile All User'in Verileri API ile Cekme:
+> Postman > + 
+  > Get | URL: https://graph.microsoft.com/v1.0/users
+    - Tum user'larin verilerini cekme.
+  > Headers
+    > Key: Authorization   | Value: Bearer jklokokløjikløm...  - past
+      - "Bearer" seklinde tipini yazip tek bosluk ve token yapistirilir.
+  > Send
+
+
+
+
+
+
+
+
+
+
+
+

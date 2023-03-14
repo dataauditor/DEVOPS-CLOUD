@@ -1,0 +1,142 @@
+1.Ikinci Bir JSON File Ekleme:
+- Daha once "Orders" Containeri olusturduk. Simdi de "Customers" Container'i olusturuyoruz.
+- Customer container'i "orders" altinda birden fazla order barindiriyor.
+a.VSC'de JSON Kodunu Olusturma:
+> VSC > Customers.json
+---------------------------------------------------------
+{
+  "customerId":"C1",
+  "customerName":"CustomerA"
+  "customerCity":"New York",
+  "orders":[
+    {
+      "
+        "orderId":"01",
+        "category":"Laptop",
+        "quantity":100
+    },
+    {
+        "orderId":"03",
+        "category":"Desktop",
+        "quantity":75
+    }
+  ]
+}
+
+{
+  "customerId":"C2",
+  "customerName":"CustomerB"
+  "customerCity":"Chicago",
+  "orders":[
+    {
+      "
+        "orderId":"02",
+        "category":"Mobiles",
+        "quantity":200
+    }
+  ]
+}
+
+{
+  "customerId":"C3",
+  "customerName":"CustomerC"
+  "customerCity":"Miami",
+  "orders":[
+    {
+      "
+        "orderId":"04",
+        "category":"Laptop",
+        "quantity":25
+    }
+  ]
+}
+---------------------------------------------------------
+  - "[ ]": Birden fazla alternatif girilecekse kullanilir. 
+
+
+
+b.appdb Altina Yeni Container Acip Dosyayi Deploy:
+> appaccount20 > Data Explorer
+  > Open Full Screen | Read and Write: Open
+  > New Container > New Container
+    > Database id: Use existing: appdb
+    > Container id: Customers | Partition key: /customerCity
+    > OK
+  > appdb | Customers | Items | New Item
+---------------------------------------------------------
+{
+  "customerId":"C1",
+  "customerName":"CustomerA"
+  "customerCity":"New York",
+  "orders":[
+    {
+      "
+        "orderId":"01",
+        "category":"Laptop",
+        "quantity":100
+    },
+    {
+        "orderId":"03",
+        "category":"Desktop",
+        "quantity":75
+    }
+  ]
+}
+---------------------------------------------------------
+  > appdb | Customers | Items | New Item
+---------------------------------------------------------
+{
+  "customerId":"C2",
+  "customerName":"CustomerB"
+  "customerCity":"Chicago",
+  "orders":[
+    {
+      "
+        "orderId":"02",
+        "category":"Mobiles",
+        "quantity":200
+    }
+  ]
+}
+---------------------------------------------------------
+  > appdb | Customers | Items | New Item
+---------------------------------------------------------
+{
+  "customerId":"C3",
+  "customerName":"CustomerC"
+  "customerCity":"Miami",
+  "orders":[
+    {
+      "
+        "orderId":"04",
+        "category":"Laptop",
+        "quantity":25
+    }
+  ]
+}
+---------------------------------------------------------
+  - Uc item eklendi.
+
+
+c.Query:
+> appaccount20 > Data Explorer
+  > Open Full Screen | Read and Write: Open
+    > New SQL Query
+-----------------------------------------------------
+SELECT * FROM Customers c
+  - Tum tablolari oldugu gibi getirir.
+
+SELECT c.orders FROM Customers c
+  - 3 adet adet "orders"i tamamen getirir.
+
+SELECT o.quantity 
+FROM o in Customers.orders
+  - "quantity"leri getirir.
+
+SELECT SUM(o.quantity) AS Quantity,c.customerName
+FROM Customers c
+JOIN o in c.orders
+GROUP BY c.customerName
+-----------------------------------------------------
+
+

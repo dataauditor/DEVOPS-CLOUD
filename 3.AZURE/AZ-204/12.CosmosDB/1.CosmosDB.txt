@@ -73,7 +73,7 @@ a.VSC'de JSON Dosyasi Olusturulur:
 -------------------------------------------------------------
 
 
-b.SQL API'le Cosmos DB'ye JSON Based Items Eklenir:
+b.SQL API'li Cosmos DB'ye JSON Based Items Eklenir:
 - Once db olusturulur. Sonra altinda Container olusturulur.
 - Items da Container icinde olusturulur.
 - Partition key ise Container icinde itemleri bolmeye yarar.

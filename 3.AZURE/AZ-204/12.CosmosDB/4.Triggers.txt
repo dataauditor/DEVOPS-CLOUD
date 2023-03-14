@@ -1,0 +1,53 @@
+1.SQL API'li Cosmos DB Olusturulur:
+> appaccount20 > Data Explorer
+  > Open Full Screen | Read and Write: Open
+    > New Container | New Database
+      > Database id: appdb
+      > Provision throughput - check  | Database throughput: Manual
+      > Estimate: 400
+      > OK
+    > New Container | New Container
+      > Database id: Use existing: appdb
+      > Container id: Orders
+      > Partition key: /category
+        - "category"i partition key olarak tanimladik.
+      > OK
+
+
+
+2.Trigger Olusturma:
+- SQL cosmos db kurulu.
+- Bir Item insert ettigimizde .NET ile trigger calisacak, ve
+  - "quality" property'nin program tarafindan gonderilip gonderilmedine bakacak.
+  - Program tarafindan gonderilmediyse default bir deger atayacak property'e.
+> appaccount20 > Data Explorer
+  > Open Full Screen | Read and Write: Open
+    > appdb | Orders | Settings
+    > New Stored Procedure | New Trigger
+      > Trigger id: validateitem | Trigger type: Pre | Trigger Operation: Create 
+        - "Pre": Oncesinde islem yapar.
+        - "Create": Yeni bir Item create edince tetiklenir.
+      > Trigger Body:
+------------------------------------------------------------
+function validateitem(){
+  var context=getContext();
+  var request=context.getRequest();
+  var item.request.getBody();
+
+  if(!("quantity" in item))
+  {
+    item["quantity"]=0
+  }
+  request.setBody(item);
+}
+------------------------------------------------------------
+        - "quantity" yok ise gelen item'da "0" degerini sen ver.
+      > Save
+
+
+
+
+
+
+
+

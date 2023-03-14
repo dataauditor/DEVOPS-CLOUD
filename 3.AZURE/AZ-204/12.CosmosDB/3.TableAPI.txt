@@ -1,0 +1,29 @@
+1.Cosmos DB Olusturulur:
+> Azure Cosmos DB > Azure Table | Create
+  > Account name: tableaccount10 
+  > Capacity mode: Provisioned throughput
+  > Create
+
+
+
+
+2.Table Olustur:
+- Table olustururken partition tanimlanmaz.
+> tableaccount10 > Data Explorer
+  > New Table
+    > Table id: Orders
+    > Table throughput: manual  
+    > OK
+
+
+
+3.Item Ekleme:
+> tableaccount10 > Data Explorer
+  > TablesDB: Orders | Entities
+  > Add Entity
+    > PartitionKey | String | Value: Laptop
+    > RowKey       | String | Value: 01      > Add Property
+    > quantity     | Int32  | Value: 100
+    > Add Entity
+
+
